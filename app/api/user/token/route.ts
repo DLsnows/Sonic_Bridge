@@ -20,5 +20,13 @@ export async function POST(request: NextRequest) {
     .set({ apiToken: hashedToken })
     .where(eq(users.id, userId));
 
-  return NextResponse.json({ token: rawToken });
+  return NextResponse.json(
+    { token: rawToken },
+    {
+      headers: {
+        "Cache-Control": "no-store",
+        "Pragma": "no-cache",
+      },
+    },
+  );
 }
