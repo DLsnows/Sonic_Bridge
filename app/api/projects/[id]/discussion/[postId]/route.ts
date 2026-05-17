@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { discussionPosts, projectMembers } from "@/lib/db/schema";
+import { discussionPosts, projectMembers, users } from "@/lib/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { z } from "zod";
 
@@ -64,7 +64,7 @@ export async function PATCH(
   }
 
   if (post.userId !== userId) {
-    return NextResponse.json({ error: "Not the author" }, { status: 403 });
+    return NextResponse.json({ error: "Not your post" }, { status: 403 });
   }
 
   const body = await request.json();
@@ -78,11 +78,33 @@ export async function PATCH(
 
   const [updated] = await db
     .update(discussionPosts)
-    .set({ content: parsed.data.content, isEdited: true, updatedAt: new Date() })
+    .set({
+      content: parsed.data.content,
+      isEdited: true,
+      updatedAt: new Date(),
+    })
     .where(eq(discussionPosts.id, postId))
     .returning();
 
-  return NextResponse.json(updated);
+  const [result] = await db
+    .select({
+      id: discussionPosts.id,
+      projectId: discussionPosts.projectId,
+      userId: discussionPosts.userId,
+      username: users.username,
+      title: discussionPosts.title,
+      content: discussionPosts.content,
+      parentId: discussionPosts.parentId,
+      isEdited: discussionPosts.isEdited,
+      createdAt: discussionPosts.createdAt,
+      updatedAt: discussionPosts.updatedAt,
+    })
+    .from(discussionPosts)
+    .innerJoin(users, eq(discussionPosts.userId, users.id))
+    .where(eq(discussionPosts.id, updated.id))
+    .limit(1);
+
+  return NextResponse.json(result);
 }
 
 export async function DELETE(
@@ -127,12 +149,16 @@ export async function DELETE(
     return NextResponse.json({ error: "Post not found" }, { status: 404 });
   }
 
+  const isOwner = post.userId === userId;
   const isAdmin = membership.role === "admin";
-  if (post.userId !== userId && !isAdmin) {
-    return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+
+  if (!isOwner && !isAdmin) {
+    return NextResponse.json(
+      { error: "Not authorized to delete this post" },
+      { status: 403 },
+    );
   }
 
-  // Collect all descendant IDs for cascade delete
   const allPosts = await db
     .select({ id: discussionPosts.id, parentId: discussionPosts.parentId })
     .from(discussionPosts)
@@ -147,13 +173,16 @@ export async function DELETE(
     }
   }
 
-  const toDelete = [postId, ...collectDescendantIds(postId, parentMap)];
+  const descendantIds = collectDescendantIds(postId, parentMap);
+  const idsToDelete = [postId, ...descendantIds];
 
-  if (toDelete.length > 1) {
-    await db.delete(discussionPosts).where(inArray(discussionPosts.id, toDelete));
+  if (idsToDelete.length > 1) {
+    await db
+      .delete(discussionPosts)
+      .where(inArray(discussionPosts.id, idsToDelete));
   } else {
     await db.delete(discussionPosts).where(eq(discussionPosts.id, postId));
   }
 
-  return NextResponse.json({ deleted: toDelete.length });
+  return NextResponse.json({ success: true, deleted: idsToDelete.length });
 }

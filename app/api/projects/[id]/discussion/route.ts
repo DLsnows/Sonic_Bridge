@@ -110,6 +110,7 @@ export async function POST(
   if (data.hasParent) {
     title = "";
     parentId = data.parentId;
+
     const [parent] = await db
       .select({ id: discussionPosts.id })
       .from(discussionPosts)
@@ -120,8 +121,12 @@ export async function POST(
         ),
       )
       .limit(1);
+
     if (!parent) {
-      return NextResponse.json({ error: "Parent post not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Parent post not found" },
+        { status: 404 },
+      );
     }
   } else {
     title = data.title;
@@ -129,7 +134,13 @@ export async function POST(
 
   const [post] = await db
     .insert(discussionPosts)
-    .values({ projectId, userId, title, content: data.content, parentId })
+    .values({
+      projectId,
+      userId,
+      title,
+      content: data.content,
+      parentId,
+    })
     .returning();
 
   const [result] = await db

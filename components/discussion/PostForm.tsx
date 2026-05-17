@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 
 interface PostFormProps {
   mode: "thread" | "reply" | "edit";
@@ -54,55 +55,50 @@ export function PostForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       {mode === "thread" && (
-        <input
-          type="text"
+        <Input
+          label="Title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Thread title"
+          placeholder="What's on your mind?"
           maxLength={200}
-          className="w-full px-3 py-2 bg-[#0F0F13] border border-white/10 rounded-lg text-sm text-[#F0F0F0]
-            placeholder:text-[#A0A0B0]/50 font-['Fira_Code',monospace]
-            transition-all duration-200
-            focus:outline-none focus:border-[#00FF41]/50 focus:shadow-[0_0_15px_rgba(0,255,65,0.1)]
-            hover:border-white/20"
         />
       )}
 
-      <textarea
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        placeholder={
-          mode === "reply"
-            ? "Write a reply... (Markdown supported)"
-            : mode === "edit"
-              ? "Edit your post..."
-              : "Write your post... (Markdown supported)"
-        }
-        maxLength={10000}
-        rows={mode === "thread" ? 6 : 4}
-        className="w-full px-3 py-2 bg-[#0F0F13] border border-white/10 rounded-lg text-sm text-[#F0F0F0]
-          placeholder:text-[#A0A0B0]/50 font-['Fira_Code',monospace] resize-y min-h-[80px]
-          transition-all duration-200
-          focus:outline-none focus:border-[#00FF41]/50 focus:shadow-[0_0_15px_rgba(0,255,65,0.1)]
-          hover:border-white/20"
-      />
+      <div className="flex flex-col gap-1.5">
+        <textarea
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder={
+            mode === "reply"
+              ? "Write a reply..."
+              : mode === "edit"
+                ? "Edit your post..."
+                : "Share your thoughts... (Markdown supported)"
+          }
+          rows={mode === "thread" ? 5 : 4}
+          maxLength={10000}
+          className="w-full px-3 py-2 bg-[#0F0F13] border border-white/10 rounded-lg text-sm text-[#F0F0F0]
+            placeholder:text-[#A0A0B0]/50 font-['Fira_Code',monospace]
+            transition-all duration-200 resize-y min-h-[80px]
+            focus:outline-none focus:border-[#00FF41]/50 focus:shadow-[0_0_15px_rgba(0,255,65,0.1)]
+            hover:border-white/20"
+        />
+        <p className="text-xs text-[#A0A0B0]/60">
+          Styling with Markdown is supported -- **bold**, *italic*, `code`, [links](url)
+        </p>
+      </div>
 
       {error && <p className="text-xs text-[#FF4444]">{error}</p>}
 
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] text-[#A0A0B0]/60">
-          Markdown supported: **bold**, *italic*, `code`, ```block```
-        </span>
-        <div className="flex gap-2">
-          {onCancel && (
-            <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-              Cancel
-            </Button>
-          )}
-          <Button type="submit" variant="primary" size="sm" loading={submitting}>
-            {mode === "thread" ? "Create Thread" : mode === "edit" ? "Save Changes" : "Reply"}
+      <div className="flex justify-end gap-2">
+        {onCancel && (
+          <Button variant="ghost" size="sm" type="button" onClick={onCancel}>
+            Cancel
           </Button>
-        </div>
+        )}
+        <Button variant="primary" size="sm" type="submit" loading={submitting}>
+          {mode === "thread" ? "Post Thread" : mode === "reply" ? "Reply" : "Save"}
+        </Button>
       </div>
     </form>
   );
