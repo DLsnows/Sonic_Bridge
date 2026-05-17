@@ -114,7 +114,7 @@ export function EventForm({ open, onClose, projectId, event, selectedDate, onSav
         endTime: new Date(parsed.data.endTime).toISOString(),
         type: parsed.data.type,
       };
-      if (!isEdit || parsed.data.description !== undefined) {
+      if (!isEdit || parsed.data.description !== (event?.description ?? null)) {
         bodyObj.description = parsed.data.description || null;
       }
       const body = JSON.stringify(bodyObj);
