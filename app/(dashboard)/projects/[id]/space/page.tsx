@@ -1,26 +1,44 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { db } from "@/lib/db";
+import { projectMembers } from "@/lib/db/schema";
+import { eq, and } from "drizzle-orm";
 import { TopBar } from "@/components/TopBar";
-import { GlassPanel } from "@/components/ui/GlassPanel";
+import { CreativeSpaceRoom } from "@/components/space/CreativeSpaceRoom";
 
-export default async function SpacePage() {
+export default async function SpacePage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
+  const { id } = await params;
+  const userId = (session.user as any).id as string;
+  const username = (session.user as any).username as string;
+
+  const [membership] = await db
+    .select()
+    .from(projectMembers)
+    .where(
+      and(eq(projectMembers.projectId, id), eq(projectMembers.userId, userId)),
+    )
+    .limit(1);
+
+  if (!membership) redirect("/");
+
   return (
-    <div>
-      <TopBar title="Creative Space" subtitle="Real-time collaboration — coming in Phase 2" />
-      <div className="p-6">
-        <GlassPanel glow="green" className="text-center py-16">
-          <div className="text-5xl mb-4">◈</div>
-          <h2 className="font-['Share_Tech_Mono',monospace] neon-text text-xl mb-2">
-            Creative Space
-          </h2>
-          <p className="text-[#A0A0B0]">
-            Real-time audio streaming, screen sharing, and video calls will be available in Phase 2.
-          </p>
-        </GlassPanel>
-      </div>
+    <div className="flex flex-col h-full">
+      <TopBar
+        title="Creative Space"
+        subtitle="Real-time audio · screen sharing · voice & video"
+      />
+      <CreativeSpaceRoom
+        projectId={id}
+        userId={userId}
+        username={username}
+      />
     </div>
   );
 }
