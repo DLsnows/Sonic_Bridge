@@ -21,6 +21,8 @@ export function VstAudioBridge({
   const { localParticipant } = useLocalParticipant();
   const bridgeRef = useRef<VstBridge | null>(null);
   const pipelineRef = useRef<VstAudioPipeline | null>(null);
+  const participantRef = useRef(localParticipant);
+  participantRef.current = localParticipant;
 
   useEffect(() => {
     if (!VstAudioPipeline.isSupported()) {
@@ -56,7 +58,7 @@ export function VstAudioBridge({
         const track = pipelineRef.current.getMediaStreamTrack();
         if (track) {
           try {
-            await localParticipant.publishTrack(track, {
+            await participantRef.current.publishTrack(track, {
               name: "DAW Audio (VST)",
               source: Track.Source.Microphone,
             });
@@ -88,7 +90,7 @@ export function VstAudioBridge({
       pipelineRef.current = null;
       published = false;
     };
-  }, [projectId, userId, username, localParticipant]);
+  }, [projectId, userId, username]);
 
   return null; // no UI — managed by VstConnectionPanel
 }

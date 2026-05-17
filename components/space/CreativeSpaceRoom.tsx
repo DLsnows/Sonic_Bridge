@@ -121,12 +121,14 @@ export function CreativeSpaceRoom({
         onDisconnected={() => setConnected(false)}
         className="flex-1 flex min-w-0"
       >
+        {/* VST bridge — invisible, manages connection + track publishing */}
         <VstAudioBridge
           projectId={projectId}
           userId={userId}
           username={username}
         />
 
+        {/* Main area: video grid + controls */}
         <div className="flex-1 flex flex-col min-w-0">
           <ParticipantGrid />
           <RoomAudioRenderer />
@@ -135,6 +137,7 @@ export function CreativeSpaceRoom({
           </div>
         </div>
 
+        {/* Right sidebar: VST panel + chat */}
         <aside className="w-72 flex flex-col border-l border-[#00FF41]/10 bg-[#09090B]/60 backdrop-blur-sm shrink-0">
           <div className="flex-1 overflow-y-auto">
             <VstConnectionPanel />
