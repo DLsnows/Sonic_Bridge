@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { projects, projectMembers, users } from "@/lib/db/schema";
+import {
+  projects,
+  projectMembers,
+  folders,
+  files,
+  scheduleEvents,
+  discussionPosts,
+  users,
+} from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 
 export async function GET(
@@ -115,7 +123,14 @@ export async function DELETE(
     return NextResponse.json({ error: "Admin only" }, { status: 403 });
   }
 
-  await db.delete(projects).where(eq(projects.id, id));
+  await db.transaction(async (tx) => {
+    await tx.delete(files).where(eq(files.projectId, id));
+    await tx.delete(scheduleEvents).where(eq(scheduleEvents.projectId, id));
+    await tx.delete(discussionPosts).where(eq(discussionPosts.projectId, id));
+    await tx.delete(folders).where(eq(folders.projectId, id));
+    await tx.delete(projectMembers).where(eq(projectMembers.projectId, id));
+    await tx.delete(projects).where(eq(projects.id, id));
+  });
 
   return NextResponse.json({ success: true });
 }

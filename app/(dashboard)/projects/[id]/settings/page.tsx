@@ -5,8 +5,6 @@ import { projects, projectMembers, users } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { TopBar } from "@/components/TopBar";
 import { GlassPanel } from "@/components/ui/GlassPanel";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
 import { CopyProjectId } from "./CopyProjectId";
 import { GenerateToken } from "./GenerateToken";
 
