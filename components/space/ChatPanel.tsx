@@ -27,6 +27,7 @@ export function ChatPanel({ userId }: ChatPanelProps) {
   useEffect(() => {
     if (!isOpen && chatMessages.length > prevCountRef.current) {
       incrementUnread();
+      prevCountRef.current = chatMessages.length;
     }
     if (isOpen) {
       prevCountRef.current = chatMessages.length;
@@ -98,7 +99,7 @@ export function ChatPanel({ userId }: ChatPanelProps) {
               const isOwn = msg.from?.identity === userId;
               return (
                 <div
-                  key={`${msg.from?.identity ?? 'unknown'}-${msg.timestamp}`}
+                  key={`${msg.from?.identity ?? 'unknown'}-${msg.timestamp}-${msg.id ?? ''}`}
                   className={`${isOwn ? "items-end" : "items-start"} flex flex-col`}
                 >
                   <div className="flex items-center gap-2 mb-1">

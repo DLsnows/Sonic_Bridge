@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
 import { useSpaceStore } from "@/lib/store/space";
 import { LiveKitTheme } from "./LiveKitTheme";
@@ -28,6 +28,7 @@ export function CreativeSpaceRoom({
   const [loading, setLoading] = useState(true);
   const setConnected = useSpaceStore((s) => s.setConnected);
   const setRoomName = useSpaceStore((s) => s.setRoomName);
+  const abortRef = useRef<AbortController | null>(null);
 
   const fetchToken = useCallback(async (signal: AbortSignal) => {
     setLoading(true);
@@ -81,7 +82,12 @@ export function CreativeSpaceRoom({
           </h3>
           <p className="text-[#A0A0B0] text-sm mb-6">{error}</p>
           <button
-            onClick={() => fetchToken(new AbortController().signal)}
+            onClick={() => {
+              abortRef.current?.abort();
+              const controller = new AbortController();
+              abortRef.current = controller;
+              fetchToken(controller.signal);
+            }}
             className="px-6 py-2 bg-[#00FF41]/20 text-[#00FF41] rounded-lg text-sm hover:bg-[#00FF41]/30 transition-colors border border-[#00FF41]/20"
           >
             Retry
