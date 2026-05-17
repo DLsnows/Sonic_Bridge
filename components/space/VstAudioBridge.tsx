@@ -36,26 +36,32 @@ export function VstAudioBridge({
     bridgeRef.current = bridge;
 
     let published = false;
+    let pipelinePromise: Promise<void> | null = null;
 
     bridge.onAudioPacket(async (packet) => {
       if (!pipelineRef.current) {
-        pipelineRef.current = new VstAudioPipeline();
-        await pipelineRef.current.initialize(
-          packet.sampleRate,
-          packet.channels,
-        );
+        if (!pipelinePromise) {
+          pipelineRef.current = new VstAudioPipeline();
+          pipelinePromise = pipelineRef.current.initialize(
+            packet.sampleRate,
+            packet.channels,
+          ).then(() => { pipelinePromise = null; });
+        }
+        await pipelinePromise;
       }
 
-      pipelineRef.current.feedOpusPacket(packet.data);
+      const pipeline = pipelineRef.current!;
+
+      pipeline.feedOpusPacket(packet.data);
 
       // Publish audio track to LiveKit once the pipeline produces a track
       const store = useVstStore.getState();
       if (
-        pipelineRef.current.isReady &&
+        pipeline.isReady &&
         !published &&
         store.broadcastEnabled
       ) {
-        const track = pipelineRef.current.getMediaStreamTrack();
+        const track = pipeline.getMediaStreamTrack();
         if (track) {
           try {
             await participantRef.current.publishTrack(track, {

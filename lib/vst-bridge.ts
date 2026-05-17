@@ -43,6 +43,11 @@ export class VstBridge {
     this.handshake = handshake;
     this.intentionalClose = false;
     this.reconnectDelay = 1000;
+    this.clearReconnectTimer();
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
     this.doConnect();
   }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface VstVolumeMeterProps {
   left: number; // dBFS
@@ -27,25 +27,25 @@ function formatDB(db: number): string {
 }
 
 export function VstVolumeMeter({ left, right, peak }: VstVolumeMeterProps) {
-  const peakRef = useRef<number>(-Infinity);
+  const [peakHeld, setPeakHeld] = useState(-Infinity);
   const decayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (peak > peakRef.current) {
-      peakRef.current = peak;
+    if (peak > peakHeld) {
+      setPeakHeld(peak);
       if (decayRef.current) clearTimeout(decayRef.current);
       decayRef.current = setTimeout(() => {
-        peakRef.current = -Infinity;
+        setPeakHeld(-Infinity);
       }, 2000);
     }
     return () => {
       if (decayRef.current) clearTimeout(decayRef.current);
     };
-  }, [peak]);
+  }, [peak, peakHeld]);
 
   const leftPercent = dBToPercent(left);
   const rightPercent = dBToPercent(right);
-  const peakPercent = dBToPercent(peakRef.current);
+  const peakPercent = dBToPercent(peakHeld);
 
   return (
     <div className="space-y-1.5">
@@ -63,7 +63,7 @@ export function VstVolumeMeter({ left, right, peak }: VstVolumeMeterProps) {
               boxShadow: `0 0 6px ${dBColor(left)}40`,
             }}
           />
-          {isFinite(peakRef.current) && (
+          {isFinite(peakHeld) && (
             <div
               className="absolute top-0 h-full w-0.5 bg-white/80 rounded"
               style={{ left: `${peakPercent}%` }}
@@ -92,7 +92,7 @@ export function VstVolumeMeter({ left, right, peak }: VstVolumeMeterProps) {
               boxShadow: `0 0 6px ${dBColor(right)}40`,
             }}
           />
-          {isFinite(peakRef.current) && (
+          {isFinite(peakHeld) && (
             <div
               className="absolute top-0 h-full w-0.5 bg-white/80 rounded"
               style={{ left: `${peakPercent}%` }}

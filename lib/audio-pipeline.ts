@@ -1,5 +1,3 @@
-const RING_BUFFER_SIZE = 16384;
-
 export class VstAudioPipeline {
   private audioContext: AudioContext | null = null;
   private destination: MediaStreamAudioDestinationNode | null = null;
