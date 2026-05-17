@@ -6,18 +6,25 @@ import { Input } from "@/components/ui/Input";
 
 interface PostFormProps {
   mode: "thread" | "reply" | "edit";
+  initialTitle?: string;
   initialContent?: string;
-  onSubmit: (data: { title?: string; content: string; parentId?: string }) => Promise<void>;
-  onCancel: () => void;
+  onSubmit: (data: { title: string; content: string }) => Promise<void>;
+  onCancel?: () => void;
 }
 
-export function PostForm({ mode, initialContent = "", onSubmit, onCancel }: PostFormProps) {
-  const [title, setTitle] = useState("");
+export function PostForm({
+  mode,
+  initialTitle = "",
+  initialContent = "",
+  onSubmit,
+  onCancel,
+}: PostFormProps) {
+  const [title, setTitle] = useState(initialTitle);
   const [content, setContent] = useState(initialContent);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  async function handleSubmit(e: FormEvent) {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -33,13 +40,17 @@ export function PostForm({ mode, initialContent = "", onSubmit, onCancel }: Post
 
     setSubmitting(true);
     try {
-      await onSubmit({ title: title.trim() || undefined, content: content.trim() });
+      await onSubmit({ title: title.trim(), content: content.trim() });
+      if (mode !== "edit") {
+        setTitle("");
+        setContent("");
+      }
     } catch (err: any) {
       setError(err.message ?? "Something went wrong.");
     } finally {
       setSubmitting(false);
     }
-  }
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
@@ -80,9 +91,11 @@ export function PostForm({ mode, initialContent = "", onSubmit, onCancel }: Post
       {error && <p className="text-xs text-[#FF4444]">{error}</p>}
 
       <div className="flex justify-end gap-2">
-        <Button variant="ghost" size="sm" type="button" onClick={onCancel}>
-          Cancel
-        </Button>
+        {onCancel && (
+          <Button variant="ghost" size="sm" type="button" onClick={onCancel}>
+            Cancel
+          </Button>
+        )}
         <Button variant="primary" size="sm" type="submit" loading={submitting}>
           {mode === "thread" ? "Post Thread" : mode === "reply" ? "Reply" : "Save"}
         </Button>
