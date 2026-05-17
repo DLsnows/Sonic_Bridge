@@ -16,7 +16,6 @@ export default async function SpacePage({
 
   const { id } = await params;
   const userId = (session.user as any).id as string;
-  const username = (session.user as any).username as string;
 
   const [membership] = await db
     .select()
@@ -34,11 +33,7 @@ export default async function SpacePage({
         title="Creative Space"
         subtitle="Real-time audio · screen sharing · voice & video"
       />
-      <CreativeSpaceRoom
-        projectId={id}
-        userId={userId}
-        username={username}
-      />
+      <CreativeSpaceRoom projectId={id} userId={userId} />
     </div>
   );
 }

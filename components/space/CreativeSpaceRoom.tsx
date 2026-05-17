@@ -11,7 +11,6 @@ import { ChatPanel } from "./ChatPanel";
 interface CreativeSpaceRoomProps {
   projectId: string;
   userId: string;
-  username: string;
 }
 
 interface TokenData {
@@ -23,7 +22,6 @@ interface TokenData {
 export function CreativeSpaceRoom({
   projectId,
   userId,
-  username,
 }: CreativeSpaceRoomProps) {
   const [tokenData, setTokenData] = useState<TokenData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -96,8 +94,8 @@ export function CreativeSpaceRoom({
         serverUrl={tokenData.wsUrl}
         token={tokenData.token}
         connect={true}
-        audio={true}
-        video={true}
+        audio={false}
+        video={false}
         onConnected={() => setConnected(true)}
         onDisconnected={() => setConnected(false)}
         className="flex-1 flex flex-col"
@@ -106,7 +104,7 @@ export function CreativeSpaceRoom({
         <RoomAudioRenderer />
         <div className="flex items-center justify-between px-4 py-2 border-t border-[#00FF41]/10">
           <ControlBar projectId={projectId} />
-          <ChatPanel userId={userId} username={username} />
+          <ChatPanel userId={userId} />
         </div>
       </LiveKitRoom>
     </div>

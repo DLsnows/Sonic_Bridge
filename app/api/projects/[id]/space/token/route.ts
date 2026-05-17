@@ -45,9 +45,9 @@ export async function POST(
       roomName,
       wsUrl: process.env.LIVEKIT_URL ?? "ws://localhost:7880",
     });
-  } catch (e: any) {
+  } catch {
     return NextResponse.json(
-      { error: e.message ?? "Failed to generate token" },
+      { error: "Failed to generate token" },
       { status: 500 },
     );
   }

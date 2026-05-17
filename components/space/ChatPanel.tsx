@@ -1,47 +1,52 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useSpaceStore, type ChatMessage } from "@/lib/store/space";
+import { useChat } from "@livekit/components-react";
+import { useSpaceStore } from "@/lib/store/space";
 
 interface ChatPanelProps {
   userId: string;
-  username: string;
 }
 
-export function ChatPanel({ userId, username }: ChatPanelProps) {
+export function ChatPanel({ userId }: ChatPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
-  const messages = useSpaceStore((s) => s.chatMessages);
-  const addChatMessage = useSpaceStore((s) => s.addChatMessage);
-  const clearUnread = useSpaceStore((s) => s.clearUnread);
+  const { chatMessages, send, isSending } = useChat();
   const unreadCount = useSpaceStore((s) => s.unreadCount);
+  const incrementUnread = useSpaceStore((s) => s.incrementUnread);
+  const clearUnread = useSpaceStore((s) => s.clearUnread);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const prevCountRef = useRef(0);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [chatMessages]);
+
+  useEffect(() => {
+    if (!isOpen && chatMessages.length > prevCountRef.current) {
+      incrementUnread();
+    }
+    prevCountRef.current = chatMessages.length;
+  }, [chatMessages.length, isOpen, incrementUnread]);
 
   function handleToggle() {
     setIsOpen(!isOpen);
     if (!isOpen) clearUnread();
   }
 
-  function handleSend(e: React.FormEvent) {
+  async function handleSend(e: React.FormEvent) {
     e.preventDefault();
     const text = input.trim();
-    if (!text) return;
+    if (!text || isSending) return;
 
-    const msg: ChatMessage = {
-      id: crypto.randomUUID(),
-      userId,
-      username,
-      text,
-      timestamp: Date.now(),
-    };
-    addChatMessage(msg);
-    setInput("");
+    try {
+      await send(text);
+      setInput("");
+    } catch {
+      // send failed; LiveKit handles error state
+    }
   }
 
   return (
@@ -58,7 +63,7 @@ export function ChatPanel({ userId, username }: ChatPanelProps) {
         💬
         {!isOpen && unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#00FF41] text-[#09090B] text-xs rounded-full flex items-center justify-center font-bold">
-            {unreadCount}
+            {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
       </button>
@@ -78,40 +83,41 @@ export function ChatPanel({ userId, username }: ChatPanelProps) {
           </div>
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
-            {messages.length === 0 && (
+            {chatMessages.length === 0 && (
               <p className="text-[#A0A0B0] text-xs text-center py-8">
                 No messages yet. Start the conversation!
               </p>
             )}
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`${
-                  msg.userId === userId ? "items-end" : "items-start"
-                } flex flex-col`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[10px] text-[#A0A0B0]">
-                    {msg.username}
-                  </span>
-                  <span className="text-[10px] text-[#A0A0B0]/50">
-                    {new Date(msg.timestamp).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                </div>
+            {chatMessages.map((msg) => {
+              const isOwn = msg.from?.identity === userId;
+              return (
                 <div
-                  className={`px-3 py-2 rounded-lg text-sm max-w-full break-words ${
-                    msg.userId === userId
-                      ? "bg-[#00FF41]/10 border border-[#00FF41]/20 text-[#F0F0F0]"
-                      : "bg-[#0F0F13] border border-[#00FF41]/10 text-[#F0F0F0]"
-                  }`}
+                  key={msg.timestamp}
+                  className={`${isOwn ? "items-end" : "items-start"} flex flex-col`}
                 >
-                  {msg.text}
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] text-[#A0A0B0]">
+                      {msg.from?.name ?? msg.from?.identity ?? "Unknown"}
+                    </span>
+                    <span className="text-[10px] text-[#A0A0B0]/50">
+                      {new Date(msg.timestamp).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </div>
+                  <div
+                    className={`px-3 py-2 rounded-lg text-sm max-w-full break-words ${
+                      isOwn
+                        ? "bg-[#00FF41]/10 border border-[#00FF41]/20 text-[#F0F0F0]"
+                        : "bg-[#0F0F13] border border-[#00FF41]/10 text-[#F0F0F0]"
+                    }`}
+                  >
+                    {msg.message}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <form onSubmit={handleSend} className="p-3 border-t border-[#00FF41]/10 flex gap-2">
@@ -124,10 +130,10 @@ export function ChatPanel({ userId, username }: ChatPanelProps) {
             />
             <button
               type="submit"
-              disabled={!input.trim()}
+              disabled={!input.trim() || isSending}
               className="px-3 py-2 bg-[#00FF41]/20 text-[#00FF41] rounded-lg text-sm disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#00FF41]/30 transition-colors"
             >
-              Send
+              {isSending ? "..." : "Send"}
             </button>
           </form>
         </div>
