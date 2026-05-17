@@ -14,7 +14,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+# lib/ is source code in this project (Next.js), NOT Python
 lib64/
 parts/
 sdist/
