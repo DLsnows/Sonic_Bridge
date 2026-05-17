@@ -95,11 +95,11 @@ export function ChatPanel({ userId }: ChatPanelProps) {
                 No messages yet. Start the conversation!
               </p>
             )}
-            {chatMessages.map((msg) => {
+            {chatMessages.map((msg, i) => {
               const isOwn = msg.from?.identity === userId;
               return (
                 <div
-                  key={`${msg.from?.identity ?? 'unknown'}-${msg.timestamp}-${msg.id ?? ''}`}
+                  key={`${msg.from?.identity ?? 'unknown'}-${msg.timestamp}-${msg.id ?? i}`}
                   className={`${isOwn ? "items-end" : "items-start"} flex flex-col`}
                 >
                   <div className="flex items-center gap-2 mb-1">
