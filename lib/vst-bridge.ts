@@ -1,4 +1,4 @@
-import { useVstStore, MeterLevels, VstAudioSettings } from "@/lib/store/vst";
+﻿import { useVstStore, MeterLevels, VstAudioSettings } from "@/lib/store/vst";
 
 export interface VstHandshake {
   projectId: string;
@@ -49,10 +49,6 @@ export class VstBridge {
   disconnect() {
     this.intentionalClose = true;
     this.clearReconnectTimer();
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
     if (this.ws) {
       this.ws.close();
       this.ws = null;
@@ -116,7 +112,10 @@ export class VstBridge {
 
     ws.onclose = () => {
       if (!this.intentionalClose) {
-        store.setStatus("disconnected");
+        const currentStatus = useVstStore.getState().status;
+        if (currentStatus !== "error") {
+          useVstStore.getState().setStatus("disconnected");
+        }
         this.scheduleReconnect();
       }
     };
@@ -138,7 +137,6 @@ export class VstBridge {
           name: (msg.pluginName as string) ?? "Unknown",
           version: (msg.version as string) ?? "0.0.0",
         });
-        // Request settings after handshake completes
         this.requestSettings();
         break;
 
