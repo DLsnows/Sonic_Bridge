@@ -3,6 +3,11 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { projects, projectMembers } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
+import { z } from "zod";
+
+const joinSchema = z.object({
+  projectId: z.string().uuid("Invalid project ID format"),
+});
 
 export async function POST(request: NextRequest) {
   const session = await auth();
@@ -10,10 +15,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { projectId } = await request.json();
-  if (!projectId) {
-    return NextResponse.json({ error: "Project ID required" }, { status: 400 });
+  const parsed = joinSchema.safeParse(await request.json());
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0].message },
+      { status: 400 },
+    );
   }
+
+  const { projectId } = parsed.data;
 
   const userId = (session.user as any).id as string;
 

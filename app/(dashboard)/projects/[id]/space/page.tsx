@@ -33,7 +33,11 @@ export default async function SpacePage({
         title="Creative Space"
         subtitle="Real-time audio · screen sharing · voice & video"
       />
-      <CreativeSpaceRoom projectId={id} userId={userId} />
+      <CreativeSpaceRoom
+        projectId={id}
+        userId={userId}
+        username={(session.user as any).username ?? (session.user as any).name ?? "User"}
+      />
     </div>
   );
 }
