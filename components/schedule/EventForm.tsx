@@ -96,7 +96,10 @@ export function EventForm({ open, onClose, projectId, event, selectedDate, onSav
       return;
     }
 
-    if (new Date(endTime) <= new Date(startTime)) {
+    const resolvedStart = new Date(parsed.data.startTime);
+    const resolvedEnd = new Date(parsed.data.endTime);
+
+    if (resolvedEnd <= resolvedStart) {
       setErrors({ endTime: "End time must be after start time" });
       return;
     }
@@ -110,8 +113,8 @@ export function EventForm({ open, onClose, projectId, event, selectedDate, onSav
 
       const bodyObj: Record<string, unknown> = {
         title: parsed.data.title,
-        startTime: new Date(parsed.data.startTime).toISOString(),
-        endTime: new Date(parsed.data.endTime).toISOString(),
+        startTime: resolvedStart.toISOString(),
+        endTime: resolvedEnd.toISOString(),
         type: parsed.data.type,
       };
       if (!isEdit || parsed.data.description !== (event?.description ?? null)) {

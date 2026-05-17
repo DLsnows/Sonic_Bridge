@@ -50,7 +50,7 @@ export async function GET(
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid startDate" }, { status: 400 });
     }
-    conditions.push(gte(scheduleEvents.startTime, new Date(startDate)));
+    conditions.push(gte(scheduleEvents.endTime, new Date(startDate)));
   }
   if (endDate) {
     const parsed = dateParamSchema.safeParse(endDate);
