@@ -139,3 +139,50 @@ body {
   outline: 2px solid #00FF41;
   outline-offset: 2px;
 }
+
+/* LiveKit theme overrides */
+:root {
+  --lk-control-bg: #0F0F13;
+  --lk-control-hover-bg: rgba(0, 255, 65, 0.1);
+  --lk-control-active-bg: rgba(0, 255, 65, 0.2);
+  --lk-control-border: rgba(0, 255, 65, 0.2);
+  --lk-fg: #F0F0F0;
+  --lk-bg: #09090B;
+  --lk-accent-fg: #00FF41;
+  --lk-accent-bg: rgba(0, 255, 65, 0.15);
+  --lk-danger: #FF4444;
+  --lk-danger-bg: rgba(255, 68, 68, 0.15);
+  --lk-border-radius: 8px;
+}
+
+.lk-participant-tile {
+  background: rgba(15, 15, 19, 0.8);
+  border: 1px solid rgba(0, 255, 65, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.lk-participant-tile:hover {
+  border-color: rgba(0, 255, 65, 0.3);
+  box-shadow: 0 0 20px rgba(0, 255, 65, 0.1);
+}
+
+.lk-participant-tile[data-lk-video-source="screen_share"] {
+  border-color: rgba(0, 255, 65, 0.4);
+  box-shadow: 0 0 20px rgba(0, 255, 65, 0.15);
+}
+
+.lk-participant-name {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.75rem;
+  color: #F0F0F0;
+  background: rgba(9, 9, 11, 0.7);
+  backdrop-filter: blur(8px);
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.lk-button {
+  font-family: 'Fira Code', monospace;
+  transition: all 0.2s ease;
+}
