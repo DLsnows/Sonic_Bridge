@@ -91,6 +91,16 @@ export async function POST(
     folderPath = pathParts.join("/");
   }
 
+  // Validate all files upfront to prevent partial uploads
+  for (const file of uploadedFiles) {
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { error: `File "${file.name}" exceeds 100MB limit` },
+        { status: 413 },
+      );
+    }
+  }
+
   const results: Array<{
     id: string;
     name: string;
@@ -101,13 +111,6 @@ export async function POST(
   }> = [];
 
   for (const file of uploadedFiles) {
-    if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { error: `File "${file.name}" exceeds 100MB limit` },
-        { status: 413 },
-      );
-    }
-
     const { storageKey } = await saveFile(id, folderPath, file);
 
     const [record] = await db
