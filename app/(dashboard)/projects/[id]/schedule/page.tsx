@@ -1,26 +1,36 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { TopBar } from "@/components/TopBar";
-import { GlassPanel } from "@/components/ui/GlassPanel";
+import { db } from "@/lib/db";
+import { projectMembers } from "@/lib/db/schema";
+import { eq, and } from "drizzle-orm";
+import { ScheduleView } from "./ScheduleView";
 
-export default async function SchedulePage() {
+export default async function SchedulePage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
+  const { id } = await params;
+  const userId = (session.user as any).id as string;
+
+  const [membership] = await db
+    .select()
+    .from(projectMembers)
+    .where(
+      and(eq(projectMembers.projectId, id), eq(projectMembers.userId, userId)),
+    )
+    .limit(1);
+
+  if (!membership) redirect("/");
+
   return (
-    <div>
-      <TopBar title="Schedule" subtitle="Project timeline — coming in Phase 5" />
-      <div className="p-6">
-        <GlassPanel glow="purple" className="text-center py-16">
-          <div className="text-5xl mb-4">◷</div>
-          <h2 className="font-['Share_Tech_Mono',monospace] neon-text-purple text-xl mb-2">
-            Schedule
-          </h2>
-          <p className="text-[#A0A0B0]">
-            Calendar and event management will be available in Phase 5.
-          </p>
-        </GlassPanel>
-      </div>
-    </div>
+    <ScheduleView
+      projectId={id}
+      userId={userId}
+      userRole={membership.role}
+    />
   );
 }
