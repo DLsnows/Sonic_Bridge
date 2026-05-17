@@ -5,6 +5,8 @@ import { scheduleEvents, projectMembers, users } from "@/lib/db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { z } from "zod";
 
+const dateParamSchema = z.string().refine((s) => !isNaN(Date.parse(s)), "Invalid date");
+
 const createEventSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
   description: z.string().max(2000).optional(),
@@ -44,9 +46,17 @@ export async function GET(
   const conditions = [eq(scheduleEvents.projectId, id)];
 
   if (startDate) {
+    const parsed = dateParamSchema.safeParse(startDate);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid startDate" }, { status: 400 });
+    }
     conditions.push(gte(scheduleEvents.startTime, new Date(startDate)));
   }
   if (endDate) {
+    const parsed = dateParamSchema.safeParse(endDate);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid endDate" }, { status: 400 });
+    }
     conditions.push(lte(scheduleEvents.startTime, new Date(endDate)));
   }
 
@@ -95,7 +105,12 @@ export async function POST(
     return NextResponse.json({ error: "Not a member" }, { status: 403 });
   }
 
-  const body = await request.json();
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
   const parsed = createEventSchema.safeParse(body);
 
   if (!parsed.success) {

@@ -59,7 +59,12 @@ export async function PATCH(
     return NextResponse.json({ error: "Only creator or admin can edit" }, { status: 403 });
   }
 
-  const body = await request.json();
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
   const parsed = updateEventSchema.safeParse(body);
 
   if (!parsed.success) {

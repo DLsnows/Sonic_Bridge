@@ -51,8 +51,8 @@ export function ScheduleView({ projectId, userId, userRole }: ScheduleViewProps)
         const data = await res.json();
         setEvents(data.events ?? []);
       }
-    } catch {
-      // silent
+    } catch (err) {
+      console.error("Failed to fetch schedule events:", err);
     } finally {
       setLoading(false);
     }
@@ -79,9 +79,12 @@ export function ScheduleView({ projectId, userId, userRole }: ScheduleViewProps)
       });
       if (res.ok) {
         setEvents((prev) => prev.filter((e) => e.id !== eventId));
+      } else {
+        const err = await res.json().catch(() => ({ error: "Unknown error" }));
+        console.error("Delete failed:", err.error);
       }
-    } catch {
-      // silent
+    } catch (err) {
+      console.error("Network error during delete:", err);
     }
   }
 

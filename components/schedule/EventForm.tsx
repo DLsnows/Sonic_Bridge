@@ -108,13 +108,16 @@ export function EventForm({ open, onClose, projectId, event, selectedDate, onSav
         ? `/api/projects/${projectId}/schedule/${event!.id}`
         : `/api/projects/${projectId}/schedule`;
 
-      const body = JSON.stringify({
+      const bodyObj: Record<string, unknown> = {
         title: parsed.data.title,
-        description: parsed.data.description || null,
         startTime: new Date(parsed.data.startTime).toISOString(),
         endTime: new Date(parsed.data.endTime).toISOString(),
         type: parsed.data.type,
-      });
+      };
+      if (!isEdit || parsed.data.description !== undefined) {
+        bodyObj.description = parsed.data.description || null;
+      }
+      const body = JSON.stringify(bodyObj);
 
       const res = await fetch(url, {
         method: isEdit ? "PATCH" : "POST",
