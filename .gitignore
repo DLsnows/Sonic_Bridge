@@ -126,6 +126,9 @@ cython_debug/
 # Project setup guide (template only, not part of the codebase)
 SETUP_GUIDE.md
 
+# File uploads (Phase 4)
+/storage/
+
 # ===== Next.js / Node =====
 
 # dependencies

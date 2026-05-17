@@ -12,8 +12,9 @@ export async function proxy(request: NextRequest) {
   const isPublicApi =
     request.nextUrl.pathname.startsWith("/api/auth/") ||
     request.nextUrl.pathname.startsWith("/api/register");
+  const hasApiToken = request.headers.get("authorization")?.startsWith("Bearer sb_") ?? false;
 
-  if (!session && !isPublic && !isPublicApi) {
+  if (!session && !isPublic && !isPublicApi && !hasApiToken) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("callbackUrl", request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
