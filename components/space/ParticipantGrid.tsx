@@ -9,7 +9,7 @@ export function ParticipantGrid() {
       { source: Track.Source.Camera, withPlaceholder: true },
       { source: Track.Source.ScreenShare, withPlaceholder: false },
     ],
-    { onlySubscribed: false },
+    { onlySubscribed: true },
   );
 
   if (tracks.length === 0) {

@@ -29,12 +29,13 @@ export function CreativeSpaceRoom({
   const setConnected = useSpaceStore((s) => s.setConnected);
   const setRoomName = useSpaceStore((s) => s.setRoomName);
 
-  const fetchToken = useCallback(async () => {
+  const fetchToken = useCallback(async (signal: AbortSignal) => {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch(`/api/projects/${projectId}/space/token`, {
         method: "POST",
+        signal,
       });
       if (!res.ok) {
         const data = await res.json();
@@ -43,15 +44,20 @@ export function CreativeSpaceRoom({
       const data: TokenData = await res.json();
       setTokenData(data);
       setRoomName(data.roomName);
-    } catch (e: any) {
-      setError(e.message ?? "Connection failed");
+    } catch (e: unknown) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
+      setError(
+        e instanceof Error ? e.message : "Connection failed",
+      );
     } finally {
       setLoading(false);
     }
   }, [projectId, setRoomName]);
 
   useEffect(() => {
-    fetchToken();
+    const controller = new AbortController();
+    fetchToken(controller.signal);
+    return () => controller.abort();
   }, [fetchToken]);
 
   if (loading) {
@@ -75,7 +81,7 @@ export function CreativeSpaceRoom({
           </h3>
           <p className="text-[#A0A0B0] text-sm mb-6">{error}</p>
           <button
-            onClick={fetchToken}
+            onClick={() => fetchToken(new AbortController().signal)}
             className="px-6 py-2 bg-[#00FF41]/20 text-[#00FF41] rounded-lg text-sm hover:bg-[#00FF41]/30 transition-colors border border-[#00FF41]/20"
           >
             Retry

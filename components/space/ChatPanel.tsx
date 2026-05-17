@@ -28,12 +28,18 @@ export function ChatPanel({ userId }: ChatPanelProps) {
     if (!isOpen && chatMessages.length > prevCountRef.current) {
       incrementUnread();
     }
-    prevCountRef.current = chatMessages.length;
+    if (isOpen) {
+      prevCountRef.current = chatMessages.length;
+    }
   }, [chatMessages.length, isOpen, incrementUnread]);
 
   function handleToggle() {
-    setIsOpen(!isOpen);
-    if (!isOpen) clearUnread();
+    const nextOpen = !isOpen;
+    setIsOpen(nextOpen);
+    if (nextOpen) {
+      clearUnread();
+      prevCountRef.current = chatMessages.length;
+    }
   }
 
   async function handleSend(e: React.FormEvent) {
@@ -92,7 +98,7 @@ export function ChatPanel({ userId }: ChatPanelProps) {
               const isOwn = msg.from?.identity === userId;
               return (
                 <div
-                  key={msg.timestamp}
+                  key={`${msg.from?.identity ?? 'unknown'}-${msg.timestamp}`}
                   className={`${isOwn ? "items-end" : "items-start"} flex flex-col`}
                 >
                   <div className="flex items-center gap-2 mb-1">
