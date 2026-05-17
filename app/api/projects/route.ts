@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { projects, projectMembers, folders } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 const createSchema = z.object({
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
   const projectList = await db
     .select()
     .from(projects)
-    .where(eq(projects.id, projectIds[0]))
+    .where(inArray(projects.id, projectIds))
     .orderBy(projects.createdAt);
 
   return NextResponse.json(projectList);

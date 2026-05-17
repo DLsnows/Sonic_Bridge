@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { randomBytes } from "crypto";
+import { randomBytes, createHash } from "crypto";
 
 export async function POST(request: NextRequest) {
   const session = await auth();
@@ -12,9 +12,13 @@ export async function POST(request: NextRequest) {
   }
 
   const userId = (session.user as any).id as string;
-  const token = `sb_${randomBytes(32).toString("hex")}`;
+  const rawToken = `sb_${randomBytes(32).toString("hex")}`;
+  const hashedToken = createHash("sha256").update(rawToken).digest("hex");
 
-  await db.update(users).set({ apiToken: token }).where(eq(users.id, userId));
+  await db
+    .update(users)
+    .set({ apiToken: hashedToken })
+    .where(eq(users.id, userId));
 
-  return NextResponse.json({ token });
+  return NextResponse.json({ token: rawToken });
 }

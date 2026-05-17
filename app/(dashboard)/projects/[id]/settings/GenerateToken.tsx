@@ -7,13 +7,22 @@ export function GenerateToken() {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState("");
 
   const generate = async () => {
     setLoading(true);
-    const res = await fetch("/api/user/token", { method: "POST" });
-    if (res.ok) {
-      const data = await res.json();
-      setToken(data.token);
+    setError("");
+    try {
+      const res = await fetch("/api/user/token", { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        setToken(data.token);
+      } else {
+        const data = await res.json();
+        setError(data.error ?? "Failed to generate token");
+      }
+    } catch {
+      setError("Network error. Please try again.");
     }
     setLoading(false);
   };
@@ -44,6 +53,7 @@ export function GenerateToken() {
           Generate API Token
         </Button>
       )}
+      {error && <p className="text-xs text-[#FF4444]">{error}</p>}
     </div>
   );
 }
