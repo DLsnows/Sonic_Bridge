@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
+import { getMaxFileSize } from "@/lib/storage";
 
 interface UploadZoneProps {
   projectId: string;
@@ -10,8 +11,6 @@ interface UploadZoneProps {
   onComplete: () => void;
   onClose: () => void;
 }
-
-const MAX_FILE_SIZE = 100 * 1024 * 1024;
 
 export function UploadZone({ projectId, folderId, onComplete, onClose }: UploadZoneProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -23,9 +22,14 @@ export function UploadZone({ projectId, folderId, onComplete, onClose }: UploadZ
   const addFiles = useCallback((fileList: FileList) => {
     setError("");
     const incoming = Array.from(fileList);
-    const overSize = incoming.find((f) => f.size > MAX_FILE_SIZE);
+    const overSize = incoming.find((f) => {
+      const { limit } = getMaxFileSize(f.name);
+      return f.size > limit;
+    });
     if (overSize) {
-      setError(`"${overSize.name}" exceeds 100MB limit`);
+      const { limit, category } = getMaxFileSize(overSize.name);
+      const limitStr = limit >= 1073741824 ? `${(limit / 1073741824).toFixed(0)}GB` : `${(limit / 1048576).toFixed(0)}MB`;
+      setError(`"${overSize.name}" exceeds ${limitStr} limit for ${category} files`);
       return;
     }
     setSelectedFiles((prev) => [...prev, ...incoming]);
@@ -76,7 +80,7 @@ export function UploadZone({ projectId, folderId, onComplete, onClose }: UploadZ
           onClick={() => inputRef.current?.click()}>
           <div className="text-3xl mb-2">↑</div>
           <p className="text-sm text-[#A0A0B0]">Drop files here or <span className="text-[#00F0FF]">click to browse</span></p>
-          <p className="text-[10px] text-[#A0A0B0]/60 mt-1">Max 100MB per file</p>
+          <p className="text-[10px] text-[#A0A0B0]/60 mt-1">Audio 120MB / Archives 2GB / Video 500MB / Other 100MB</p>
         </div>
         <input ref={inputRef} type="file" multiple className="hidden"
           onChange={(e) => { if (e.target.files && e.target.files.length > 0) addFiles(e.target.files); e.target.value = ""; }} />

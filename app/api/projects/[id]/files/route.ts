@@ -3,9 +3,7 @@ import { db } from "@/lib/db";
 import { files, folders, users } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { authenticate } from "@/lib/api-auth";
-import { saveFile } from "@/lib/storage";
-
-const MAX_FILE_SIZE = 100 * 1024 * 1024;
+import { saveFile, getMaxFileSize } from "@/lib/storage";
 
 export async function GET(
   request: NextRequest,
@@ -93,9 +91,11 @@ export async function POST(
 
   // Validate all files upfront to prevent partial uploads
   for (const file of uploadedFiles) {
-    if (file.size > MAX_FILE_SIZE) {
+    const { limit, category } = getMaxFileSize(file.name);
+    if (file.size > limit) {
+      const limitStr = limit >= 1073741824 ? `${(limit / 1073741824).toFixed(0)}GB` : `${(limit / 1048576).toFixed(0)}MB`;
       return NextResponse.json(
-        { error: `File "${file.name}" exceeds 100MB limit` },
+        { error: `File "${file.name}" exceeds ${limitStr} limit for ${category} files` },
         { status: 413 },
       );
     }

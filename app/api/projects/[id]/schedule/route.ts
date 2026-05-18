@@ -9,7 +9,7 @@ const dateParamSchema = z.string().refine((s) => !isNaN(Date.parse(s)), "Invalid
 
 const createEventSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
-  description: z.string().max(2000).optional(),
+  description: z.string().max(2000).nullable().optional(),
   startTime: z.string().refine((s) => !isNaN(Date.parse(s)), "Invalid start time"),
   endTime: z.string().refine((s) => !isNaN(Date.parse(s)), "Invalid end time"),
   type: z.enum(["meeting", "production", "release", "other"]).default("other"),
