@@ -84,14 +84,6 @@ export function VstAudioBridge({
       }
     });
 
-    bridge.onMeterUpdate((levels) => {
-      useVstStore.getState().setMeterLevels(levels);
-    });
-
-    bridge.onSettingsUpdate((settings) => {
-      useVstStore.getState().setAudioSettings(settings);
-    });
-
     bridge.connect({ projectId, userId, username });
 
     return () => {

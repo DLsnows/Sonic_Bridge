@@ -161,33 +161,28 @@ export class VstBridge {
         break;
       }
 
-      case "meter":
-        store.setMeterLevels({
+      case "meter": {
+        const levels = {
           left: (msg.left as number) ?? -Infinity,
           right: (msg.right as number) ?? -Infinity,
           peak: (msg.peak as number) ?? -Infinity,
-        });
-        this.meterCallback?.({
-          left: (msg.left as number) ?? -Infinity,
-          right: (msg.right as number) ?? -Infinity,
-          peak: (msg.peak as number) ?? -Infinity,
-        });
+        };
+        store.setMeterLevels(levels);
+        this.meterCallback?.(levels);
         break;
+      }
 
-      case "settings":
-        store.setAudioSettings({
+      case "settings": {
+        const settings = {
           sampleRate: (msg.sampleRate as number) ?? 48000,
           bufferSize: (msg.bufferSize as number) ?? 256,
           channels: (msg.channels as number) ?? 2,
           opusBitrate: (msg.opusBitrate as number) ?? 128000,
-        });
-        this.settingsCallback?.({
-          sampleRate: (msg.sampleRate as number) ?? 48000,
-          bufferSize: (msg.bufferSize as number) ?? 256,
-          channels: (msg.channels as number) ?? 2,
-          opusBitrate: (msg.opusBitrate as number) ?? 128000,
-        });
+        };
+        store.setAudioSettings(settings);
+        this.settingsCallback?.(settings);
         break;
+      }
 
       case "error":
         store.setError((msg.message as string) ?? "Unknown error");
