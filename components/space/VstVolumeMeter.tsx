@@ -27,25 +27,28 @@ function formatDB(db: number): string {
 }
 
 export function VstVolumeMeter({ left, right, peak }: VstVolumeMeterProps) {
-  const [peakHeld, setPeakHeld] = useState(-Infinity);
+  const peakHeldRef = useRef(-Infinity);
   const decayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [, forceUpdate] = useState(0);
 
   useEffect(() => {
-    if (peak > peakHeld) {
-      setPeakHeld(peak);
+    if (peak > peakHeldRef.current) {
+      peakHeldRef.current = peak;
+      forceUpdate(n => n + 1);
       if (decayRef.current) clearTimeout(decayRef.current);
       decayRef.current = setTimeout(() => {
-        setPeakHeld(-Infinity);
+        peakHeldRef.current = -Infinity;
+        forceUpdate(n => n + 1);
       }, 2000);
     }
     return () => {
       if (decayRef.current) clearTimeout(decayRef.current);
     };
-  }, [peak, peakHeld]);
+  }, [peak]);
 
   const leftPercent = dBToPercent(left);
   const rightPercent = dBToPercent(right);
-  const peakPercent = dBToPercent(peakHeld);
+  const peakPercent = dBToPercent(peakHeldRef.current);
 
   return (
     <div className="space-y-1.5">
@@ -63,7 +66,7 @@ export function VstVolumeMeter({ left, right, peak }: VstVolumeMeterProps) {
               boxShadow: `0 0 6px ${dBColor(left)}40`,
             }}
           />
-          {isFinite(peakHeld) && (
+          {isFinite(peakHeldRef.current) && (
             <div
               className="absolute top-0 h-full w-0.5 bg-white/80 rounded"
               style={{ left: `${peakPercent}%` }}
@@ -92,7 +95,7 @@ export function VstVolumeMeter({ left, right, peak }: VstVolumeMeterProps) {
               boxShadow: `0 0 6px ${dBColor(right)}40`,
             }}
           />
-          {isFinite(peakHeld) && (
+          {isFinite(peakHeldRef.current) && (
             <div
               className="absolute top-0 h-full w-0.5 bg-white/80 rounded"
               style={{ left: `${peakPercent}%` }}

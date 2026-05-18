@@ -36,18 +36,23 @@ export function VstAudioBridge({
     bridgeRef.current = bridge;
 
     let published = false;
-    let pipelinePromise: Promise<void> | null = null;
+    let initializing = false;
 
     bridge.onAudioPacket(async (packet) => {
-      if (!pipelineRef.current) {
-        if (!pipelinePromise) {
-          pipelineRef.current = new VstAudioPipeline();
-          pipelinePromise = pipelineRef.current.initialize(
+      if (!pipelineRef.current && !initializing) {
+        initializing = true;
+        pipelineRef.current = new VstAudioPipeline();
+        try {
+          await pipelineRef.current.initialize(
             packet.sampleRate,
             packet.channels,
-          ).then(() => { pipelinePromise = null; });
+          );
+        } catch {
+          pipelineRef.current = null;
+          initializing = false;
+          return;
         }
-        await pipelinePromise;
+        initializing = false;
       }
 
       const pipeline = pipelineRef.current!;

@@ -126,6 +126,7 @@ export class VstBridge {
     };
 
     ws.onerror = () => {
+      this.intentionalClose = true;
       store.setStatus("error");
       store.setError("WebSocket connection error");
       ws.close();
@@ -162,12 +163,12 @@ export class VstBridge {
       }
 
       case "meter":
-        this.meterCallback?.({
+        store.setMeterLevels({
           left: (msg.left as number) ?? -Infinity,
           right: (msg.right as number) ?? -Infinity,
           peak: (msg.peak as number) ?? -Infinity,
         });
-        store.setMeterLevels({
+        this.meterCallback?.({
           left: (msg.left as number) ?? -Infinity,
           right: (msg.right as number) ?? -Infinity,
           peak: (msg.peak as number) ?? -Infinity,
