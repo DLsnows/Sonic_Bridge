@@ -2,8 +2,8 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { projects, projectMembers, users } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { projects, projectMembers, users, scheduleEvents, files, discussionPosts } from "@/lib/db/schema";
+import { eq, and, gte, desc, asc, isNull } from "drizzle-orm";
 import { TopBar } from "@/components/TopBar";
 import { Card } from "@/components/ui/Card";
 import { GlassPanel } from "@/components/ui/GlassPanel";
@@ -81,6 +81,35 @@ export default async function ProjectPage({
 
   const isAdmin = membership.role === "admin";
 
+  // Recent activity data
+  const now = new Date();
+  const upcomingEvents = await db
+    .select()
+    .from(scheduleEvents)
+    .where(and(eq(scheduleEvents.projectId, id), gte(scheduleEvents.startTime, now)))
+    .orderBy(asc(scheduleEvents.startTime))
+    .limit(5);
+
+  const recentFiles = await db
+    .select()
+    .from(files)
+    .where(eq(files.projectId, id))
+    .orderBy(desc(files.uploadedAt))
+    .limit(5);
+
+  const recentThreads = await db
+    .select({
+      id: discussionPosts.id,
+      title: discussionPosts.title,
+      username: users.username,
+      createdAt: discussionPosts.createdAt,
+    })
+    .from(discussionPosts)
+    .innerJoin(users, eq(discussionPosts.userId, users.id))
+    .where(and(eq(discussionPosts.projectId, id), isNull(discussionPosts.parentId)))
+    .orderBy(desc(discussionPosts.createdAt))
+    .limit(5);
+
   return (
     <div>
       <TopBar
@@ -117,28 +146,80 @@ export default async function ProjectPage({
           ))}
         </div>
 
-        {/* Project Info & Members */}
+        {/* Recent Activity & Members */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <GlassPanel>
-            <h3 className="font-['Share_Tech_Mono',monospace] text-sm text-[#00FF41] mb-4">
-              Project Info
-            </h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-[#A0A0B0]">Project ID</span>
-                <span className="text-[#F0F0F0] font-mono text-xs">
-                  {project.id}
-                </span>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-['Share_Tech_Mono',monospace] text-sm text-[#00FF41]">
+                Recent Activity
+              </h3>
+              <span className="font-['Share_Tech_Mono',monospace] text-[10px] text-[#A0A0B0]">
+                ID: {project.id.slice(0, 8)}...
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              {/* Upcoming Events */}
+              <div>
+                <h4 className="font-['Share_Tech_Mono',monospace] text-[10px] text-[#B44DFF] uppercase tracking-wider mb-2">
+                  Upcoming Events
+                </h4>
+                {upcomingEvents.length === 0 ? (
+                  <p className="text-[10px] text-[#A0A0B0]">No upcoming events</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {upcomingEvents.map((evt) => (
+                      <div key={evt.id} className="flex items-center justify-between text-xs">
+                        <span className="text-[#F0F0F0] truncate max-w-[180px]">{evt.title}</span>
+                        <span className="text-[#A0A0B0] font-mono text-[10px] shrink-0 ml-2">
+                          {evt.startTime.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div className="flex justify-between">
-                <span className="text-[#A0A0B0]">Created</span>
-                <span className="text-[#F0F0F0]">
-                  {project.createdAt?.toLocaleDateString()}
-                </span>
+
+              {/* Recent Files */}
+              <div>
+                <h4 className="font-['Share_Tech_Mono',monospace] text-[10px] text-[#00FF41] uppercase tracking-wider mb-2">
+                  Recent Files
+                </h4>
+                {recentFiles.length === 0 ? (
+                  <p className="text-[10px] text-[#A0A0B0]">No files uploaded</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {recentFiles.map((f) => (
+                      <div key={f.id} className="flex items-center justify-between text-xs">
+                        <span className="text-[#F0F0F0] truncate max-w-[180px]">{f.name}</span>
+                        <span className="text-[#A0A0B0] font-mono text-[10px] shrink-0 ml-2">
+                          {(f.size / 1024).toFixed(0)} KB
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div className="flex justify-between">
-                <span className="text-[#A0A0B0]">My Role</span>
-                <span className="text-[#00FF41]">{isAdmin ? "Admin" : "Member"}</span>
+
+              {/* Recent Discussions */}
+              <div>
+                <h4 className="font-['Share_Tech_Mono',monospace] text-[10px] text-[#FF8C00] uppercase tracking-wider mb-2">
+                  Recent Discussions
+                </h4>
+                {recentThreads.length === 0 ? (
+                  <p className="text-[10px] text-[#A0A0B0]">No discussions yet</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {recentThreads.map((post) => (
+                      <div key={post.id} className="flex items-center justify-between text-xs">
+                        <span className="text-[#F0F0F0] truncate max-w-[180px]">{post.title}</span>
+                        <span className="text-[#A0A0B0] text-[10px] shrink-0 ml-2">
+                          {post.username}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </GlassPanel>

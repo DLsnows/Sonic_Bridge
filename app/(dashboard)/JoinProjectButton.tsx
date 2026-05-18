@@ -56,13 +56,13 @@ export function JoinProjectButton() {
       >
         <div className="flex flex-col gap-4">
           <p className="text-sm text-[#A0A0B0]">
-            Enter the project ID shared by your collaborator.
+            Enter the project ID shared by your collaborator (UUID or custom ID).
           </p>
           <Input
             label="Project ID"
             value={code}
             onChange={(e) => setCode(e.target.value)}
-            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+            placeholder="my-band or xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
           />
           {error && <p className="text-sm text-[#FF4444]">{error}</p>}
         </div>

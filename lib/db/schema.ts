@@ -31,6 +31,7 @@ export const projects = pgTable("projects", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   description: text("description"),
+  customId: text("custom_id").unique(),
   createdBy: uuid("created_by")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),

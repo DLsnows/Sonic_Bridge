@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import type { FileItem } from "./types";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
@@ -8,6 +8,7 @@ import { Modal } from "@/components/ui/Modal";
 interface FileListProps {
   files: FileItem[];
   loading: boolean;
+  projectId: string;
   onDelete: (fileId: string) => void;
   onDownload: (fileId: string, fileName: string) => void;
 }
@@ -36,8 +37,40 @@ const iconColors: Record<string, string> = {
   FILE: "text-[#A0A0B0]",
 };
 
-export function FileList({ files, loading, onDelete, onDownload }: FileListProps) {
+export function FileList({ files, loading, projectId, onDelete, onDownload }: FileListProps) {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [playingFileId, setPlayingFileId] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playingFileIdRef = useRef<string | null>(null);
+
+  const handlePlayAudio = useCallback(
+    (fileId: string, fileName: string) => {
+      if (playingFileIdRef.current === fileId) {
+        audioRef.current?.pause();
+        playingFileIdRef.current = null;
+        setPlayingFileId(null);
+        return;
+      }
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      const audio = new Audio(`/api/projects/${projectId}/files/${fileId}`);
+      audio.play().catch(() => { /* playback blocked or failed */ });
+      const onEnded = () => { playingFileIdRef.current = null; setPlayingFileId(null); };
+      const onPause = () => {
+        if (playingFileIdRef.current === fileId) {
+          playingFileIdRef.current = null;
+          setPlayingFileId(null);
+        }
+      };
+      audio.addEventListener("ended", onEnded);
+      audio.addEventListener("pause", onPause);
+      audioRef.current = audio;
+      playingFileIdRef.current = fileId;
+      setPlayingFileId(fileId);
+    },
+    [projectId],
+  );
 
   if (loading) {
     return (
@@ -91,6 +124,15 @@ export function FileList({ files, loading, onDelete, onDownload }: FileListProps
                 <td className="py-2.5 px-3 text-[#A0A0B0] text-xs">{new Date(file.uploadedAt).toLocaleDateString()}</td>
                 <td className="py-2.5 px-3">
                   <div className="flex items-center justify-end gap-1">
+                    {file.mimeType.startsWith("audio/") && (
+                      <Button
+                        variant={playingFileId === file.id ? "primary" : "ghost"}
+                        size="sm"
+                        onClick={() => handlePlayAudio(file.id, file.name)}
+                      >
+                        {playingFileId === file.id ? "⏸" : "▶"}
+                      </Button>
+                    )}
                     <Button variant="ghost" size="sm" onClick={() => onDownload(file.id, file.name)}>DL</Button>
                     <Button variant="danger" size="sm" onClick={() => setDeleteTarget({ id: file.id, name: file.name })}>DEL</Button>
                   </div>

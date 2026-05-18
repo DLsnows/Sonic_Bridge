@@ -8,6 +8,12 @@ import { z } from "zod";
 const createSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
+  customId: z
+    .string()
+    .min(4)
+    .max(32)
+    .regex(/^[a-zA-Z0-9_-]+$/, "Custom ID can only contain letters, numbers, hyphens, and underscores")
+    .optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -26,11 +32,25 @@ export async function POST(request: NextRequest) {
   }
 
   const userId = (session.user as any).id as string;
-  const { name, description } = parsed.data;
+  const { name, description, customId } = parsed.data;
+
+  if (customId) {
+    const [existing] = await db
+      .select({ id: projects.id })
+      .from(projects)
+      .where(eq(projects.customId, customId))
+      .limit(1);
+    if (existing) {
+      return NextResponse.json(
+        { error: "Custom ID is already taken" },
+        { status: 409 },
+      );
+    }
+  }
 
   const [project] = await db
     .insert(projects)
-    .values({ name, description: description ?? null, createdBy: userId })
+    .values({ name, description: description ?? null, customId: customId ?? null, createdBy: userId })
     .returning();
 
   await db.insert(projectMembers).values({
