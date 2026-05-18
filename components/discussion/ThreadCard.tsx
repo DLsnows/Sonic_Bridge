@@ -123,6 +123,7 @@ export function ThreadCard({
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deletingReplyId, setDeletingReplyId] = useState<string | null>(null);
   const [aiFormatting, setAiFormatting] = useState(false);
+  const [aiFormatError, setAiFormatError] = useState<string | null>(null);
   const isOwner = post.userId === currentUserId;
   const canModify = isOwner || isAdmin;
 
@@ -243,8 +244,13 @@ export function ThreadCard({
                 onClick={async (e) => {
                   e.stopPropagation();
                   setAiFormatting(true);
+                  setAiFormatError(null);
                   try {
                     await onAiFormat(post.id);
+                  } catch (err) {
+                    setAiFormatError(
+                      err instanceof Error ? err.message : "AI format failed",
+                    );
                   } finally {
                     setAiFormatting(false);
                   }
@@ -259,6 +265,12 @@ export function ThreadCard({
           {deleteError && (
             <div className="p-2 rounded bg-[#FF4444]/10 border border-[#FF4444]/30 text-xs text-[#FF4444] mt-2">
               {deleteError}
+            </div>
+          )}
+
+          {aiFormatError && (
+            <div className="p-2 rounded bg-[#FF4444]/10 border border-[#FF4444]/30 text-xs text-[#FF4444] mt-2">
+              {aiFormatError}
             </div>
           )}
 
