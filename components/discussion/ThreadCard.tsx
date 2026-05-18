@@ -307,6 +307,7 @@ export function ThreadCard({
                           onClick={async () => {
                             if (!confirm("Delete this reply?")) return;
                             setDeletingReplyId(reply.id);
+                            setDeleteError(null);
                             try {
                               await onDelete(reply.id);
                             } catch {

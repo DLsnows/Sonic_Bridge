@@ -86,6 +86,7 @@ export class VstBridge {
     store.setStatus("connecting");
     store.setError(null);
 
+    // localhost-only WebSocket — TLS not required since traffic never leaves the machine
     const url = `ws://localhost:${this.port}`;
     let ws: WebSocket;
     try {
