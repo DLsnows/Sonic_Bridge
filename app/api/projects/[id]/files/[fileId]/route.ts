@@ -23,6 +23,12 @@ export async function GET(
     return NextResponse.json({ error: "File not found" }, { status: 404 });
   }
 
+  // For files > 50MB, redirect to signed URL to avoid server memory pressure
+  if (file.size > 50 * 1024 * 1024) {
+    const url = await getFileUrl(file.storageKey);
+    return NextResponse.redirect(url);
+  }
+
   const { body, contentType, size } = await getFileBody(file.storageKey);
   return new NextResponse(body, {
     headers: {

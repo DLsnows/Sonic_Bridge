@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
-import { getMaxFileSize } from "@/lib/storage";
+import { getMaxFileSize, SIZE_LIMITS } from "@/lib/storage";
 
 interface UploadZoneProps {
   projectId: string;
@@ -80,7 +80,7 @@ export function UploadZone({ projectId, folderId, onComplete, onClose }: UploadZ
           onClick={() => inputRef.current?.click()}>
           <div className="text-3xl mb-2">↑</div>
           <p className="text-sm text-[#A0A0B0]">Drop files here or <span className="text-[#00F0FF]">click to browse</span></p>
-          <p className="text-[10px] text-[#A0A0B0]/60 mt-1">Audio 120MB / Archives 2GB / Video 500MB / Other 100MB</p>
+          <p className="text-[10px] text-[#A0A0B0]/60 mt-1">{`Audio ${SIZE_LIMITS.audio / 1048576}MB / Archives ${SIZE_LIMITS.archive / 1073741824}GB / Video ${SIZE_LIMITS.video / 1048576}MB / Other ${SIZE_LIMITS.other / 1048576}MB`}</p>
         </div>
         <input ref={inputRef} type="file" multiple className="hidden"
           onChange={(e) => { if (e.target.files && e.target.files.length > 0) addFiles(e.target.files); e.target.value = ""; }} />
