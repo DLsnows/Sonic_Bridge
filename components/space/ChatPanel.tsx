@@ -62,22 +62,22 @@ export function ChatPanel({ userId }: ChatPanelProps) {
         onClick={handleToggle}
         className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${
           isOpen
-            ? "bg-[#00FF41]/20 text-[#00FF41]"
+            ? "bg-[#00F0FF]/20 text-[#00F0FF]"
             : "bg-[#0F0F13] text-[#A0A0B0]"
         } relative`}
         title={isOpen ? "Close chat" : "Open chat"}
       >
         💬
         {!isOpen && unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#00FF41] text-[#09090B] text-xs rounded-full flex items-center justify-center font-bold">
+          <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#00F0FF] text-[#09090B] text-xs rounded-full flex items-center justify-center font-bold">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-0 h-full w-80 border-l border-[#00FF41]/10 bg-[#09090B]/95 backdrop-blur-lg flex flex-col z-30 animate-fade-in">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-[#00FF41]/10">
+        <div className="absolute right-0 top-0 h-full w-80 border-l border-[#00F0FF]/10 bg-[#09090B]/95 backdrop-blur-lg flex flex-col z-30 animate-fade-in">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-[#00F0FF]/10">
             <h3 className="font-['Share_Tech_Mono',monospace] text-[#F0F0F0] text-sm">
               Chat
             </h3>
@@ -116,8 +116,8 @@ export function ChatPanel({ userId }: ChatPanelProps) {
                   <div
                     className={`px-3 py-2 rounded-lg text-sm max-w-full break-words ${
                       isOwn
-                        ? "bg-[#00FF41]/10 border border-[#00FF41]/20 text-[#F0F0F0]"
-                        : "bg-[#0F0F13] border border-[#00FF41]/10 text-[#F0F0F0]"
+                        ? "bg-[#00F0FF]/10 border border-[#00F0FF]/20 text-[#F0F0F0]"
+                        : "bg-[#0F0F13] border border-[#00F0FF]/10 text-[#F0F0F0]"
                     }`}
                   >
                     {msg.message}
@@ -127,18 +127,18 @@ export function ChatPanel({ userId }: ChatPanelProps) {
             })}
           </div>
 
-          <form onSubmit={handleSend} className="p-3 border-t border-[#00FF41]/10 flex gap-2">
+          <form onSubmit={handleSend} className="p-3 border-t border-[#00F0FF]/10 flex gap-2">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Type a message..."
-              className="flex-1 bg-[#0F0F13] border border-[#00FF41]/10 rounded-lg px-3 py-2 text-sm text-[#F0F0F0] placeholder-[#A0A0B0] focus:outline-none focus:border-[#00FF41]/40 transition-colors"
+              className="flex-1 bg-[#0F0F13] border border-[#00F0FF]/10 rounded-lg px-3 py-2 text-sm text-[#F0F0F0] placeholder-[#A0A0B0] focus:outline-none focus:border-[#00F0FF]/40 transition-colors"
             />
             <button
               type="submit"
               disabled={!input.trim() || isSending}
-              className="px-3 py-2 bg-[#00FF41]/20 text-[#00FF41] rounded-lg text-sm disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#00FF41]/30 transition-colors"
+              className="px-3 py-2 bg-[#00F0FF]/20 text-[#00F0FF] rounded-lg text-sm disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[#00F0FF]/30 transition-colors"
             >
               {isSending ? "..." : "Send"}
             </button>

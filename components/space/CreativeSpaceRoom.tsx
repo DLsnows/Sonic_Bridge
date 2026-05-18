@@ -9,6 +9,7 @@ import { ControlBar } from "./ControlBar";
 import { ChatPanel } from "./ChatPanel";
 import { VstConnectionPanel } from "./VstConnectionPanel";
 import { VstAudioBridge } from "./VstAudioBridge";
+import { AudioMixer } from "./AudioMixer";
 
 interface CreativeSpaceRoomProps {
   projectId: string;
@@ -32,6 +33,8 @@ export function CreativeSpaceRoom({
   const [loading, setLoading] = useState(true);
   const setConnected = useSpaceStore((s) => s.setConnected);
   const setRoomName = useSpaceStore((s) => s.setRoomName);
+  const toggleMixer = useSpaceStore((s) => s.toggleMixer);
+  const mixerOpen = useSpaceStore((s) => s.mixerOpen);
   const abortRef = useRef<AbortController | null>(null);
 
   const fetchToken = useCallback(
@@ -72,7 +75,7 @@ export function CreativeSpaceRoom({
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 mx-auto mb-4 rounded-full border-2 border-[#00FF41]/30 border-t-[#00FF41] animate-spin" />
+          <div className="w-12 h-12 mx-auto mb-4 rounded-full border-2 border-[#00F0FF]/30 border-t-[#00F0FF] animate-spin" />
           <p className="text-[#A0A0B0] text-sm">
             Connecting to Creative Space...
           </p>
@@ -97,7 +100,7 @@ export function CreativeSpaceRoom({
               abortRef.current = controller;
               fetchToken(controller.signal);
             }}
-            className="px-6 py-2 bg-[#00FF41]/20 text-[#00FF41] rounded-lg text-sm hover:bg-[#00FF41]/30 transition-colors border border-[#00FF41]/20"
+            className="px-6 py-2 bg-[#00F0FF]/20 text-[#00F0FF] rounded-lg text-sm hover:bg-[#00F0FF]/30 transition-colors border border-[#00F0FF]/20"
           >
             Retry
           </button>
@@ -128,24 +131,33 @@ export function CreativeSpaceRoom({
           username={username}
         />
 
-        {/* Main area: video grid + controls */}
+        {/* Left sidebar: VST panel */}
+        <aside className="w-72 flex-shrink-0 border-r border-[#00F0FF]/10 bg-[#09090B]/60 backdrop-blur-sm">
+          <div className="h-full overflow-y-auto">
+            <VstConnectionPanel />
+          </div>
+        </aside>
+
+        {/* Main area: video grid + audio renderer */}
         <div className="flex-1 flex flex-col min-w-0">
           <ParticipantGrid />
           <RoomAudioRenderer />
-          <div className="flex items-center px-4 py-2 border-t border-[#00FF41]/10">
-            <ControlBar projectId={projectId} />
-          </div>
         </div>
 
-        {/* Right sidebar: VST panel + chat */}
-        <aside className="w-72 flex flex-col border-l border-[#00FF41]/10 bg-[#09090B]/60 backdrop-blur-sm shrink-0">
-          <div className="flex-1 overflow-y-auto">
-            <VstConnectionPanel />
-          </div>
-          <div className="border-t border-[#00FF41]/10">
-            <ChatPanel userId={userId} />
-          </div>
+        {/* Right sidebar: chat */}
+        <aside className="w-72 flex-shrink-0 border-l border-[#00F0FF]/10 bg-[#09090B]/60 backdrop-blur-sm">
+          <ChatPanel userId={userId} />
         </aside>
+
+        {/* Floating control bar — fixed overlay */}
+        <ControlBar
+          projectId={projectId}
+          onToggleMixer={toggleMixer}
+          mixerOpen={mixerOpen}
+        />
+
+        {/* Audio mixer — fixed overlay inside room context */}
+        <AudioMixer />
       </LiveKitRoom>
     </div>
   );

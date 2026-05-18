@@ -23,6 +23,17 @@ export function VstAudioBridge({
   const pipelineRef = useRef<VstAudioPipeline | null>(null);
   const participantRef = useRef(localParticipant);
   participantRef.current = localParticipant;
+  const triggerReconnect = useVstStore((s) => s.triggerReconnect);
+  const prevTriggerRef = useRef(triggerReconnect);
+
+  // Watch for manual reconnect requests
+  useEffect(() => {
+    if (triggerReconnect !== prevTriggerRef.current && bridgeRef.current) {
+      prevTriggerRef.current = triggerReconnect;
+      bridgeRef.current.disconnect();
+      bridgeRef.current.connect({ projectId, userId, username });
+    }
+  }, [triggerReconnect, projectId, userId, username]);
 
   useEffect(() => {
     if (!VstAudioPipeline.isSupported()) {

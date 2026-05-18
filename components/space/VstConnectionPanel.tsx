@@ -14,7 +14,7 @@ const statusLabels: Record<string, string> = {
   connected: "Connected",
   connecting: "Connecting...",
   disconnected: "Disconnected",
-  error: "Error",
+  error: "Missing",
 };
 
 export function VstConnectionPanel() {
@@ -32,6 +32,7 @@ export function VstConnectionPanel() {
   const audioTrackPublished = useVstStore((s) => s.audioTrackPublished);
   const broadcastEnabled = useVstStore((s) => s.broadcastEnabled);
   const setBroadcastEnabled = useVstStore((s) => s.setBroadcastEnabled);
+  const requestReconnect = useVstStore((s) => s.requestReconnect);
 
   const color = statusColors[status] ?? statusColors.disconnected;
 
@@ -40,7 +41,7 @@ export function VstConnectionPanel() {
       {/* Header */}
       <div className="flex items-center gap-2">
         <span className="text-lg">◈</span>
-        <h3 className="font-['Share_Tech_Mono',monospace] text-xs text-[#00FF41] uppercase tracking-wider">
+        <h3 className="font-['Share_Tech_Mono',monospace] text-xs text-[#00F0FF] uppercase tracking-wider">
           DAW Audio Bridge
         </h3>
       </div>
@@ -76,17 +77,33 @@ export function VstConnectionPanel() {
 
       {/* Error message */}
       {lastError && status === "error" && (
-        <div className="text-[10px] text-[#FF4444] bg-[#FF4444]/10 rounded p-2 border border-[#FF4444]/20">
-          {lastError}
+        <div className="space-y-2">
+          <div className="text-[10px] text-[#FF4444] bg-[#FF4444]/10 rounded p-2 border border-[#FF4444]/20">
+            {lastError}
+          </div>
+          <button
+            onClick={requestReconnect}
+            className="w-full py-1.5 text-[10px] text-[#00F0FF] bg-[#00F0FF]/10 border border-[#00F0FF]/20 rounded hover:bg-[#00F0FF]/20 transition-colors font-['Share_Tech_Mono',monospace]"
+          >
+            Reconnect
+          </button>
         </div>
       )}
 
       {/* Disconnected guidance */}
       {status === "disconnected" && (
-        <p className="text-[10px] text-[#A0A0B0] leading-relaxed">
-          Load the SonicBridge VST plugin in your DAW and open this project to
-          stream audio.
-        </p>
+        <div className="space-y-2">
+          <p className="text-[10px] text-[#A0A0B0] leading-relaxed">
+            Load the SonicBridge VST plugin in your DAW and open this project to
+            stream audio.
+          </p>
+          <button
+            onClick={requestReconnect}
+            className="w-full py-1.5 text-[10px] text-[#00F0FF] bg-[#00F0FF]/10 border border-[#00F0FF]/20 rounded hover:bg-[#00F0FF]/20 transition-colors font-['Share_Tech_Mono',monospace]"
+          >
+            Reconnect
+          </button>
+        </div>
       )}
 
       {/* Volume Meter */}
