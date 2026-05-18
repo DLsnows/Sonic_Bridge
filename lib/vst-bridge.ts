@@ -126,7 +126,6 @@ export class VstBridge {
     };
 
     ws.onerror = () => {
-      this.intentionalClose = true;
       store.setStatus("error");
       store.setError("WebSocket connection error");
       ws.close();

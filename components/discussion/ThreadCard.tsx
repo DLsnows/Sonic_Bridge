@@ -117,6 +117,7 @@ export function ThreadCard({
   const [expanded, setExpanded] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deletingReplyId, setDeletingReplyId] = useState<string | null>(null);
   const isOwner = post.userId === currentUserId;
   const canModify = isOwner || isAdmin;
 
@@ -302,9 +303,17 @@ export function ThreadCard({
                         <Button
                           variant="ghost"
                           size="sm"
+                          loading={deletingReplyId === reply.id}
                           onClick={async () => {
                             if (!confirm("Delete this reply?")) return;
-                            await onDelete(reply.id);
+                            setDeletingReplyId(reply.id);
+                            try {
+                              await onDelete(reply.id);
+                            } catch {
+                              setDeleteError("Failed to delete reply");
+                            } finally {
+                              setDeletingReplyId(null);
+                            }
                           }}
                           className="hover:text-[#FF4444]"
                         >
