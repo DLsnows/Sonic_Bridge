@@ -22,8 +22,8 @@ interface ScheduleEvent {
 const eventSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
   description: z.string().max(2000).optional(),
-  startTime: z.string().min(1, "Start time is required"),
-  endTime: z.string().min(1, "End time is required"),
+  startTime: z.string().min(1, "Start time is required").refine((s) => !isNaN(Date.parse(s)), "Invalid start time"),
+  endTime: z.string().min(1, "End time is required").refine((s) => !isNaN(Date.parse(s)), "Invalid end time"),
   type: z.enum(["meeting", "production", "release", "other"]),
 });
 
@@ -114,11 +114,13 @@ export function EventForm({ open, onClose, projectId, event, selectedDate, onSav
 
       const bodyObj: Record<string, unknown> = {
         title: parsed.data.title,
-        description: parsed.data.description || null,
         startTime: resolvedStart.toISOString(),
         endTime: resolvedEnd.toISOString(),
         type: parsed.data.type,
       };
+      if (parsed.data.description) {
+        bodyObj.description = parsed.data.description;
+      }
       const body = JSON.stringify(bodyObj);
 
       const res = await fetch(url, {

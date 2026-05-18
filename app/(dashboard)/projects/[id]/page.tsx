@@ -88,9 +88,11 @@ export default async function ProjectPage({
         subtitle={project.description ?? undefined}
         actions={
           isAdmin ? (
-            <Button variant="secondary" size="sm">
-              Project Settings
-            </Button>
+            <Link href={`/projects/${id}/settings`}>
+              <Button variant="secondary" size="sm">
+                Project Settings
+              </Button>
+            </Link>
           ) : undefined
         }
       />

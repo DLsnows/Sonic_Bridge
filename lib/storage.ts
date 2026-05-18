@@ -1,6 +1,26 @@
 import { put, del, list, head } from "@vercel/blob";
 import { randomBytes } from "crypto";
 
+// Per-type file size limits
+const AUDIO_EXTENSIONS = ["m4a", "mp3", "wav", "flac", "aac", "ogg", "wma"];
+const ARCHIVE_EXTENSIONS = ["zip", "rar", "7z", "tar", "gz"];
+const VIDEO_EXTENSIONS = ["mov", "mp4", "avi", "mkv", "webm"];
+
+export const SIZE_LIMITS = {
+  audio: 120 * 1024 * 1024,       // 120 MB
+  archive: 2 * 1024 * 1024 * 1024, // 2 GB
+  video: 500 * 1024 * 1024,        // 500 MB
+  other: 100 * 1024 * 1024,        // 100 MB
+} as const;
+
+export function getMaxFileSize(fileName: string): { limit: number; category: string } {
+  const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
+  if (AUDIO_EXTENSIONS.includes(ext)) return { limit: SIZE_LIMITS.audio, category: "audio" };
+  if (ARCHIVE_EXTENSIONS.includes(ext)) return { limit: SIZE_LIMITS.archive, category: "archive" };
+  if (VIDEO_EXTENSIONS.includes(ext)) return { limit: SIZE_LIMITS.video, category: "video" };
+  return { limit: SIZE_LIMITS.other, category: "other" };
+}
+
 export function getStorageKey(
   projectId: string,
   folderPath: string,
@@ -23,6 +43,21 @@ export async function saveFile(
 export async function getFileUrl(storageKey: string): Promise<string> {
   const blob = await head(storageKey);
   return blob.url;
+}
+
+export async function getFileBody(
+  storageKey: string,
+): Promise<{ body: ReadableStream<Uint8Array>; contentType: string; size: number }> {
+  const blob = await head(storageKey);
+  const response = await fetch(blob.url);
+  if (!response.ok || !response.body) {
+    throw new Error("Failed to fetch blob content");
+  }
+  return {
+    body: response.body,
+    contentType: blob.contentType || "application/octet-stream",
+    size: blob.size,
+  };
 }
 
 export async function deleteFile(storageKey: string): Promise<void> {
