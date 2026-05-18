@@ -27,11 +27,12 @@ export default async function FilesPage({
 
   if (!membership) redirect("/");
 
-  const folderList = await db
+  const folderList = (await db
     .select()
     .from(folders)
     .where(eq(folders.projectId, id))
-    .orderBy(folders.createdAt);
+    .orderBy(folders.createdAt))
+    .map((f) => ({ ...f, createdAt: f.createdAt.toISOString() }));
 
   return (
     <div className="flex flex-col h-full">

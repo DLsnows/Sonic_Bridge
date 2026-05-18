@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { files } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { authenticate } from "@/lib/api-auth";
-import { readFile, deleteFile } from "@/lib/storage";
+import { getFileUrl, deleteFile } from "@/lib/storage";
 
 export async function GET(
   request: NextRequest,
@@ -23,15 +23,8 @@ export async function GET(
     return NextResponse.json({ error: "File not found" }, { status: 404 });
   }
 
-  const buffer = await readFile(file.storageKey);
-
-  return new NextResponse(buffer, {
-    headers: {
-      "Content-Type": file.mimeType,
-      "Content-Disposition": `attachment; filename="${encodeURIComponent(file.name)}"`,
-      "Content-Length": String(file.size),
-    },
-  });
+  const url = await getFileUrl(file.storageKey);
+  return NextResponse.redirect(url);
 }
 
 export async function DELETE(
