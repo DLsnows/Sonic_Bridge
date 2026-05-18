@@ -41,10 +41,12 @@ export async function POST(request: NextRequest) {
     await db.insert(users).values({ username, email, passwordHash });
 
     return NextResponse.json({ success: true }, { status: 201 });
-  } catch {
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+  } catch (err) {
+    console.error("Registration error:", err);
+    const message =
+      process.env.NODE_ENV === "production"
+        ? "Internal server error"
+        : `Internal server error: ${err instanceof Error ? err.message : String(err)}`;
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
