@@ -3,6 +3,8 @@
 #include <juce_core/juce_core.h>
 #include <ixwebsocket/IXWebSocketServer.h>
 #include <functional>
+#include <mutex>
+#include <vector>
 
 namespace SonicBridge {
 
@@ -50,6 +52,7 @@ private:
 
   std::unique_ptr<ix::WebSocketServer> mServer;
   std::atomic<bool> mRunning{false};
+  mutable std::mutex mClientsMutex;
 };
 
 } // namespace SonicBridge

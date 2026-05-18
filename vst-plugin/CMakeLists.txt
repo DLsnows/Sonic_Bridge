@@ -120,25 +120,37 @@ endif()
 
 # --- Post-Build: copy dependency DLLs alongside VST3 ---
 if(WIN32)
-  set(VCPKG_INSTALLED "C:/dev/vcpkg/installed/x64-windows" CACHE PATH
-      "Path to vcpkg installed directory for x64-windows triplet")
-  if(NOT EXISTS "${VCPKG_INSTALLED}")
-    message(WARNING "VCPKG_INSTALLED='${VCPKG_INSTALLED}' does not exist. "
-                    "Override with -DVCPKG_INSTALLED=... or skip DLL copy.")
+  set(VCPKG_INSTALLED "" CACHE PATH
+      "Path to vcpkg installed directory for x64-windows triplet. Auto-detected when using vcpkg toolchain.")
+  if(NOT VCPKG_INSTALLED)
+    if(DEFINED CMAKE_TOOLCHAIN_FILE AND CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg")
+      get_filename_component(_vcpkg_scripts "${CMAKE_TOOLCHAIN_FILE}" DIRECTORY)
+      get_filename_component(_vcpkg_root "${_vcpkg_scripts}/../.." ABSOLUTE)
+      if(EXISTS "${_vcpkg_root}/installed/${VCPKG_TARGET_TRIPLET}")
+        set(VCPKG_INSTALLED "${_vcpkg_root}/installed/${VCPKG_TARGET_TRIPLET}")
+      endif()
+    elseif(DEFINED ENV{VCPKG_ROOT})
+      set(VCPKG_INSTALLED "$ENV{VCPKG_ROOT}/installed/${VCPKG_TARGET_TRIPLET}")
+    endif()
   endif()
-  add_custom_command(TARGET SonicBridgeVST POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-      "${VCPKG_INSTALLED}/bin/opus.dll"
-      "$<TARGET_FILE_DIR:SonicBridgeVST>/opus.dll"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-      "${VCPKG_INSTALLED}/bin/z.dll"
-      "$<TARGET_FILE_DIR:SonicBridgeVST>/z.dll"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-      "${VCPKG_INSTALLED}/bin/libcrypto-3-x64.dll"
-      "$<TARGET_FILE_DIR:SonicBridgeVST>/libcrypto-3-x64.dll"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-      "${VCPKG_INSTALLED}/bin/libssl-3-x64.dll"
-      "$<TARGET_FILE_DIR:SonicBridgeVST>/libssl-3-x64.dll"
-    COMMENT "Copying dependency DLLs to VST3 bundle"
-  )
+  if(VCPKG_INSTALLED AND EXISTS "${VCPKG_INSTALLED}")
+    message(STATUS "vcpkg installed dir: ${VCPKG_INSTALLED}")
+    add_custom_command(TARGET SonicBridgeVST POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${VCPKG_INSTALLED}/bin/opus.dll"
+        "$<TARGET_FILE_DIR:SonicBridgeVST>/opus.dll"
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${VCPKG_INSTALLED}/bin/z.dll"
+        "$<TARGET_FILE_DIR:SonicBridgeVST>/z.dll"
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${VCPKG_INSTALLED}/bin/libcrypto-3-x64.dll"
+        "$<TARGET_FILE_DIR:SonicBridgeVST>/libcrypto-3-x64.dll"
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${VCPKG_INSTALLED}/bin/libssl-3-x64.dll"
+        "$<TARGET_FILE_DIR:SonicBridgeVST>/libssl-3-x64.dll"
+      COMMENT "Copying dependency DLLs to VST3 bundle"
+    )
+  else()
+    message(WARNING "vcpkg installed dir not found. Set -DVCPKG_INSTALLED=... to enable DLL copy.")
+  endif()
 endif()

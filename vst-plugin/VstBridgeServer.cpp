@@ -46,6 +46,7 @@ void VstBridgeServer::stop() {
 
 int VstBridgeServer::getClientCount() const {
   if (!mServer) return 0;
+  std::lock_guard<std::mutex> lock(mClientsMutex);
   return static_cast<int>(mServer->getClients().size());
 }
 
@@ -99,7 +100,16 @@ void VstBridgeServer::onClientMessage(
 
 void VstBridgeServer::broadcast(const juce::String& message) {
   if (!mServer) return;
-  for (auto& client : mServer->getClients()) {
+
+  std::vector<std::shared_ptr<ix::WebSocket>> snapshot;
+  {
+    std::lock_guard<std::mutex> lock(mClientsMutex);
+    for (const auto& client : mServer->getClients()) {
+      snapshot.push_back(client);
+    }
+  }
+
+  for (auto& client : snapshot) {
     client->send(message.toStdString());
   }
 }
