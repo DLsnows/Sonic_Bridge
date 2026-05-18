@@ -171,6 +171,23 @@ export function DiscussionBoard({
     [projectId, parentMap],
   );
 
+  const handleAiFormat = useCallback(
+    async (postId: string) => {
+      const res = await fetch(`/api/projects/${projectId}/ai-format`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Failed" }));
+        throw new Error(err.error ?? "AI formatting failed");
+      }
+      const reply: DiscussionPost = await res.json();
+      setPosts((prev) => [reply, ...prev]);
+    },
+    [projectId],
+  );
+
   return (
     <div>
       <TopBar
@@ -192,7 +209,7 @@ export function DiscussionBoard({
         {threads.length === 0 ? (
           <div className="text-center py-16">
             <div className="text-5xl mb-4">&#9776;</div>
-            <h2 className="font-['Share_Tech_Mono',monospace] text-[#00FF41] text-xl mb-2">
+            <h2 className="font-['Share_Tech_Mono',monospace] text-[#FF8C00] text-xl mb-2">
               No discussions yet
             </h2>
             <p className="text-[#A0A0B0] mb-6">
@@ -211,11 +228,13 @@ export function DiscussionBoard({
                 replies={repliesMap.get(thread.id) ?? []}
                 currentUserId={currentUserId}
                 isAdmin={isAdmin}
+                projectId={projectId}
                 replyingTo={replyingTo}
                 editingId={editingId}
                 onReply={handleReply}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                onAiFormat={handleAiFormat}
                 onSetReplying={setReplyingTo}
                 onSetEditing={setEditingId}
               />

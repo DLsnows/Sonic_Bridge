@@ -8,6 +8,7 @@
   --color-neon-green: #00FF41;
   --color-neon-cyan: #00F0FF;
   --color-neon-purple: #B44DFF;
+  --color-neon-orange: #FF8C00;
   --color-cyber-black: #09090B;
   --color-panel-bg: #0F0F13;
   --color-text-primary: #F0F0F0;
@@ -83,6 +84,11 @@ body {
   text-shadow: 0 0 10px rgba(180, 77, 255, 0.5), 0 0 20px rgba(180, 77, 255, 0.2);
 }
 
+.neon-text-orange {
+  color: #FF8C00;
+  text-shadow: 0 0 10px rgba(255, 140, 0, 0.5), 0 0 20px rgba(255, 140, 0, 0.2);
+}
+
 /* Neon border */
 .neon-border {
   border-color: rgba(0, 255, 65, 0.3);
@@ -100,6 +106,10 @@ body {
 
 .glow-purple {
   box-shadow: 0 0 30px rgba(180, 77, 255, 0.15), 0 0 60px rgba(180, 77, 255, 0.05);
+}
+
+.glow-orange {
+  box-shadow: 0 0 30px rgba(255, 140, 0, 0.15), 0 0 60px rgba(255, 140, 0, 0.05);
 }
 
 /* Scanline overlay */

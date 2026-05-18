@@ -22,8 +22,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEEPSEEK.KEY: ${{ secrets.DEEPSEEK_KEY }}
-          config.model: "deepseek/deepseek-chat"
-          config.fallback_models: '["deepseek/deepseek-chat"]'
+          config.model: "deepseek/deepseek-v4-pro"
+          config.fallback_models: '["deepseek/deepseek-v4-pro"]'
           config.custom_model_max_tokens: "131072"
           github_action_config.auto_review: "true"
           github_action_config.auto_describe: "true"

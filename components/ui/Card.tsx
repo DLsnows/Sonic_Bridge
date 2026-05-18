@@ -1,7 +1,7 @@
 import { HTMLAttributes, forwardRef } from "react";
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  glow?: "green" | "cyan" | "purple" | "none";
+  glow?: "green" | "cyan" | "purple" | "orange" | "none";
   hover?: boolean;
 }
 
@@ -9,6 +9,7 @@ const glowClasses: Record<string, string> = {
   green: "hover:shadow-[0_0_30px_rgba(0,255,65,0.15)] hover:border-[#00FF41]/30",
   cyan: "hover:shadow-[0_0_30px_rgba(0,240,255,0.15)] hover:border-[#00F0FF]/30",
   purple: "hover:shadow-[0_0_30px_rgba(180,77,255,0.15)] hover:border-[#B44DFF]/30",
+  orange: "hover:shadow-[0_0_30px_rgba(255,140,0,0.15)] hover:border-[#FF8C00]/30",
   none: "",
 };
 

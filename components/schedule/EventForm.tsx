@@ -194,7 +194,7 @@ export function EventForm({ open, onClose, projectId, event, selectedDate, onSav
             className="w-full px-3 py-2 bg-[#0F0F13] border rounded-lg text-sm text-[#F0F0F0]
               placeholder:text-[#A0A0B0]/50 font-['Fira_Code',monospace]
               transition-all duration-200 resize-none
-              focus:outline-none focus:border-[#00FF41]/50 focus:shadow-[0_0_15px_rgba(0,255,65,0.1)]
+              focus:outline-none focus:border-[#B44DFF]/50 focus:shadow-[0_0_15px_rgba(180,77,255,0.1)]
               border-white/10 hover:border-white/20"
           />
         </div>
