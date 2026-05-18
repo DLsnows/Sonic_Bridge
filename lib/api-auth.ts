@@ -4,6 +4,13 @@ import { users, projectMembers } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { createHash } from "crypto";
 
+function validateRole(role: unknown): "admin" | "member" {
+  if (role !== "admin" && role !== "member") {
+    throw new Error(`Invalid membership role: ${role}`);
+  }
+  return role;
+}
+
 export interface AuthResult {
   userId: string;
   username: string;
@@ -51,7 +58,7 @@ export async function authenticate(
     return {
       userId: user.id,
       username: user.username,
-      membership: membership as { role: "admin" | "member" },
+      membership: { role: validateRole(membership.role) },
     };
   }
 
@@ -80,6 +87,6 @@ export async function authenticate(
   return {
     userId,
     username: (session.user as any).username ?? (session.user as any).name ?? "User",
-    membership: membership as { role: "admin" | "member" },
+    membership: { role: validateRole(membership.role) },
   };
 }

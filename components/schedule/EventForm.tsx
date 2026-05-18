@@ -113,13 +113,11 @@ export function EventForm({ open, onClose, projectId, event, selectedDate, onSav
 
       const bodyObj: Record<string, unknown> = {
         title: parsed.data.title,
+        description: parsed.data.description || null,
         startTime: resolvedStart.toISOString(),
         endTime: resolvedEnd.toISOString(),
         type: parsed.data.type,
       };
-      if (!isEdit || parsed.data.description !== (event?.description ?? null)) {
-        bodyObj.description = parsed.data.description || null;
-      }
       const body = JSON.stringify(bodyObj);
 
       const res = await fetch(url, {

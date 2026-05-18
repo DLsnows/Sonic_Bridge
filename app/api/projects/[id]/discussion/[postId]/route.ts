@@ -2,24 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { discussionPosts, projectMembers, users } from "@/lib/db/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
 const editPostSchema = z.object({
   content: z.string().min(1).max(10000),
 });
-
-function collectDescendantIds(
-  postId: string,
-  parentMap: Map<string, string[]>,
-): string[] {
-  const children = parentMap.get(postId) ?? [];
-  const descendants = [...children];
-  for (const childId of children) {
-    descendants.push(...collectDescendantIds(childId, parentMap));
-  }
-  return descendants;
-}
 
 export async function PATCH(
   request: NextRequest,
@@ -159,22 +147,18 @@ export async function DELETE(
     );
   }
 
-  const allPosts = await db
-    .select({ id: discussionPosts.id, parentId: discussionPosts.parentId })
-    .from(discussionPosts)
-    .where(eq(discussionPosts.projectId, projectId));
+  // Use recursive CTE to find all descendants at the database level
+  const result = await db.execute<{ id: string }>(
+    sql`WITH RECURSIVE descendants AS (
+      SELECT id FROM discussion_posts WHERE id = ${postId}
+      UNION ALL
+      SELECT dp.id FROM discussion_posts dp
+      INNER JOIN descendants d ON dp.parent_id = d.id
+    )
+    SELECT id FROM descendants`
+  );
 
-  const parentMap = new Map<string, string[]>();
-  for (const p of allPosts) {
-    if (p.parentId) {
-      const children = parentMap.get(p.parentId) ?? [];
-      children.push(p.id);
-      parentMap.set(p.parentId, children);
-    }
-  }
-
-  const descendantIds = collectDescendantIds(postId, parentMap);
-  const idsToDelete = [postId, ...descendantIds];
+  const idsToDelete = result.rows.map((r) => r.id);
 
   if (idsToDelete.length > 1) {
     await db

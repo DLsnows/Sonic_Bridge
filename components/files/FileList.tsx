@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import type { FileItem } from "./types";
 import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
 
 interface FileListProps {
   files: FileItem[];
@@ -35,6 +37,8 @@ const iconColors: Record<string, string> = {
 };
 
 export function FileList({ files, loading, onDelete, onDownload }: FileListProps) {
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+
   if (loading) {
     return (
       <div className="space-y-2">
@@ -88,7 +92,7 @@ export function FileList({ files, loading, onDelete, onDownload }: FileListProps
                 <td className="py-2.5 px-3">
                   <div className="flex items-center justify-end gap-1">
                     <Button variant="ghost" size="sm" onClick={() => onDownload(file.id, file.name)}>DL</Button>
-                    <Button variant="danger" size="sm" onClick={() => { if (confirm(`Delete "${file.name}"?`)) onDelete(file.id); }}>DEL</Button>
+                    <Button variant="danger" size="sm" onClick={() => setDeleteTarget({ id: file.id, name: file.name })}>DEL</Button>
                   </div>
                 </td>
               </tr>
@@ -96,6 +100,34 @@ export function FileList({ files, loading, onDelete, onDownload }: FileListProps
           })}
         </tbody>
       </table>
+
+      <Modal
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        title="Delete File"
+        footer={
+          <>
+            <Button variant="ghost" size="sm" onClick={() => setDeleteTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => {
+                if (deleteTarget) onDelete(deleteTarget.id);
+                setDeleteTarget(null);
+              }}
+            >
+              Delete
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-[#D0D0D0]">
+          Delete <span className="text-[#FF4444] font-medium">"{deleteTarget?.name}"</span>?
+          This action cannot be undone.
+        </p>
+      </Modal>
     </div>
   );
 }

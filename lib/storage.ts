@@ -29,8 +29,10 @@ export async function deleteFile(storageKey: string): Promise<void> {
   try {
     const blob = await head(storageKey);
     await del(blob.url);
-  } catch {
-    // Blob doesn't exist — nothing to delete
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.toLowerCase().includes("not found")) return;
+    throw err;
   }
 }
 

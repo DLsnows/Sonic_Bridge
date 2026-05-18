@@ -31,7 +31,7 @@ export async function DELETE(
   const descendantIds = new Set<string>();
   function collectDescendants(parentId: string) {
     for (const f of allFolders) {
-      if (f.parentId === parentId) {
+      if (f.parentId === parentId && !descendantIds.has(f.id)) {
         descendantIds.add(f.id);
         collectDescendants(f.id);
       }

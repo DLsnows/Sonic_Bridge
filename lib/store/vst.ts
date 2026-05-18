@@ -72,7 +72,13 @@ export const useVstStore = create<VstState>((set) => ({
       meterRight: levels.right,
       meterPeak: levels.peak,
     }),
-  setAudioSettings: (settings) => set({ ...settings }),
+  setAudioSettings: (settings) =>
+    set({
+      sampleRate: settings.sampleRate,
+      bufferSize: settings.bufferSize,
+      channels: settings.channels,
+      opusBitrate: settings.opusBitrate,
+    }),
   setAudioTrackPublished: (published) => set({ audioTrackPublished: published }),
   setBroadcastEnabled: (enabled) => set({ broadcastEnabled: enabled }),
   setError: (error) => set({ lastError: error }),

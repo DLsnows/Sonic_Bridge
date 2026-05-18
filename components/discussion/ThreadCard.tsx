@@ -116,14 +116,20 @@ export function ThreadCard({
 }: ThreadCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const isOwner = post.userId === currentUserId;
   const canModify = isOwner || isAdmin;
 
   const handleDelete = async () => {
     if (!confirm("Delete this post and all replies?")) return;
     setDeleting(true);
+    setDeleteError(null);
     try {
       await onDelete(post.id);
+    } catch (err) {
+      setDeleteError(
+        err instanceof Error ? err.message : "Delete failed",
+      );
     } finally {
       setDeleting(false);
     }
@@ -224,6 +230,12 @@ export function ThreadCard({
               </Button>
             )}
           </div>
+
+          {deleteError && (
+            <div className="p-2 rounded bg-[#FF4444]/10 border border-[#FF4444]/30 text-xs text-[#FF4444] mt-2">
+              {deleteError}
+            </div>
+          )}
 
           {editingId === post.id && (
             <div className="mt-3">
