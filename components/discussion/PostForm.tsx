@@ -80,7 +80,7 @@ export function PostForm({
           className="w-full px-3 py-2 bg-[#0F0F13] border border-white/10 rounded-lg text-sm text-[#F0F0F0]
             placeholder:text-[#A0A0B0]/50 font-['Fira_Code',monospace]
             transition-all duration-200 resize-y min-h-[80px]
-            focus:outline-none focus:border-[#00FF41]/50 focus:shadow-[0_0_15px_rgba(0,255,65,0.1)]
+            focus:outline-none focus:border-[#FF8C00]/50 focus:shadow-[0_0_15px_rgba(0,255,65,0.1)]
             hover:border-white/20"
         />
         <p className="text-xs text-[#A0A0B0]/60">

@@ -24,11 +24,13 @@ interface ThreadCardProps {
   replies: DiscussionPost[];
   currentUserId: string;
   isAdmin: boolean;
+  projectId: string;
   replyingTo: string | null;
   editingId: string | null;
   onReply: (parentId: string, content: string) => Promise<void>;
   onEdit: (postId: string, content: string) => Promise<void>;
   onDelete: (postId: string) => Promise<void>;
+  onAiFormat: (postId: string) => Promise<void>;
   onSetReplying: (id: string | null) => void;
   onSetEditing: (id: string | null) => void;
 }
@@ -60,7 +62,7 @@ const markdownComponents = {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-[#00FF41] hover:underline"
+      className="text-[#FF8C00] hover:underline"
     >
       {children}
     </a>
@@ -68,7 +70,7 @@ const markdownComponents = {
   code: ({ children, className }: any) => {
     if (className) {
       return (
-        <pre className="bg-[#09090B] border border-[#00FF41]/10 rounded p-3 overflow-x-auto text-xs text-[#00F0FF] my-2">
+        <pre className="bg-[#09090B] border border-[#FF8C00]/10 rounded p-3 overflow-x-auto text-xs text-[#00F0FF] my-2">
           <code>{children}</code>
         </pre>
       );
@@ -80,7 +82,7 @@ const markdownComponents = {
     );
   },
   blockquote: ({ children }: any) => (
-    <blockquote className="border-l-2 border-[#00FF41]/20 pl-3 italic text-[#A0A0B0] my-2">
+    <blockquote className="border-l-2 border-[#FF8C00]/20 pl-3 italic text-[#A0A0B0] my-2">
       {children}
     </blockquote>
   ),
@@ -106,11 +108,13 @@ export function ThreadCard({
   replies,
   currentUserId,
   isAdmin,
+  projectId,
   replyingTo,
   editingId,
   onReply,
   onEdit,
   onDelete,
+  onAiFormat,
   onSetReplying,
   onSetEditing,
 }: ThreadCardProps) {
@@ -118,6 +122,7 @@ export function ThreadCard({
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deletingReplyId, setDeletingReplyId] = useState<string | null>(null);
+  const [aiFormatting, setAiFormatting] = useState(false);
   const isOwner = post.userId === currentUserId;
   const canModify = isOwner || isAdmin;
 
@@ -147,7 +152,7 @@ export function ThreadCard({
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <span className="w-6 h-6 rounded-full bg-[#00FF41]/20 border border-[#00FF41]/30 flex items-center justify-center text-[10px] text-[#00FF41] font-['Share_Tech_Mono',monospace] shrink-0">
+              <span className="w-6 h-6 rounded-full bg-[#FF8C00]/20 border border-[#FF8C00]/30 flex items-center justify-center text-[10px] text-[#FF8C00] font-['Share_Tech_Mono',monospace] shrink-0">
                 {post.username.charAt(0).toUpperCase()}
               </span>
               <span className="text-sm text-[#F0F0F0] font-medium truncate">
@@ -157,7 +162,7 @@ export function ThreadCard({
                 {timeAgo(post.createdAt)}
               </span>
             </div>
-            <h3 className="text-base text-[#00FF41] font-['Share_Tech_Mono',monospace] mb-1">
+            <h3 className="text-base text-[#FF8C00] font-['Share_Tech_Mono',monospace] mb-1">
               {post.title || (
                 <span className="text-[#A0A0B0] italic">(reply to thread)</span>
               )}
@@ -176,7 +181,7 @@ export function ThreadCard({
                 : "No replies"}
             </span>
             <span
-              className="text-[#00FF41]/50 text-sm transition-transform duration-200"
+              className="text-[#FF8C00]/50 text-sm transition-transform duration-200"
               style={{
                 transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
               }}
@@ -188,7 +193,7 @@ export function ThreadCard({
       </div>
 
       {expanded && (
-        <div className="px-4 pb-4 border-t border-[#00FF41]/5 animate-fade-in">
+        <div className="px-4 pb-4 border-t border-[#FF8C00]/5 animate-fade-in">
           <div className="pt-4">
             <PostBody post={post} />
           </div>
@@ -230,6 +235,25 @@ export function ThreadCard({
                 Delete
               </Button>
             )}
+            {post.content.length > 20 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                loading={aiFormatting}
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  setAiFormatting(true);
+                  try {
+                    await onAiFormat(post.id);
+                  } finally {
+                    setAiFormatting(false);
+                  }
+                }}
+                className="text-[#FF8C00]/70 hover:text-[#FF8C00]"
+              >
+                AI Format
+              </Button>
+            )}
           </div>
 
           {deleteError && (
@@ -266,11 +290,11 @@ export function ThreadCard({
           )}
 
           {replies.length > 0 && (
-            <div className="mt-4 ml-8 pl-4 border-l-2 border-[#00FF41]/10 space-y-3">
+            <div className="mt-4 ml-8 pl-4 border-l-2 border-[#FF8C00]/10 space-y-3">
               {replies.map((reply) => (
                 <div key={reply.id} className="animate-fade-in">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="w-5 h-5 rounded-full bg-[#00FF41]/10 border border-[#00FF41]/20 flex items-center justify-center text-[9px] text-[#00FF41] font-['Share_Tech_Mono',monospace] shrink-0">
+                    <span className="w-5 h-5 rounded-full bg-[#FF8C00]/10 border border-[#FF8C00]/20 flex items-center justify-center text-[9px] text-[#FF8C00] font-['Share_Tech_Mono',monospace] shrink-0">
                       {reply.username.charAt(0).toUpperCase()}
                     </span>
                     <span className="text-xs text-[#F0F0F0] font-medium">

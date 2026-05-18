@@ -15,14 +15,14 @@ const navCards = [
     label: "Creative Space",
     desc: "Real-time audio, screen sharing, voice & video",
     icon: "◈",
-    glow: "green" as const,
+    glow: "cyan" as const,
   },
   {
     href: "files",
     label: "Project Files",
     desc: "Upload, download & manage project assets",
     icon: "◫",
-    glow: "cyan" as const,
+    glow: "green" as const,
   },
   {
     href: "schedule",
@@ -36,7 +36,7 @@ const navCards = [
     label: "Discussion",
     desc: "Ideas, feedback & team conversations",
     icon: "☰",
-    glow: "green" as const,
+    glow: "orange" as const,
   },
 ];
 
