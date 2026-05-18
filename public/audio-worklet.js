@@ -19,7 +19,7 @@ class VstAudioProcessor extends AudioWorkletProcessor {
 
     this.port.onmessage = (event) => {
       const msg = event.data;
-      if (msg.type === "pcm") {
+      if (msg.type === "pcm" && msg.buffers) {
         this.writePcm(msg);
       }
     };
@@ -61,13 +61,14 @@ class VstAudioProcessor extends AudioWorkletProcessor {
     const framesToWrite = Math.min(frames, RING_CAPACITY - this.available);
     if (framesToWrite <= 0) return; // buffer full, drop frame
 
-    for (let i = 0; i < framesToWrite; i++) {
-      for (let ch = 0; ch < Math.min(channels, this.ringBuffer.length); ch++) {
-        this.ringBuffer[ch][this.writePos] =
-          buffers[ch] != null ? buffers[ch][i] : 0;
+    for (let ch = 0; ch < Math.min(channels, this.ringBuffer.length); ch++) {
+      const rb = this.ringBuffer[ch];
+      const buf = buffers[ch];
+      for (let i = 0; i < framesToWrite; i++) {
+        rb[(this.writePos + i) % RING_CAPACITY] = buf != null ? buf[i] : 0;
       }
-      this.writePos = (this.writePos + 1) % RING_CAPACITY;
     }
+    this.writePos = (this.writePos + framesToWrite) % RING_CAPACITY;
 
     this.available += framesToWrite;
   }

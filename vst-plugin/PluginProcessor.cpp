@@ -96,29 +96,24 @@ void SonicBridgeAudioProcessor::processBlock(
       workBuffer[i * 2 + 1] = rightChannel[i];
     }
 
-    // Encode to Opus (20ms = 960 samples at 48kHz)
-    // Handle block sizes that aren't exactly 20ms
-    static juce::AudioBuffer<float> accumulationBuffer(2, 960);
-    static int accumulatedSamples = 0;
-
+    // Opus frame accumulation (per-instance member variables, not static)
     int remaining = numSamples;
     int offset = 0;
 
     while (remaining > 0) {
-      int toCopy = juce::jmin(remaining, 960 - accumulatedSamples);
+      int toCopy = juce::jmin(remaining, 960 - mAccumulatedSamples);
 
-      accumulationBuffer.copyFrom(0, accumulatedSamples,
+      mAccumulationBuffer.copyFrom(0, mAccumulatedSamples,
                                    buffer, 0, offset, toCopy);
-      accumulationBuffer.copyFrom(1, accumulatedSamples,
+      mAccumulationBuffer.copyFrom(1, mAccumulatedSamples,
                                    buffer, 1, offset, toCopy);
-      accumulatedSamples += toCopy;
+      mAccumulatedSamples += toCopy;
       offset += toCopy;
       remaining -= toCopy;
 
-      if (accumulatedSamples >= 960) {
-        // Encode a full Opus frame
+      if (mAccumulatedSamples >= 960) {
         auto encoded = mEncoder.encode(
-          accumulationBuffer.getReadPointer(0), // interleaved
+          mAccumulationBuffer.getReadPointer(0), // interleaved
           960
         );
 
@@ -135,7 +130,7 @@ void SonicBridgeAudioProcessor::processBlock(
           );
         }
 
-        accumulatedSamples = 0;
+        mAccumulatedSamples = 0;
       }
     }
 

@@ -59,6 +59,10 @@ private:
   // Work buffer for interleaved stereo
   juce::AudioBuffer<float> mWorkBuffer;
 
+  // Opus frame accumulation (per-instance, not static)
+  juce::AudioBuffer<float> mAccumulationBuffer{2, 960};
+  int mAccumulatedSamples = 0;
+
   // Meter broadcast throttle
   int mMeterFrameCounter = 0;
   static constexpr int kMeterIntervalFrames = 4; // ~20 Hz at 256-sample blocks
