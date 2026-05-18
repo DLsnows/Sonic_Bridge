@@ -41,11 +41,13 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [playingFileId, setPlayingFileId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playingFileIdRef = useRef<string | null>(null);
 
   const handlePlayAudio = useCallback(
     (fileId: string, fileName: string) => {
-      if (playingFileId === fileId) {
+      if (playingFileIdRef.current === fileId) {
         audioRef.current?.pause();
+        playingFileIdRef.current = null;
         setPlayingFileId(null);
         return;
       }
@@ -54,12 +56,20 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
       }
       const audio = new Audio(`/api/projects/${projectId}/files/${fileId}`);
       audio.play().catch(() => { /* playback blocked or failed */ });
-      audio.addEventListener("ended", () => setPlayingFileId(null));
-      audio.addEventListener("pause", () => { if (playingFileId === fileId) setPlayingFileId(null); });
+      const onEnded = () => { playingFileIdRef.current = null; setPlayingFileId(null); };
+      const onPause = () => {
+        if (playingFileIdRef.current === fileId) {
+          playingFileIdRef.current = null;
+          setPlayingFileId(null);
+        }
+      };
+      audio.addEventListener("ended", onEnded);
+      audio.addEventListener("pause", onPause);
       audioRef.current = audio;
+      playingFileIdRef.current = fileId;
       setPlayingFileId(fileId);
     },
-    [projectId, playingFileId],
+    [projectId],
   );
 
   if (loading) {
