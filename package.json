@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "mock-vst": "tsx scripts/mock-vst-server.ts"
   },
   "dependencies": {
     "@livekit/components-react": "^2.9.21",

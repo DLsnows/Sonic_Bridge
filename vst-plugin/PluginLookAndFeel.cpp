@@ -3,24 +3,26 @@
 namespace SonicBridge {
 
 PluginLookAndFeel::PluginLookAndFeel() {
-  // Use monospace font for cyberpunk aesthetic
-  setDefaultSansSerifTypeface(
-    juce::Typeface::createSystemTypefaceFor(
-      juce::Font("Fira Code", juce::Font::plain).toString().toRawUTF8(),
-      juce::Font::getDefaultSansSerifFontName().toRawUTF8()
-    )
-  );
-}
-
-void PluginLookAndFeel::setColourScheme(
-    LookAndFeel_V4::ColourScheme& scheme) {
-  scheme.widgetColour = bgPanel;
-  scheme.sliderFillColour = greenNeon;
-  scheme.sliderTrackColour = greenNeon.withAlpha(0.3f);
-  scheme.outlineColour = greenNeon.withAlpha(0.2f);
-  scheme.windowBackground = bgDeep;
-  scheme.defaultText = textPrimary;
-  scheme.secondaryText = textSecondary;
+  // Set cyberpunk dark colour scheme
+  setColour(juce::ResizableWindow::backgroundColourId, bgDeep);
+  setColour(juce::TextEditor::backgroundColourId, bgPanel);
+  setColour(juce::TextEditor::textColourId, textPrimary);
+  setColour(juce::TextEditor::outlineColourId, greenNeon.withAlpha(0.2f));
+  setColour(juce::Slider::thumbColourId, greenNeon);
+  setColour(juce::Slider::trackColourId, greenNeon.withAlpha(0.3f));
+  setColour(juce::Slider::rotarySliderFillColourId, greenNeon);
+  setColour(juce::Slider::backgroundColourId, bgPanel);
+  setColour(juce::TextButton::buttonColourId, greenNeon.withAlpha(0.1f));
+  setColour(juce::TextButton::buttonOnColourId, greenNeon.withAlpha(0.2f));
+  setColour(juce::TextButton::textColourOffId, textPrimary);
+  setColour(juce::TextButton::textColourOnId, greenNeon);
+  setColour(juce::Label::textColourId, textSecondary);
+  setColour(juce::ComboBox::backgroundColourId, bgPanel);
+  setColour(juce::ComboBox::textColourId, textPrimary);
+  setColour(juce::ComboBox::outlineColourId, greenNeon.withAlpha(0.2f));
+  setColour(juce::PopupMenu::backgroundColourId, bgPanel);
+  setColour(juce::PopupMenu::textColourId, textPrimary);
+  setColour(juce::PopupMenu::highlightedBackgroundColourId, greenNeon.withAlpha(0.15f));
 }
 
 void PluginLookAndFeel::drawRotarySlider(
@@ -90,7 +92,7 @@ void PluginLookAndFeel::drawButtonText(
 }
 
 juce::Font PluginLookAndFeel::getLabelFont(juce::Label& /*label*/) {
-  return juce::Font(12.0f, juce::Font::plain);
+  return juce::Font(juce::FontOptions().withHeight(12.0f));
 }
 
 } // namespace SonicBridge

@@ -15,9 +15,10 @@ bool VstBridgeServer::start(int port) {
   mServer = std::make_unique<ix::WebSocketServer>(port, "127.0.0.1");
 
   mServer->setOnClientMessageCallback(
-    [this](std::shared_ptr<ix::WebSocket> client,
+    [this](std::shared_ptr<ix::ConnectionState> connectionState,
+           ix::WebSocket& client,
            const ix::WebSocketMessagePtr& msg) {
-      onClientMessage(client, msg);
+      onClientMessage(connectionState, client, msg);
     }
   );
 
@@ -41,31 +42,25 @@ void VstBridgeServer::stop() {
     mServer->stop();
     mServer.reset();
   }
-
-  std::lock_guard<std::mutex> lock(mClientsMutex);
-  mClients.clear();
 }
 
 int VstBridgeServer::getClientCount() const {
+  if (!mServer) return 0;
   std::lock_guard<std::mutex> lock(mClientsMutex);
-  return static_cast<int>(mClients.size());
+  return static_cast<int>(mServer->getClients().size());
 }
 
 void VstBridgeServer::onClientMessage(
-    std::shared_ptr<ix::WebSocket> client,
+    std::shared_ptr<ix::ConnectionState> /*connectionState*/,
+    ix::WebSocket& /*client*/,
     const ix::WebSocketMessagePtr& msg) {
 
   using namespace Protocol;
 
-  if (msg->type == ix::WebSocketMessageType::Open) {
-    std::lock_guard<std::mutex> lock(mClientsMutex);
-    mClients.insert(client);
-    return;
-  }
-
-  if (msg->type == ix::WebSocketMessageType::Close) {
-    std::lock_guard<std::mutex> lock(mClientsMutex);
-    mClients.erase(client);
+  // Connection lifecycle events need no handling here —
+  // client counting and broadcast use mServer->getClients() directly
+  if (msg->type == ix::WebSocketMessageType::Open ||
+      msg->type == ix::WebSocketMessageType::Close) {
     return;
   }
 
@@ -106,8 +101,20 @@ void VstBridgeServer::onClientMessage(
 // -- Broadcast helpers --
 
 void VstBridgeServer::broadcast(const juce::String& message) {
-  std::lock_guard<std::mutex> lock(mClientsMutex);
-  for (auto& client : mClients) {
+  if (!mServer) return;
+
+  // Snapshot clients under lock to minimize contention on the audio thread.
+  // shared_ptr keeps each WebSocket alive; send() is thread-safe and a
+  // no-op on closed sockets, so iterating outside the lock is safe.
+  std::vector<std::shared_ptr<ix::WebSocket>> snapshot;
+  {
+    std::lock_guard<std::mutex> lock(mClientsMutex);
+    for (const auto& client : mServer->getClients()) {
+      snapshot.push_back(client);
+    }
+  }
+
+  for (auto& client : snapshot) {
     client->send(message.toStdString());
   }
 }

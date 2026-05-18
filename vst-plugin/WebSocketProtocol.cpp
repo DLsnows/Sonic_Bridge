@@ -21,11 +21,11 @@ MessageType parseType(const juce::String& type) {
 // -- Handshake --
 
 juce::var Handshake::toJson() const {
-  juce::DynamicObject obj;
-  obj.setProperty("type", "handshake");
-  obj.setProperty("projectId", projectId);
-  obj.setProperty("userId", userId);
-  obj.setProperty("username", username);
+  auto* obj = new juce::DynamicObject();
+  obj->setProperty("type", "handshake");
+  obj->setProperty("projectId", projectId);
+  obj->setProperty("userId", userId);
+  obj->setProperty("username", username);
   return juce::var(obj);
 }
 
@@ -40,48 +40,48 @@ Handshake Handshake::fromJson(const juce::var& json) {
 // -- Status --
 
 juce::var StatusMessage::toJson() const {
-  juce::DynamicObject obj;
-  obj.setProperty("type", "status");
-  obj.setProperty("connected", connected);
-  obj.setProperty("pluginName", pluginName);
-  obj.setProperty("version", version);
+  auto* obj = new juce::DynamicObject();
+  obj->setProperty("type", "status");
+  obj->setProperty("connected", connected);
+  obj->setProperty("pluginName", pluginName);
+  obj->setProperty("version", version);
   return juce::var(obj);
 }
 
 // -- Audio --
 
 juce::var AudioMessage::toJson() const {
-  juce::DynamicObject obj;
-  obj.setProperty("type", "audio");
-  obj.setProperty("seq", static_cast<int>(seq));
-  obj.setProperty("timestamp", static_cast<int64_t>(timestamp));
-  obj.setProperty("sampleRate", sampleRate);
-  obj.setProperty("channels", channels);
-  obj.setProperty("frameSize", frameSize);
-  obj.setProperty("data", juce::Base64::toBase64(opusData.data(), opusData.size()));
+  auto* obj = new juce::DynamicObject();
+  obj->setProperty("type", "audio");
+  obj->setProperty("seq", static_cast<int>(seq));
+  obj->setProperty("timestamp", static_cast<int64_t>(timestamp));
+  obj->setProperty("sampleRate", sampleRate);
+  obj->setProperty("channels", channels);
+  obj->setProperty("frameSize", frameSize);
+  obj->setProperty("data", juce::Base64::toBase64(opusData.data(), opusData.size()));
   return juce::var(obj);
 }
 
 // -- Meter --
 
 juce::var MeterMessage::toJson() const {
-  juce::DynamicObject obj;
-  obj.setProperty("type", "meter");
-  obj.setProperty("left", left);
-  obj.setProperty("right", right);
-  obj.setProperty("peak", peak);
+  auto* obj = new juce::DynamicObject();
+  obj->setProperty("type", "meter");
+  obj->setProperty("left", left);
+  obj->setProperty("right", right);
+  obj->setProperty("peak", peak);
   return juce::var(obj);
 }
 
 // -- Settings --
 
 juce::var SettingsMessage::toJson() const {
-  juce::DynamicObject obj;
-  obj.setProperty("type", "settings");
-  obj.setProperty("sampleRate", sampleRate);
-  obj.setProperty("bufferSize", bufferSize);
-  obj.setProperty("channels", channels);
-  obj.setProperty("opusBitrate", opusBitrate);
+  auto* obj = new juce::DynamicObject();
+  obj->setProperty("type", "settings");
+  obj->setProperty("sampleRate", sampleRate);
+  obj->setProperty("bufferSize", bufferSize);
+  obj->setProperty("channels", channels);
+  obj->setProperty("opusBitrate", opusBitrate);
   return juce::var(obj);
 }
 
@@ -97,10 +97,10 @@ SettingsMessage SettingsMessage::fromJson(const juce::var& json) {
 // -- Error --
 
 juce::var ErrorMessage::toJson() const {
-  juce::DynamicObject obj;
-  obj.setProperty("type", "error");
-  obj.setProperty("code", code);
-  obj.setProperty("message", message);
+  auto* obj = new juce::DynamicObject();
+  obj->setProperty("type", "error");
+  obj->setProperty("code", code);
+  obj->setProperty("message", message);
   return juce::var(obj);
 }
 
