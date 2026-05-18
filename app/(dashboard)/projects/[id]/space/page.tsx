@@ -32,6 +32,7 @@ export default async function SpacePage({
       <TopBar
         title="Creative Space"
         subtitle="Real-time audio · screen sharing · voice & video"
+        showBack
       />
       <CreativeSpaceRoom
         projectId={id}

@@ -43,12 +43,14 @@ export function Sidebar({ username }: { username?: string }) {
 
       {/* User section */}
       <div className="p-4 border-t border-[#00FF41]/10 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-[#00FF41]/20 flex items-center justify-center text-xs text-[#00FF41] font-['Share_Tech_Mono',monospace]">
-          {(username ?? "U")[0].toUpperCase()}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm text-[#F0F0F0] truncate">{username ?? "User"}</p>
-        </div>
+        <Link href="/settings" className="flex items-center gap-3 flex-1 min-w-0 hover:bg-white/5 rounded-lg p-1 -m-1 transition-colors">
+          <div className="w-8 h-8 rounded-full bg-[#00FF41]/20 flex items-center justify-center text-xs text-[#00FF41] font-['Share_Tech_Mono',monospace] shrink-0">
+            {(username ?? "U")[0].toUpperCase()}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-[#F0F0F0] truncate">{username ?? "User"}</p>
+          </div>
+        </Link>
         <Button
           variant="ghost"
           size="sm"

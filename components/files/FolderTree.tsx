@@ -13,9 +13,11 @@ interface FolderTreeProps {
   folders: Folder[];
   currentFolderId: string | null;
   onSelect: (folderId: string | null) => void;
+  onRename: (folderId: string, currentName: string) => void;
+  onDelete: (folderId: string, folderName: string) => void;
 }
 
-export function FolderTree({ folders, currentFolderId, onSelect }: FolderTreeProps) {
+export function FolderTree({ folders, currentFolderId, onSelect, onRename, onDelete }: FolderTreeProps) {
   function buildTree(parentId: string | null): TreeNode[] {
     const children = folders.filter((f) => f.parentId === parentId);
     return children.map((f) => ({
@@ -48,7 +50,7 @@ export function FolderTree({ folders, currentFolderId, onSelect }: FolderTreePro
     return (
       <div>
         <button
-          className={`w-full text-left px-2 py-1.5 rounded text-xs font-mono flex items-center gap-1.5 transition-colors
+          className={`group w-full text-left px-2 py-1.5 rounded text-xs font-mono flex items-center gap-1.5 transition-colors
             ${isCurrent ? "bg-[#00F0FF]/10 text-[#00F0FF]" : "text-[#A0A0B0] hover:text-[#F0F0F0] hover:bg-white/5"}`}
           style={{ paddingLeft: `${8 + depth * 12}px` }}
           onClick={() => {
@@ -62,7 +64,21 @@ export function FolderTree({ folders, currentFolderId, onSelect }: FolderTreePro
             </span>
           )}
           {!hasChildren && <span className="w-3" />}
-          <span>{node.name}</span>
+          <span className="truncate">{node.name}</span>
+          {node.id !== null && (
+            <span className="ml-auto flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+              <button
+                onClick={(e) => { e.stopPropagation(); onRename(node.id!, node.name); }}
+                className="text-[10px] text-[#A0A0B0] hover:text-[#00F0FF] px-1"
+                title="Rename"
+              >✎</button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(node.id!, node.name); }}
+                className="text-[10px] text-[#A0A0B0] hover:text-[#FF4444] px-1"
+                title="Delete"
+              >✕</button>
+            </span>
+          )}
         </button>
         {expanded && hasChildren &&
           node.children.map((child) => (

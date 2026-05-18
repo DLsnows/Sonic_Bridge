@@ -102,6 +102,7 @@ export function ScheduleView({ projectId, userId, userRole }: ScheduleViewProps)
       <TopBar
         title="Schedule"
         subtitle="Project timeline"
+        showBack
         actions={
           <Button size="sm" onClick={handleCreate}>
             + Add Event

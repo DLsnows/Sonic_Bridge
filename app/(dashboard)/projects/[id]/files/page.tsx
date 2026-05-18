@@ -36,7 +36,7 @@ export default async function FilesPage({
 
   return (
     <div className="flex flex-col h-full">
-      <TopBar title="Project Files" subtitle="Upload, download & manage project assets" />
+      <TopBar title="Project Files" subtitle="Upload, download & manage project assets" showBack />
       <FileBrowser projectId={id} userId={userId} initialFolders={folderList} />
     </div>
   );

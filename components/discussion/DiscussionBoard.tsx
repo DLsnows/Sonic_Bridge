@@ -176,6 +176,7 @@ export function DiscussionBoard({
       <TopBar
         title="Discussion"
         subtitle={projectName}
+        showBack
         actions={
           <Button
             variant="primary"
