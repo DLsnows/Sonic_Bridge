@@ -39,7 +39,7 @@ export default async function SettingsPage({
 
   return (
     <div>
-      <TopBar title="Project Settings" />
+      <TopBar title="Project Settings" showBack />
       <div className="p-6 max-w-2xl space-y-6">
         <GlassPanel>
           <h3 className="font-['Share_Tech_Mono',monospace] text-sm text-[#00FF41] mb-4">

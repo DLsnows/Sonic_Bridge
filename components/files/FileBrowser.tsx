@@ -52,10 +52,32 @@ export function FileBrowser({ projectId, userId, initialFolders }: FileBrowserPr
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   };
 
+  const handleRenameFolder = (folderId: string, currentName: string) => {
+    const newName = prompt("New folder name:", currentName);
+    if (!newName || newName === currentName) return;
+    fetch(`/api/projects/${projectId}/folders/${folderId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newName }),
+    }).then((res) => { if (res.ok) refreshFolders(); });
+  };
+
+  const handleDeleteFolder = (folderId: string, folderName: string) => {
+    if (!confirm(`Delete folder "${folderName}" and all its contents?`)) return;
+    fetch(`/api/projects/${projectId}/folders/${folderId}`, { method: "DELETE" })
+      .then((res) => {
+        if (res.ok) {
+          if (currentFolderId === folderId) setCurrentFolderId(null);
+          refreshFolders();
+          fetchFiles(null);
+        }
+      });
+  };
+
   return (
     <div className="flex h-[calc(100vh-4rem)]">
       <aside className="w-56 border-r border-[#00FF41]/10 bg-[#0A0A0F]/50 p-3 flex flex-col">
-        <FolderTree folders={folders} currentFolderId={currentFolderId} onSelect={setCurrentFolderId} />
+        <FolderTree folders={folders} currentFolderId={currentFolderId} onSelect={setCurrentFolderId} onRename={handleRenameFolder} onDelete={handleDeleteFolder} />
         <Button variant="ghost" size="sm" className="mt-2" onClick={() => setShowCreateFolder(true)}>
           + New Folder
         </Button>

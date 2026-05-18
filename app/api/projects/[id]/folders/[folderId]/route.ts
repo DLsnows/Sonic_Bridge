@@ -4,6 +4,49 @@ import { folders, files as filesTable } from "@/lib/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { authenticate } from "@/lib/api-auth";
 import { deleteFile } from "@/lib/storage";
+import { z } from "zod";
+
+const renameSchema = z.object({
+  name: z.string().min(1).max(200),
+});
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string; folderId: string }> },
+) {
+  const { id, folderId } = await params;
+  const authResult = await authenticate(request, id);
+  if (authResult instanceof Response) return authResult;
+
+  const [folder] = await db
+    .select()
+    .from(folders)
+    .where(and(eq(folders.id, folderId), eq(folders.projectId, id)))
+    .limit(1);
+
+  if (!folder) {
+    return NextResponse.json({ error: "Folder not found" }, { status: 404 });
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+  const parsed = renameSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+  }
+
+  const [updated] = await db
+    .update(folders)
+    .set({ name: parsed.data.name })
+    .where(eq(folders.id, folderId))
+    .returning();
+
+  return NextResponse.json({ folder: updated });
+}
 
 export async function DELETE(
   request: NextRequest,
