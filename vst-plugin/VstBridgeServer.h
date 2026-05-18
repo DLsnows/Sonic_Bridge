@@ -2,9 +2,6 @@
 
 #include <juce_core/juce_core.h>
 #include <ixwebsocket/IXWebSocketServer.h>
-#include <set>
-#include <mutex>
-#include <thread>
 #include <functional>
 
 namespace SonicBridge {
@@ -46,13 +43,12 @@ public:
   VstBridgeCallbacks callbacks;
 
 private:
-  void onClientMessage(std::shared_ptr<ix::WebSocket> client,
+  void onClientMessage(std::shared_ptr<ix::ConnectionState> connectionState,
+                       ix::WebSocket& client,
                        const ix::WebSocketMessagePtr& msg);
   void broadcast(const juce::String& message);
 
   std::unique_ptr<ix::WebSocketServer> mServer;
-  std::set<std::shared_ptr<ix::WebSocket>> mClients;
-  std::mutex mClientsMutex;
   std::atomic<bool> mRunning{false};
 };
 

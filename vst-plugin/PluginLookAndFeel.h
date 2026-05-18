@@ -10,9 +10,6 @@ public:
   PluginLookAndFeel();
   ~PluginLookAndFeel() override = default;
 
-  // Override colour scheme
-  void setColourScheme(LookAndFeel_V4::ColourScheme& scheme) override;
-
   // Slider style (rotary with neon glow)
   void drawRotarySlider(juce::Graphics& g, int x, int y, int width,
                         int height, float sliderPos,

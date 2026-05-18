@@ -15,9 +15,10 @@ bool VstBridgeServer::start(int port) {
   mServer = std::make_unique<ix::WebSocketServer>(port, "127.0.0.1");
 
   mServer->setOnClientMessageCallback(
-    [this](std::shared_ptr<ix::WebSocket> client,
+    [this](std::shared_ptr<ix::ConnectionState> connectionState,
+           ix::WebSocket& client,
            const ix::WebSocketMessagePtr& msg) {
-      onClientMessage(client, msg);
+      onClientMessage(connectionState, client, msg);
     }
   );
 
@@ -41,31 +42,22 @@ void VstBridgeServer::stop() {
     mServer->stop();
     mServer.reset();
   }
-
-  std::lock_guard<std::mutex> lock(mClientsMutex);
-  mClients.clear();
 }
 
 int VstBridgeServer::getClientCount() const {
-  std::lock_guard<std::mutex> lock(mClientsMutex);
-  return static_cast<int>(mClients.size());
+  if (!mServer) return 0;
+  return static_cast<int>(mServer->getClients().size());
 }
 
 void VstBridgeServer::onClientMessage(
-    std::shared_ptr<ix::WebSocket> client,
+    std::shared_ptr<ix::ConnectionState> /*connectionState*/,
+    ix::WebSocket& /*client*/,
     const ix::WebSocketMessagePtr& msg) {
 
   using namespace Protocol;
 
-  if (msg->type == ix::WebSocketMessageType::Open) {
-    std::lock_guard<std::mutex> lock(mClientsMutex);
-    mClients.insert(client);
-    return;
-  }
-
-  if (msg->type == ix::WebSocketMessageType::Close) {
-    std::lock_guard<std::mutex> lock(mClientsMutex);
-    mClients.erase(client);
+  if (msg->type == ix::WebSocketMessageType::Open ||
+      msg->type == ix::WebSocketMessageType::Close) {
     return;
   }
 
@@ -106,8 +98,8 @@ void VstBridgeServer::onClientMessage(
 // -- Broadcast helpers --
 
 void VstBridgeServer::broadcast(const juce::String& message) {
-  std::lock_guard<std::mutex> lock(mClientsMutex);
-  for (auto& client : mClients) {
+  if (!mServer) return;
+  for (auto& client : mServer->getClients()) {
     client->send(message.toStdString());
   }
 }

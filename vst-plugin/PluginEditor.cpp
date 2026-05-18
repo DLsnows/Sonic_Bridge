@@ -17,20 +17,20 @@ SonicBridgeAudioProcessorEditor::SonicBridgeAudioProcessorEditor(
 
   // Status label
   mStatusLabel.setText("Disconnected", juce::dontSendNotification);
-  mStatusLabel.setFont(juce::Font(14.0f, juce::Font::bold));
+  mStatusLabel.setFont(juce::Font(juce::FontOptions(14.0f, juce::Font::bold)));
   mStatusLabel.setColour(juce::Label::textColourId,
                          juce::Colour(0xffa0a0b0));
   addAndMakeVisible(mStatusLabel);
 
   mPluginInfoLabel.setText("SonicBridge VST " JucePlugin_VersionString,
                            juce::dontSendNotification);
-  mPluginInfoLabel.setFont(juce::Font(11.0f));
+  mPluginInfoLabel.setFont(juce::Font(juce::FontOptions().withHeight(11.0f)));
   mPluginInfoLabel.setColour(juce::Label::textColourId,
                              juce::Colour(0xffa0a0b0));
   addAndMakeVisible(mPluginInfoLabel);
 
   mClientCountLabel.setText("Clients: 0", juce::dontSendNotification);
-  mClientCountLabel.setFont(juce::Font(10.0f));
+  mClientCountLabel.setFont(juce::Font(juce::FontOptions().withHeight(10.0f)));
   mClientCountLabel.setColour(juce::Label::textColourId,
                               juce::Colour(0xffa0a0b0));
   addAndMakeVisible(mClientCountLabel);
@@ -42,13 +42,13 @@ SonicBridgeAudioProcessorEditor::SonicBridgeAudioProcessorEditor(
   addAndMakeVisible(mRightMeter);
 
   mMeterLabelL.setText("L", juce::dontSendNotification);
-  mMeterLabelL.setFont(juce::Font(10.0f));
+  mMeterLabelL.setFont(juce::Font(juce::FontOptions().withHeight(10.0f)));
   mMeterLabelL.setColour(juce::Label::textColourId,
                          juce::Colour(0xffa0a0b0));
   addAndMakeVisible(mMeterLabelL);
 
   mMeterLabelR.setText("R", juce::dontSendNotification);
-  mMeterLabelR.setFont(juce::Font(10.0f));
+  mMeterLabelR.setFont(juce::Font(juce::FontOptions().withHeight(10.0f)));
   mMeterLabelR.setColour(juce::Label::textColourId,
                          juce::Colour(0xffa0a0b0));
   addAndMakeVisible(mMeterLabelR);
@@ -72,20 +72,20 @@ SonicBridgeAudioProcessorEditor::SonicBridgeAudioProcessorEditor(
     juce::String(mProcessor.getCurrentBitrate() / 1000) + " kbps",
     juce::dontSendNotification
   );
-  mBitrateLabel.setFont(juce::Font(10.0f));
+  mBitrateLabel.setFont(juce::Font(juce::FontOptions().withHeight(10.0f)));
   mBitrateLabel.setColour(juce::Label::textColourId,
                           juce::Colour(0xfff0f0f0));
   addAndMakeVisible(mBitrateLabel);
 
   // Audio info
   mSampleRateLabel.setText("48 kHz", juce::dontSendNotification);
-  mSampleRateLabel.setFont(juce::Font(10.0f));
+  mSampleRateLabel.setFont(juce::Font(juce::FontOptions().withHeight(10.0f)));
   mSampleRateLabel.setColour(juce::Label::textColourId,
                              juce::Colour(0xffa0a0b0));
   addAndMakeVisible(mSampleRateLabel);
 
   mBufferSizeLabel.setText("256 smp", juce::dontSendNotification);
-  mBufferSizeLabel.setFont(juce::Font(10.0f));
+  mBufferSizeLabel.setFont(juce::Font(juce::FontOptions().withHeight(10.0f)));
   mBufferSizeLabel.setColour(juce::Label::textColourId,
                              juce::Colour(0xffa0a0b0));
   addAndMakeVisible(mBufferSizeLabel);
@@ -105,7 +105,7 @@ SonicBridgeAudioProcessorEditor::SonicBridgeAudioProcessorEditor(
   addAndMakeVisible(mStartStopButton);
 
   mPortLabel.setText("ws://localhost:9420", juce::dontSendNotification);
-  mPortLabel.setFont(juce::Font(10.0f));
+  mPortLabel.setFont(juce::Font(juce::FontOptions().withHeight(10.0f)));
   mPortLabel.setColour(juce::Label::textColourId,
                        juce::Colour(0xffa0a0b0));
   addAndMakeVisible(mPortLabel);
