@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { TopBar } from "@/components/TopBar";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
@@ -32,12 +32,21 @@ function collectDescendantIds(
   postId: string,
   parentMap: Map<string, string[]>,
 ): string[] {
-  const children = parentMap.get(postId) ?? [];
-  const descendants = [...children];
-  for (const childId of children) {
-    descendants.push(...collectDescendantIds(childId, parentMap));
+  const result: string[] = [];
+  const queue = [postId];
+  const visited = new Set<string>();
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    const children = parentMap.get(id) ?? [];
+    for (const childId of children) {
+      if (!visited.has(childId)) {
+        visited.add(childId);
+        result.push(childId);
+        queue.push(childId);
+      }
+    }
   }
-  return descendants;
+  return result;
 }
 
 export function DiscussionBoard({
@@ -52,24 +61,34 @@ export function DiscussionBoard({
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const threads = posts.filter((p) => !p.parentId);
-  const repliesMap = new Map<string, DiscussionPost[]>();
-  for (const p of posts) {
-    if (p.parentId) {
-      const existing = repliesMap.get(p.parentId) ?? [];
-      existing.push(p);
-      repliesMap.set(p.parentId, existing);
-    }
-  }
+  const threads = useMemo(
+    () => posts.filter((p) => !p.parentId),
+    [posts],
+  );
 
-  const parentMap = new Map<string, string[]>();
-  for (const p of posts) {
-    if (p.parentId) {
-      const children = parentMap.get(p.parentId) ?? [];
-      children.push(p.id);
-      parentMap.set(p.parentId, children);
+  const repliesMap = useMemo(() => {
+    const map = new Map<string, DiscussionPost[]>();
+    for (const p of posts) {
+      if (p.parentId) {
+        const existing = map.get(p.parentId) ?? [];
+        existing.push(p);
+        map.set(p.parentId, existing);
+      }
     }
-  }
+    return map;
+  }, [posts]);
+
+  const parentMap = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const p of posts) {
+      if (p.parentId) {
+        const children = map.get(p.parentId) ?? [];
+        children.push(p.id);
+        map.set(p.parentId, children);
+      }
+    }
+    return map;
+  }, [posts]);
 
   const handleCreateThread = useCallback(
     async (data: { title: string; content: string }) => {
