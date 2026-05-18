@@ -57,6 +57,8 @@ void VstBridgeServer::onClientMessage(
 
   using namespace Protocol;
 
+  // Connection lifecycle events need no handling here —
+  // client counting and broadcast use mServer->getClients() directly
   if (msg->type == ix::WebSocketMessageType::Open ||
       msg->type == ix::WebSocketMessageType::Close) {
     return;
@@ -101,6 +103,9 @@ void VstBridgeServer::onClientMessage(
 void VstBridgeServer::broadcast(const juce::String& message) {
   if (!mServer) return;
 
+  // Snapshot clients under lock to minimize contention on the audio thread.
+  // shared_ptr keeps each WebSocket alive; send() is thread-safe and a
+  // no-op on closed sockets, so iterating outside the lock is safe.
   std::vector<std::shared_ptr<ix::WebSocket>> snapshot;
   {
     std::lock_guard<std::mutex> lock(mClientsMutex);
