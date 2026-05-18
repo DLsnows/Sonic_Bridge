@@ -6,7 +6,7 @@ import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 
 const joinSchema = z.object({
-  projectId: z.string().uuid("Invalid project ID format"),
+  projectId: z.string().min(1, "Project ID is required"),
 });
 
 export async function POST(request: NextRequest) {
@@ -27,11 +27,11 @@ export async function POST(request: NextRequest) {
 
   const userId = (session.user as any).id as string;
 
-  const [project] = await db
-    .select()
-    .from(projects)
-    .where(eq(projects.id, projectId))
-    .limit(1);
+  // Accept either UUID id or custom ID (check format to avoid PG cast errors)
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId);
+  const [project] = isUuid
+    ? await db.select().from(projects).where(eq(projects.id, projectId)).limit(1)
+    : await db.select().from(projects).where(eq(projects.customId, projectId)).limit(1);
 
   if (!project) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });

@@ -11,6 +11,7 @@ export function CreateProjectButton() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [customId, setCustomId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -19,10 +20,13 @@ export function CreateProjectButton() {
     setError("");
     setLoading(true);
 
+    const body: Record<string, string> = { name: name.trim(), description: description.trim() };
+    if (customId.trim()) body.customId = customId.trim();
+
     const res = await fetch("/api/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim(), description: description.trim() }),
+      body: JSON.stringify(body),
     });
 
     if (res.ok) {
@@ -65,6 +69,15 @@ export function CreateProjectButton() {
             placeholder="My Album Project"
             required
           />
+          <Input
+            label="Custom ID (optional)"
+            value={customId}
+            onChange={(e) => setCustomId(e.target.value)}
+            placeholder="my-band (letters, numbers, hyphens, underscores)"
+          />
+          <p className="text-[10px] text-[#A0A0B0] -mt-2">
+            4-32 chars, alphanumeric, hyphens, underscores. Leave blank for auto-generated UUID.
+          </p>
           <Input
             label="Description (optional)"
             value={description}
