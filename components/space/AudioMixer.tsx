@@ -16,9 +16,11 @@ export function AudioMixer() {
     const participant = remoteParticipants.find((p) => p.identity === participantIdentity);
     if (participant) {
       participant.audioTrackPublications.forEach((pub) => {
-        const elements = pub.track?.attachedElements;
-        if (elements) {
-          for (const el of elements) {
+        const p = pub as unknown as { setVolume?: (v: number) => void; track?: { attachedElements?: HTMLMediaElement[] } };
+        if (typeof p.setVolume === "function") {
+          p.setVolume(value);
+        } else if (p.track?.attachedElements) {
+          for (const el of p.track.attachedElements) {
             el.volume = value;
           }
         }

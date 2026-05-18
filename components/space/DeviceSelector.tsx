@@ -22,29 +22,46 @@ export function DeviceSelector({ kind, currentDeviceId, onSelect, onClose }: Dev
     let cancelled = false;
     async function loadDevices() {
       try {
-        try {
-          const constraints = kind === "audioinput"
-            ? { audio: true }
-            : { video: true };
-          const stream = await navigator.mediaDevices.getUserMedia(constraints);
-          stream.getTracks().forEach((t) => t.stop());
-        } catch { /* labels may be empty */ }
-
         const allDevices = await navigator.mediaDevices.enumerateDevices();
+        const hasLabels = allDevices.some((d) => d.kind === kind && d.label);
+
+        // If labels are missing and we haven't granted permission yet, try once
+        if (!hasLabels) {
+          try {
+            const constraints = kind === "audioinput"
+              ? { audio: true }
+              : { video: true };
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            stream.getTracks().forEach((t) => t.stop());
+            // Re-enumerate with labels now available
+            const refreshed = await navigator.mediaDevices.enumerateDevices();
+            const filtered = refreshed
+              .filter((d) => d.kind === kind && d.deviceId)
+              .map((d) => ({
+                deviceId: d.deviceId,
+                label: d.label || (kind === "audioinput" ? "Microphone" : "Camera"),
+              }));
+            const seen = new Set<string>();
+            const unique: DeviceInfo[] = [];
+            for (const d of filtered) {
+              if (!seen.has(d.deviceId)) { seen.add(d.deviceId); unique.push(d); }
+            }
+            if (!cancelled) setDevices(unique);
+            return;
+          } catch { /* permission denied, continue with empty labels */ }
+        }
+
         const filtered = allDevices
           .filter((d) => d.kind === kind && d.deviceId)
           .map((d) => ({
             deviceId: d.deviceId,
-            label: d.label || `${kind === "audioinput" ? "Microphone" : "Camera"} (${d.deviceId.slice(0, 8)}...)`,
+            label: d.label || (kind === "audioinput" ? "Microphone" : "Camera"),
           }));
 
         const seen = new Set<string>();
         const unique: DeviceInfo[] = [];
         for (const d of filtered) {
-          if (!seen.has(d.deviceId)) {
-            seen.add(d.deviceId);
-            unique.push(d);
-          }
+          if (!seen.has(d.deviceId)) { seen.add(d.deviceId); unique.push(d); }
         }
         if (!cancelled) setDevices(unique);
       } catch {

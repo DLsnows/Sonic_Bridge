@@ -24,12 +24,10 @@ export function VstAudioBridge({
   const participantRef = useRef(localParticipant);
   participantRef.current = localParticipant;
   const triggerReconnect = useVstStore((s) => s.triggerReconnect);
-  const prevTriggerRef = useRef(triggerReconnect);
 
-  // Watch for manual reconnect requests
+  // Watch for manual reconnect requests (triggerReconnect > 0 guards against mount-time fire)
   useEffect(() => {
-    if (triggerReconnect !== prevTriggerRef.current && bridgeRef.current) {
-      prevTriggerRef.current = triggerReconnect;
+    if (triggerReconnect > 0 && bridgeRef.current) {
       bridgeRef.current.disconnect();
       bridgeRef.current.connect({ projectId, userId, username });
     }
