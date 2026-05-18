@@ -23,12 +23,6 @@ PluginLookAndFeel::PluginLookAndFeel() {
   setColour(juce::PopupMenu::backgroundColourId, bgPanel);
   setColour(juce::PopupMenu::textColourId, textPrimary);
   setColour(juce::PopupMenu::highlightedBackgroundColourId, greenNeon.withAlpha(0.15f));
-
-  setDefaultSansSerifTypeface(
-    juce::Typeface::createSystemTypefaceFor(
-      nullptr, 0
-    )
-  );
 }
 
 void PluginLookAndFeel::drawRotarySlider(

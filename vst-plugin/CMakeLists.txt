@@ -120,7 +120,12 @@ endif()
 
 # --- Post-Build: copy dependency DLLs alongside VST3 ---
 if(WIN32)
-  set(VCPKG_INSTALLED "C:/dev/vcpkg/installed/x64-windows")
+  set(VCPKG_INSTALLED "C:/dev/vcpkg/installed/x64-windows" CACHE PATH
+      "Path to vcpkg installed directory for x64-windows triplet")
+  if(NOT EXISTS "${VCPKG_INSTALLED}")
+    message(WARNING "VCPKG_INSTALLED='${VCPKG_INSTALLED}' does not exist. "
+                    "Override with -DVCPKG_INSTALLED=... or skip DLL copy.")
+  endif()
   add_custom_command(TARGET SonicBridgeVST POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
       "${VCPKG_INSTALLED}/bin/opus.dll"
