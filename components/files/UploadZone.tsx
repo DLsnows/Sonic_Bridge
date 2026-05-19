@@ -44,19 +44,30 @@ export function UploadZone({ projectId, folderId, onComplete, onClose }: UploadZ
     setUploading(true);
     setError("");
 
-    const formData = new FormData();
-    for (const f of selectedFiles) formData.append("files", f);
-    if (folderId) formData.append("folderId", folderId);
+    try {
+      const formData = new FormData();
+      for (const f of selectedFiles) formData.append("files", f);
+      if (folderId) formData.append("folderId", folderId);
 
-    const res = await fetch(`/api/projects/${projectId}/files`, { method: "POST", body: formData });
+      const res = await fetch(`/api/projects/${projectId}/files`, { method: "POST", body: formData });
 
-    if (res.ok) {
-      onComplete();
-    } else {
-      const data = await res.json();
-      setError(data.error ?? "Upload failed");
+      if (res.ok) {
+        onComplete();
+      } else {
+        let message = "Upload failed";
+        try {
+          const data = await res.json();
+          message = data.error ?? message;
+        } catch {
+          // Response was not JSON (e.g., HTML error page)
+        }
+        setError(message);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Network error during upload");
+    } finally {
+      setUploading(false);
     }
-    setUploading(false);
   };
 
   return (
