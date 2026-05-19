@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { projects, projectMembers, users, scheduleEvents, files, discussionPosts } from "@/lib/db/schema";
 import { eq, and, gte, desc, asc, isNull } from "drizzle-orm";
 import { TopBar } from "@/components/TopBar";
+import { ProjectIdBadge } from "@/components/ProjectIdBadge";
 import { Card } from "@/components/ui/Card";
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { Button } from "@/components/ui/Button";
@@ -115,6 +116,7 @@ export default async function ProjectPage({
       <TopBar
         title={project.name}
         subtitle={project.description ?? undefined}
+        badge={<ProjectIdBadge projectId={project.id} />}
         actions={
           isAdmin ? (
             <Link href={`/projects/${id}/settings`}>
@@ -153,9 +155,6 @@ export default async function ProjectPage({
               <h3 className="font-['Share_Tech_Mono',monospace] text-sm text-[#00FF41]">
                 Recent Activity
               </h3>
-              <span className="font-['Share_Tech_Mono',monospace] text-[10px] text-[#A0A0B0]">
-                ID: {project.id.slice(0, 8)}...
-              </span>
             </div>
 
             <div className="space-y-4">

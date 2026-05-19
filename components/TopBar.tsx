@@ -7,17 +7,21 @@ interface TopBarProps {
   subtitle?: string;
   actions?: React.ReactNode;
   showBack?: boolean;
+  badge?: React.ReactNode;
 }
 
-export function TopBar({ title, subtitle, actions, showBack }: TopBarProps) {
+export function TopBar({ title, subtitle, actions, showBack, badge }: TopBarProps) {
   return (
     <header className="h-16 flex items-center justify-between px-6 border-b border-[#00FF41]/10 bg-[#09090B]/80 backdrop-blur-lg sticky top-0 z-20">
       <div className="flex items-center gap-3">
         {showBack && <BackButton />}
         <div>
-          <h1 className="text-lg font-['Share_Tech_Mono',monospace] text-[#F0F0F0]">
-            {title}
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg font-['Share_Tech_Mono',monospace] text-[#F0F0F0]">
+              {title}
+            </h1>
+            {badge}
+          </div>
           {subtitle && (
             <p className="text-xs text-[#A0A0B0] mt-0.5">{subtitle}</p>
           )}
