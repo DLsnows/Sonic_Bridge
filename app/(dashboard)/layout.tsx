@@ -13,7 +13,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-[#09090B]">
-      <Sidebar username={(session.user as any)?.username} />
+      <Sidebar username={(session.user as any)?.username} avatar={session.user.image ?? null} />
       <DashboardLayoutClient>{children}</DashboardLayoutClient>
     </div>
   );
