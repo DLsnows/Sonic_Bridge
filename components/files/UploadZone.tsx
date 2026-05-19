@@ -58,7 +58,9 @@ export function UploadZone({ projectId, folderId, onComplete, onClose }: UploadZ
         try {
           const data = await res.json();
           message = data.error ?? message;
-        } catch { /* non-JSON error response */ }
+        } catch {
+          // Response was not JSON (e.g., HTML error page)
+        }
         setError(message);
       }
     } catch (err) {
