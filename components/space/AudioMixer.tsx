@@ -28,6 +28,8 @@ export function AudioMixer() {
   const meterLeft = useVstStore((s) => s.meterLeft);
   const meterRight = useVstStore((s) => s.meterRight);
   const meterPeak = useVstStore((s) => s.meterPeak);
+  const micVolume = useVstStore((s) => s.micVolume);
+  const setMicVolume = useVstStore((s) => s.setMicVolume);
 
   const handleRemoteVolumeChange = useCallback(
     (participantIdentity: string, value: number) => {
@@ -76,6 +78,39 @@ export function AudioMixer() {
           <h4 className="font-['Share_Tech_Mono',monospace] text-[10px] text-[#00F0FF]/60 uppercase tracking-wider border-b border-[#00F0FF]/10 pb-1">
             Inputs
           </h4>
+
+          {/* Local Microphone */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-[#F0F0F0] font-['Share_Tech_Mono',monospace] truncate max-w-[160px]">
+                Local Microphone
+              </span>
+              <span className="text-[10px] text-[#A0A0B0] tabular-nums">
+                {Math.round(micVolume * 100)}%
+              </span>
+            </div>
+            <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-75"
+                style={{
+                  width: `${micVolume * 100}%`,
+                  backgroundColor: "#00F0FF",
+                }}
+              />
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={micVolume}
+              onChange={(e) => setMicVolume(parseFloat(e.target.value))}
+              className={sliderClass}
+              style={{
+                background: `linear-gradient(to right, rgba(0,240,255,0.25) ${micVolume * 100}%, rgba(255,255,255,0.1) ${micVolume * 100}%)`,
+              }}
+            />
+          </div>
 
           {/* DAW/VST Channel */}
           <div className="space-y-1">
