@@ -123,7 +123,7 @@ export async function deleteFolderContents(
   do {
     const result = await list({ prefix: `${projectId}/${folderPath}/`, cursor });
     if (result.blobs.length > 0) {
-      await del(result.blobs.map((b) => b.downloadUrl));
+      await del(result.blobs.map((b) => b.url));
     }
     cursor = result.hasMore ? result.cursor : undefined;
   } while (cursor);
