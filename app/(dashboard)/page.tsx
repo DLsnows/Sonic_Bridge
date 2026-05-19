@@ -19,40 +19,63 @@ export default async function DashboardPage() {
 
   const userId = (session.user as any).id as string;
 
-  const memberOf = await db
-    .select({
-      projectId: projectMembers.projectId,
-      role: projectMembers.role,
-    })
-    .from(projectMembers)
-    .where(eq(projectMembers.userId, userId));
+  let memberOf: { projectId: string; role: "admin" | "member" }[] = [];
+  let projectList: typeof projects.$inferSelect[] = [];
+  let dbError: string | null = null;
 
-  const projectIds = memberOf.map((m) => m.projectId);
+  try {
+    memberOf = await db
+      .select({
+        projectId: projectMembers.projectId,
+        role: projectMembers.role,
+      })
+      .from(projectMembers)
+      .where(eq(projectMembers.userId, userId));
 
-  const projectList =
-    projectIds.length > 0
-      ? await db
-          .select()
-          .from(projects)
-          .where(inArray(projects.id, projectIds))
-          .orderBy(projects.createdAt)
-      : [];
+    const projectIds = memberOf.map((m) => m.projectId);
+
+    projectList =
+      projectIds.length > 0
+        ? await db
+            .select()
+            .from(projects)
+            .where(inArray(projects.id, projectIds))
+            .orderBy(projects.createdAt)
+        : [];
+  } catch (err) {
+    dbError = err instanceof Error ? err.message : "Database connection failed";
+  }
 
   return (
     <div>
       <TopBar
         title="Projects"
-        subtitle={`${projectList.length} project${projectList.length !== 1 ? "s" : ""}`}
+        subtitle={dbError ? "Error" : `${projectList.length} project${projectList.length !== 1 ? "s" : ""}`}
         actions={
-          <div className="flex gap-2">
-            <JoinProjectButton />
-            <CreateProjectButton />
-          </div>
+          !dbError ? (
+            <div className="flex gap-2">
+              <JoinProjectButton />
+              <CreateProjectButton />
+            </div>
+          ) : undefined
         }
       />
 
       <div className="p-6">
-        {projectList.length === 0 ? (
+        {dbError ? (
+          <GlassPanel glow="green" className="text-center py-16">
+            <div className="text-5xl mb-4">!</div>
+            <h2 className="text-xl font-['Share_Tech_Mono',monospace] text-[#FF4444] mb-2">
+              Connection Error
+            </h2>
+            <p className="text-[#A0A0B0] mb-2 text-sm font-mono break-all">
+              {dbError}
+            </p>
+            <p className="text-xs text-[#A0A0B0]/60">
+              Verify DATABASE_URL is set in Vercel → Settings → Environment Variables (scoped to Preview/Production).
+            </p>
+          </GlassPanel>
+        ) : projectList.length === 0 ? (
           <GlassPanel glow="green" className="text-center py-16">
             <div className="text-5xl mb-4">◈</div>
             <h2 className="text-xl font-['Share_Tech_Mono',monospace] neon-text mb-2">
