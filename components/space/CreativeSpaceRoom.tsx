@@ -10,6 +10,7 @@ import { ChatPanel } from "./ChatPanel";
 import { VstConnectionPanel } from "./VstConnectionPanel";
 import { VstAudioBridge } from "./VstAudioBridge";
 import { AudioMixer } from "./AudioMixer";
+import { ParticipantList } from "./ParticipantList";
 
 interface CreativeSpaceRoomProps {
   projectId: string;
@@ -144,9 +145,14 @@ export function CreativeSpaceRoom({
           <RoomAudioRenderer />
         </div>
 
-        {/* Right sidebar: chat */}
-        <aside className="w-72 flex-shrink-0 border-l border-[#00F0FF]/10 bg-[#09090B]/60 backdrop-blur-sm">
-          <ChatPanel userId={userId} />
+        {/* Right sidebar: participant list + chat */}
+        <aside className="w-72 flex-shrink-0 border-l border-[#00F0FF]/10 bg-[#09090B]/60 backdrop-blur-sm flex flex-col">
+          <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+            <ParticipantList userId={userId} />
+          </div>
+          <div className="p-3 border-t border-[#00F0FF]/10 flex justify-center">
+            <ChatPanel userId={userId} />
+          </div>
         </aside>
 
         {/* Floating control bar — fixed overlay */}
