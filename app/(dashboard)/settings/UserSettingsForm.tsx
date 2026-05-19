@@ -34,6 +34,7 @@ export function UserSettingsForm({ userId, username: initialUsername, email, ava
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [displayAvatar, setDisplayAvatar] = useState<string | null>(currentAvatar ?? null);
   const [avatarLoading, setAvatarLoading] = useState(false);
   const [avatarMsg, setAvatarMsg] = useState("");
 
@@ -101,9 +102,10 @@ export function UserSettingsForm({ userId, username: initialUsername, email, ava
       const data = await res.json();
       if (res.ok) {
         setAvatarMsg("Avatar updated.");
+        setDisplayAvatar(data.avatar);
         setSelectedFile(null);
         if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }
-        window.location.reload();
+        router.refresh();
       } else {
         setAvatarMsg(data.error ?? "Failed");
       }
@@ -119,9 +121,10 @@ export function UserSettingsForm({ userId, username: initialUsername, email, ava
     const res = await fetch("/api/user/avatar", { method: "DELETE" });
     if (res.ok) {
       setAvatarMsg("Avatar removed.");
+      setDisplayAvatar(null);
       setSelectedFile(null);
       if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }
-      window.location.reload();
+      router.refresh();
     } else {
       const data = await res.json().catch(() => ({ error: "Failed" }));
       setAvatarMsg(data.error ?? "Failed");
@@ -166,9 +169,9 @@ export function UserSettingsForm({ userId, username: initialUsername, email, ava
         <h3 className="font-['Share_Tech_Mono',monospace] text-sm text-[#00FF41] mb-4">Avatar</h3>
         <div className="space-y-3">
           <div className="flex items-center gap-4">
-            {(previewUrl || currentAvatar) ? (
+            {(previewUrl || displayAvatar) ? (
               <img
-                src={previewUrl ?? currentAvatar ?? ""}
+                src={previewUrl ?? displayAvatar ?? ""}
                 alt="Avatar preview"
                 className="w-16 h-16 rounded-full object-cover border-2 border-[#00FF41]/30 shrink-0"
               />
@@ -193,7 +196,7 @@ export function UserSettingsForm({ userId, username: initialUsername, email, ava
                   Upload
                 </Button>
               )}
-              {currentAvatar && !selectedFile && (
+              {displayAvatar && !selectedFile && (
                 <Button size="sm" variant="danger" loading={avatarLoading} onClick={handleRemove}>
                   Remove
                 </Button>

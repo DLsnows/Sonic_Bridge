@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -16,6 +16,7 @@ export function Sidebar({ username, avatar }: { username?: string; avatar?: stri
   const collapsed = useSidebarStore((s) => s.collapsed);
   const toggle = useSidebarStore((s) => s.toggle);
   const [imgError, setImgError] = useState(false);
+  useEffect(() => { setImgError(false); }, [avatar]);
 
   return (
     <aside
