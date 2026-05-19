@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useTracks, ParticipantTile, useMaybeRoomContext } from "@livekit/components-react";
-import { Track, RoomEvent, type RemoteParticipant } from "livekit-client";
+import { Track, RoomEvent, type RemoteParticipant, type RemoteTrackPublication } from "livekit-client";
 import { useSpaceStore } from "@/lib/store/space";
 
 export function ParticipantGrid() {
@@ -39,9 +39,20 @@ export function ParticipantGrid() {
       }
     }
 
+    function handleTrackPublished(
+      publication: RemoteTrackPublication,
+      _participant: RemoteParticipant,
+    ) {
+      if (publication.kind === Track.Kind.Video) {
+        publication.setSubscribed(false);
+      }
+    }
+
     room.on(RoomEvent.ParticipantConnected, handleParticipantConnected);
+    room.on(RoomEvent.TrackPublished, handleTrackPublished);
     return () => {
       room.off(RoomEvent.ParticipantConnected, handleParticipantConnected);
+      room.off(RoomEvent.TrackPublished, handleTrackPublished);
     };
   }, [videoWatchEnabled, room]);
 
