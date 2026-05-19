@@ -1,9 +1,15 @@
 "use client";
 
-import { useTracks, ParticipantTile } from "@livekit/components-react";
-import { Track } from "livekit-client";
+import { useEffect, useRef } from "react";
+import { useTracks, ParticipantTile, useMaybeRoomContext } from "@livekit/components-react";
+import { Track, RoomEvent } from "livekit-client";
+import { useSpaceStore } from "@/lib/store/space";
 
 export function ParticipantGrid() {
+  const room = useMaybeRoomContext();
+  const videoWatchEnabled = useSpaceStore((s) => s.videoWatchEnabled);
+  const prevVideoWatchRef = useRef(videoWatchEnabled);
+
   const tracks = useTracks(
     [
       { source: Track.Source.Camera, withPlaceholder: true },
@@ -12,17 +18,61 @@ export function ParticipantGrid() {
     { onlySubscribed: true },
   );
 
+  useEffect(() => {
+    if (!room) return;
+    if (videoWatchEnabled === prevVideoWatchRef.current) return;
+    prevVideoWatchRef.current = videoWatchEnabled;
+
+    for (const [, participant] of room.remoteParticipants) {
+      for (const [, pub] of participant.videoTrackPublications) {
+        pub.setSubscribed(videoWatchEnabled);
+      }
+    }
+  }, [videoWatchEnabled, room]);
+
+  useEffect(() => {
+    if (!room || videoWatchEnabled) return;
+
+    function handleParticipantConnected() {
+      for (const [, participant] of room!.remoteParticipants) {
+        for (const [, pub] of participant.videoTrackPublications) {
+          if (!pub.isSubscribed) continue;
+          pub.setSubscribed(false);
+        }
+      }
+    }
+
+    room.on(RoomEvent.ParticipantConnected, handleParticipantConnected);
+    return () => {
+      room.off(RoomEvent.ParticipantConnected, handleParticipantConnected);
+    };
+  }, [videoWatchEnabled, room]);
+
   if (tracks.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="glass-panel text-center py-16 px-12">
-          <div className="text-5xl mb-4">◈</div>
-          <h3 className="font-['Share_Tech_Mono',monospace] neon-text text-lg mb-2">
-            Waiting for collaborators...
-          </h3>
-          <p className="text-[#A0A0B0] text-sm">
-            Share the project ID to invite others to this Creative Space.
-          </p>
+          {!videoWatchEnabled ? (
+            <>
+              <div className="text-5xl mb-4 animate-pulse-amber" style={{ animationDuration: "2s" }}>🔋</div>
+              <h3 className="font-['Share_Tech_Mono',monospace] neon-text-cyan text-lg mb-2">
+                Video paused — bandwidth saving mode
+              </h3>
+              <p className="text-[#A0A0B0] text-sm">
+                Audio is still active. Click the eye button in the control bar to resume watching.
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="text-5xl mb-4">◈</div>
+              <h3 className="font-['Share_Tech_Mono',monospace] neon-text text-lg mb-2">
+                Waiting for collaborators...
+              </h3>
+              <p className="text-[#A0A0B0] text-sm">
+                Share the project ID to invite others to this Creative Space.
+              </p>
+            </>
+          )}
         </div>
       </div>
     );

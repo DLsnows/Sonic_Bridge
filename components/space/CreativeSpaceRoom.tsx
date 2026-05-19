@@ -120,7 +120,10 @@ export function CreativeSpaceRoom({
         connect={true}
         audio={false}
         video={false}
-        onConnected={() => setConnected(true)}
+        onConnected={() => {
+          setConnected(true);
+          useSpaceStore.getState().setVideoWatchEnabled(true);
+        }}
         onDisconnected={() => setConnected(false)}
         className="flex-1 flex min-w-0"
       >
