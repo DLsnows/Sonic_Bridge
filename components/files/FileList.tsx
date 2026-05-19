@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import type { FileItem } from "./types";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
@@ -40,37 +40,118 @@ const iconColors: Record<string, string> = {
 export function FileList({ files, loading, projectId, onDelete, onDownload }: FileListProps) {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [playingFileId, setPlayingFileId] = useState<string | null>(null);
+  const [audioLoading, setAudioLoading] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playingFileIdRef = useRef<string | null>(null);
+  const audioListenersRef = useRef<Record<string, () => void> | null>(null);
+  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handlePlayAudio = useCallback(
-    (fileId: string, fileName: string) => {
+    (fileId: string) => {
+      // Toggle: clicking the currently playing file stops playback
       if (playingFileIdRef.current === fileId) {
         audioRef.current?.pause();
+        audioRef.current = null;
         playingFileIdRef.current = null;
         setPlayingFileId(null);
+        setAudioLoading(false);
         return;
       }
+
+      // Clean up previous audio element
       if (audioRef.current) {
         audioRef.current.pause();
+        audioRef.current.src = "";
+        audioRef.current = null;
       }
-      const audio = new Audio(`/api/projects/${projectId}/files/${fileId}`);
-      audio.play().catch(() => { /* playback blocked or failed */ });
-      const onEnded = () => { playingFileIdRef.current = null; setPlayingFileId(null); };
+
+      // Clear any lingering error timeout
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+        errorTimeoutRef.current = null;
+      }
+
+      setAudioError(null);
+      setAudioLoading(true);
+
+      const audio = new Audio(`/api/projects/${projectId}/files/${fileId}?inline=1`);
+      audio.preload = "auto";
+
+      const onEnded = () => {
+        playingFileIdRef.current = null;
+        setPlayingFileId(null);
+        setAudioLoading(false);
+      };
+
       const onPause = () => {
         if (playingFileIdRef.current === fileId) {
           playingFileIdRef.current = null;
           setPlayingFileId(null);
+          setAudioLoading(false);
         }
       };
+
+      const onError = () => {
+        const errMsg = audio.error
+          ? `MEDIA_${audio.error.code}: ${audio.error.message}`
+          : "MEDIA_ELEMENT_ERROR: Format error";
+        console.error("Audio playback error:", errMsg);
+        setAudioError(errMsg);
+        playingFileIdRef.current = null;
+        setPlayingFileId(null);
+        setAudioLoading(false);
+        // Auto-clear error after 5 seconds
+        errorTimeoutRef.current = setTimeout(() => setAudioError(null), 5000);
+      };
+
+      const onCanPlay = () => {
+        setAudioLoading(false);
+      };
+
       audio.addEventListener("ended", onEnded);
       audio.addEventListener("pause", onPause);
+      audio.addEventListener("error", onError);
+      audio.addEventListener("canplay", onCanPlay);
+
+      audioListenersRef.current = { ended: onEnded, pause: onPause, error: onError, canplay: onCanPlay };
+
+      audio.play().catch((err) => {
+        console.error("Audio play() rejected:", err);
+        setAudioLoading(false);
+        playingFileIdRef.current = null;
+        setPlayingFileId(null);
+      });
+
       audioRef.current = audio;
       playingFileIdRef.current = fileId;
       setPlayingFileId(fileId);
     },
     [projectId],
   );
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+        errorTimeoutRef.current = null;
+      }
+      if (audioRef.current) {
+        const listeners = audioListenersRef.current;
+        if (listeners) {
+          audioRef.current.removeEventListener("ended", listeners.ended);
+          audioRef.current.removeEventListener("pause", listeners.pause);
+          audioRef.current.removeEventListener("error", listeners.error);
+          audioRef.current.removeEventListener("canplay", listeners.canplay);
+          audioListenersRef.current = null;
+        }
+        audioRef.current.pause();
+        audioRef.current.src = "";
+        audioRef.current = null;
+      }
+    };
+  }, []);
 
   if (loading) {
     return (
@@ -95,6 +176,11 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
 
   return (
     <div className="overflow-x-auto">
+      {audioError && (
+        <div className="mb-3 px-4 py-2 bg-[#FF4444]/10 border border-[#FF4444]/30 rounded text-xs text-[#FF4444]">
+          {audioError}
+        </div>
+      )}
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-white/10">
@@ -128,9 +214,9 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
                       <Button
                         variant={playingFileId === file.id ? "primary" : "ghost"}
                         size="sm"
-                        onClick={() => handlePlayAudio(file.id, file.name)}
+                        onClick={() => handlePlayAudio(file.id)}
                       >
-                        {playingFileId === file.id ? "⏸" : "▶"}
+                        {playingFileId === file.id && audioLoading ? "..." : playingFileId === file.id ? "⏸" : "▶"}
                       </Button>
                     )}
                     <Button variant="ghost" size="sm" onClick={() => onDownload(file.id, file.name)}>DL</Button>

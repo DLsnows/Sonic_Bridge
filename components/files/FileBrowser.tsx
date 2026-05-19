@@ -45,11 +45,23 @@ export function FileBrowser({ projectId, userId, initialFolders }: FileBrowserPr
     const res = await fetch(`/api/projects/${projectId}/files/${fileId}`, { method: "DELETE" });
     if (res.ok) fetchFiles(currentFolderId);
   };
-  const handleDownload = (fileId: string, fileName: string) => {
+  const handleDownload = async (fileId: string, fileName: string) => {
+    try {
+      const check = await fetch(`/api/projects/${projectId}/files/${fileId}`, { method: "HEAD" });
+      if (!check.ok) {
+        alert(`Download failed: ${check.status === 404 ? "File not found" : "Server error"}`);
+        return;
+      }
+    } catch {
+      alert("Download failed: Network error");
+      return;
+    }
     const a = document.createElement("a");
     a.href = `/api/projects/${projectId}/files/${fileId}`;
     a.download = fileName;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   const handleRenameFolder = (folderId: string, currentName: string) => {

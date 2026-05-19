@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { connection } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { discussionPosts, users } from "@/lib/db/schema";
+import { discussionPosts, users, projectAiConfigs } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { decrypt } from "@/lib/encryption";
 
 const bodySchema = z.object({
   postId: z.string().uuid(),
@@ -43,13 +45,34 @@ export async function POST(
     );
   }
 
-  const aiUrl = process.env.AI_API_URL;
-  const aiKey = process.env.AI_API_KEY;
-  const aiModel = process.env.AI_MODEL || "gpt-4o-mini";
+  await connection();
+
+  let aiUrl: string;
+  let aiKey: string;
+  let aiModel: string;
+
+  // Try DB config first, then fall back to env vars
+  const [dbConfig] = await db
+    .select()
+    .from(projectAiConfigs)
+    .where(eq(projectAiConfigs.projectId, projectId))
+    .limit(1);
+
+  if (dbConfig) {
+    aiUrl = dbConfig.apiUrl;
+    aiKey = decrypt(dbConfig.encryptedApiKey);
+    aiModel = dbConfig.model;
+  } else {
+    aiUrl = process.env.AI_API_URL ?? "";
+    aiKey = process.env.AI_API_KEY ?? "";
+    aiModel = process.env.AI_MODEL || "gpt-4o-mini";
+  }
 
   if (!aiUrl || !aiKey) {
+    const missing = !aiUrl && !aiKey ? "AI_API_URL and AI_API_KEY" : !aiUrl ? "AI_API_URL" : "AI_API_KEY";
+    console.error(`AI formatting not configured: missing ${missing}`);
     return NextResponse.json(
-      { error: "AI formatting not configured" },
+      { error: "AI formatting not configured. Ask a project admin to configure it in Project Settings." },
       { status: 503 },
     );
   }

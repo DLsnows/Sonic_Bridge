@@ -70,7 +70,7 @@ export async function POST(request: Request) {
       .limit(1);
 
     const storageKey = `avatars/${userId}_${randomBytes(8).toString("hex")}.jpg`;
-    const result = await put(storageKey, file, { access: "public", addRandomSuffix: false });
+    const result = await put(storageKey, file, { access: "private", addRandomSuffix: false });
 
     await db.update(users).set({ avatar: result.url }).where(eq(users.id, userId));
 

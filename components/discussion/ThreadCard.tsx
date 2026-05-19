@@ -270,7 +270,23 @@ export function ThreadCard({
 
           {aiFormatError && (
             <div className="p-2 rounded bg-[#FF4444]/10 border border-[#FF4444]/30 text-xs text-[#FF4444] mt-2">
-              {aiFormatError}
+              {aiFormatError.toLowerCase().includes("not configured") ? (
+                isAdmin ? (
+                  <>
+                    AI formatting not configured.{" "}
+                    <a
+                      href={`/projects/${projectId}/settings`}
+                      className="text-[#FF8C00] underline hover:text-[#FF8C00]/80"
+                    >
+                      Configure it in Project Settings.
+                    </a>
+                  </>
+                ) : (
+                  "AI formatting not configured. Contact a project admin to enable it."
+                )
+              ) : (
+                aiFormatError
+              )}
             </div>
           )}
 

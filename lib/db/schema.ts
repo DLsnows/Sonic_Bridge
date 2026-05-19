@@ -112,3 +112,18 @@ export const discussionPosts = pgTable("discussion_posts", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+export const projectAiConfigs = pgTable("project_ai_configs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: uuid("project_id")
+    .notNull()
+    .unique()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  apiUrl: text("api_url").notNull(),
+  encryptedApiKey: text("encrypted_api_key").notNull(),
+  model: text("model").notNull().default("gpt-4o-mini"),
+  createdBy: uuid("created_by")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
