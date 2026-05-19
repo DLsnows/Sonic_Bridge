@@ -44,6 +44,8 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
   const [audioError, setAudioError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playingFileIdRef = useRef<string | null>(null);
+  const audioListenersRef = useRef<Record<string, () => void> | null>(null);
+  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handlePlayAudio = useCallback(
     (fileId: string, _fileName: string) => {
@@ -55,6 +57,19 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
       }
       if (audioRef.current) {
         audioRef.current.pause();
+        audioRef.current.src = "";
+        const prev = audioListenersRef.current;
+        if (prev) {
+          audioRef.current.removeEventListener("ended", prev.onEnded);
+          audioRef.current.removeEventListener("pause", prev.onPause);
+          audioRef.current.removeEventListener("error", prev.onError);
+          audioRef.current.removeEventListener("canplay", prev.onCanPlay);
+          audioListenersRef.current = null;
+        }
+      }
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+        errorTimeoutRef.current = null;
       }
       setAudioError(null);
       setAudioLoading(true);
@@ -74,13 +89,14 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
         setAudioLoading(false);
         playingFileIdRef.current = null;
         setPlayingFileId(null);
-        setTimeout(() => setAudioError(null), 5000);
+        errorTimeoutRef.current = setTimeout(() => { setAudioError(null); errorTimeoutRef.current = null; }, 5000);
       };
       const onCanPlay = () => { setAudioLoading(false); };
       audio.addEventListener("ended", onEnded);
       audio.addEventListener("pause", onPause);
       audio.addEventListener("error", onError);
       audio.addEventListener("canplay", onCanPlay);
+      audioListenersRef.current = { onEnded, onPause, onError, onCanPlay };
       audio.play().catch((err) => {
         console.error("Audio play() rejected:", err);
         setAudioLoading(false);
@@ -97,8 +113,19 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
+        const prev = audioListenersRef.current;
+        if (prev) {
+          audioRef.current.removeEventListener("ended", prev.onEnded);
+          audioRef.current.removeEventListener("pause", prev.onPause);
+          audioRef.current.removeEventListener("error", prev.onError);
+          audioRef.current.removeEventListener("canplay", prev.onCanPlay);
+        }
         audioRef.current.src = "";
         audioRef.current = null;
+      }
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+        errorTimeoutRef.current = null;
       }
     };
   }, []);

@@ -72,11 +72,17 @@ export async function getFileBody(
   }
 
   if (response.status === 206) {
-    const contentRange = response.headers.get("content-range") ?? "";
+    const contentRange = response.headers.get("content-range");
+    if (!contentRange) {
+      throw new Error("Missing Content-Range header in 206 response");
+    }
     const match = contentRange.match(/bytes (\d+)-(\d+)\/(\d+)/);
-    const rangeStart = match ? parseInt(match[1], 10) : 0;
-    const rangeEnd = match ? parseInt(match[2], 10) : 0;
-    const totalSize = match ? parseInt(match[3], 10) : blob.size;
+    if (!match) {
+      throw new Error(`Invalid Content-Range format: ${contentRange}`);
+    }
+    const rangeStart = parseInt(match[1], 10);
+    const rangeEnd = parseInt(match[2], 10);
+    const totalSize = parseInt(match[3], 10);
     return {
       body: response.body,
       contentType: blob.contentType || "application/octet-stream",
