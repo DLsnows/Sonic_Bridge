@@ -29,7 +29,7 @@ export function ProjectIdBadge({ projectId }: { projectId: string }) {
         {copied ? (
           <span className="text-[#00FF41]">Copied!</span>
         ) : (
-          <>ID: {projectId.slice(0, 8)}&hellip;</>
+          <>ID: {projectId.slice(0, 8)}…</>
         )}
       </span>
       <svg
