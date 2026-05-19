@@ -26,14 +26,17 @@ export function VstAudioBridge({
   participantRef.current = localParticipant;
   const triggerReconnect = useVstStore((s) => s.triggerReconnect);
   const vstVolume = useVstStore((s) => s.vstVolume);
+  const vstStatus = useVstStore((s) => s.status);
   const audioBitrate = useMediaSettingsStore((s) => s.audioQuality.bitrate);
   const sendBufferMs = useMediaSettingsStore((s) => s.audioQuality.sendBufferMs);
   const receiveBufferMs = useMediaSettingsStore((s) => s.audioQuality.receiveBufferMs);
+  const settingsAppliedRef = useRef(false);
 
   // Watch for manual reconnect requests (triggerReconnect > 0 guards against mount-time fire)
   useEffect(() => {
     if (triggerReconnect > 0 && bridgeRef.current) {
       bridgeRef.current.disconnect();
+      settingsAppliedRef.current = false;
       bridgeRef.current.connect({ projectId, userId, username });
     }
   }, [triggerReconnect, projectId, userId, username]);
@@ -42,16 +45,26 @@ export function VstAudioBridge({
     pipelineRef.current?.setVolume(vstVolume);
   }, [vstVolume]);
 
-  // Apply audio bitrate change to VST plugin
+  // Apply user's audio settings to VST plugin after connection is established
   useEffect(() => {
-    if (bridgeRef.current) {
+    if (vstStatus === "connected" && bridgeRef.current && !settingsAppliedRef.current) {
+      const bitrate = useMediaSettingsStore.getState().audioQuality.bitrate;
+      const sendSamples = msToSamples(useMediaSettingsStore.getState().audioQuality.sendBufferMs);
+      bridgeRef.current.sendSettings(bitrate, sendSamples);
+      settingsAppliedRef.current = true;
+    }
+  }, [vstStatus]);
+
+  // Apply bitrate change (user interaction after initial connection)
+  useEffect(() => {
+    if (bridgeRef.current && settingsAppliedRef.current) {
       bridgeRef.current.sendBitrateChange(audioBitrate);
     }
   }, [audioBitrate]);
 
-  // Apply send buffer change to VST plugin
+  // Apply send buffer change (user interaction after initial connection)
   useEffect(() => {
-    if (bridgeRef.current) {
+    if (bridgeRef.current && settingsAppliedRef.current) {
       const samples = msToSamples(sendBufferMs);
       bridgeRef.current.sendBufferChange(samples);
     }

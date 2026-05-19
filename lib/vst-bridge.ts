@@ -73,6 +73,10 @@ export class VstBridge {
     this.settingsCallback = cb;
   }
 
+  sendSettings(opusBitrate: number, bufferSize: number) {
+    this.send({ type: "set_settings", opusBitrate, bufferSize });
+  }
+
   sendBitrateChange(opusBitrate: number) {
     this.send({ type: "set_settings", opusBitrate });
   }

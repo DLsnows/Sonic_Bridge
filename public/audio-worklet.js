@@ -29,14 +29,28 @@ class VstAudioProcessor extends AudioWorkletProcessor {
 
   resize(newCapacity) {
     if (newCapacity <= 0 || newCapacity === this.ringCapacity) return;
+    const oldCapacity = this.ringCapacity;
+    const oldBuffers = this.ringBuffer;
+    const oldAvailable = this.available;
     this.ringCapacity = newCapacity;
     this.ringBuffer = [
       new Float32Array(newCapacity),
       new Float32Array(newCapacity),
     ];
-    this.writePos = 0;
+    // Preserve as much existing audio data as possible
+    const preserved = Math.min(oldAvailable, newCapacity);
+    if (preserved > 0) {
+      for (let ch = 0; ch < Math.min(oldBuffers.length, this.ringBuffer.length); ch++) {
+        const oldBuf = oldBuffers[ch];
+        const newBuf = this.ringBuffer[ch];
+        for (let i = 0; i < preserved; i++) {
+          newBuf[i] = oldBuf[(this.readPos + i) % oldCapacity];
+        }
+      }
+    }
+    this.writePos = preserved % newCapacity;
     this.readPos = 0;
-    this.available = 0;
+    this.available = preserved;
   }
 
   process(_inputs, outputs, _parameters) {
