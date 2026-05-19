@@ -23,41 +23,70 @@ export async function GET(
     return NextResponse.json({ error: "File not found" }, { status: 404 });
   }
 
-  // For files > 50MB, redirect to signed download URL
-  if (file.size > 50 * 1024 * 1024) {
+  const isInline = request.nextUrl.searchParams.has("inline");
+  const rangeHeader = request.headers.get("range");
+  const isAudio = file.mimeType?.startsWith("audio/") ?? false;
+  const isVideo = file.mimeType?.startsWith("video/") ?? false;
+
+  // For files > 50MB, redirect to signed download URL to avoid server memory pressure
+  if (file.size > 50 * 1024 * 1024 && !rangeHeader) {
     const url = await getFileUrl(file.storageKey);
     return NextResponse.redirect(url);
   }
 
-  const rangeHeader = request.headers.get("range");
-  const isInline = request.nextUrl.searchParams.has("inline");
-  const isAudio = file.mimeType?.startsWith("audio/") ?? false;
-  const isVideo = file.mimeType?.startsWith("video/") ?? false;
+  const result = await getFileBody(file.storageKey, {
+    range: rangeHeader ?? undefined,
+  });
 
-  const {
-    body, contentType, size, contentLength, isRange, rangeStart, rangeEnd,
-  } = await getFileBody(file.storageKey, { range: rangeHeader ?? undefined });
-
-  // Use inline disposition for media when Range is present or explicit ?inline=1
-  const useInline = isInline || ((isAudio || isVideo) && isRange);
+  const useInline = isInline || ((isAudio || isVideo) && result.isRange);
   const disposition = useInline
     ? `inline; filename="${encodeURIComponent(file.name)}"`
     : `attachment; filename="${encodeURIComponent(file.name)}"`;
 
-  const responseHeaders = new Headers();
-  responseHeaders.set("Content-Type", contentType);
-  responseHeaders.set("Accept-Ranges", "bytes");
-  responseHeaders.set("Content-Disposition", disposition);
-  responseHeaders.set("Cache-Control", "private, max-age=60");
+  const headers: Record<string, string> = {
+    "Content-Type": result.contentType,
+    "Content-Disposition": disposition,
+    "Accept-Ranges": "bytes",
+    "Cache-Control": "private, max-age=60",
+  };
 
-  if (isRange && body) {
-    responseHeaders.set("Content-Range", `bytes ${rangeStart}-${rangeEnd}/${size}`);
-    responseHeaders.set("Content-Length", String(contentLength));
-    return new NextResponse(body, { status: 206, headers: responseHeaders });
+  if (result.isRange) {
+    headers["Content-Range"] = `bytes ${result.rangeStart}-${result.rangeEnd}/${result.size}`;
+    headers["Content-Length"] = String(result.contentLength);
+    return new NextResponse(result.body, { status: 206, headers });
   }
 
-  responseHeaders.set("Content-Length", String(size));
-  return new NextResponse(body, { headers: responseHeaders });
+  headers["Content-Length"] = String(result.contentLength);
+  return new NextResponse(result.body, { headers });
+}
+
+export async function HEAD(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string; fileId: string }> },
+) {
+  const { id, fileId } = await params;
+  const authResult = await authenticate(request, id);
+  if (authResult instanceof Response) return authResult;
+
+  const [file] = await db
+    .select()
+    .from(files)
+    .where(and(eq(files.id, fileId), eq(files.projectId, id)))
+    .limit(1);
+
+  if (!file) {
+    return NextResponse.json({ error: "File not found" }, { status: 404 });
+  }
+
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      "Content-Length": String(file.size),
+      "Content-Type": file.mimeType || "application/octet-stream",
+      "Accept-Ranges": "bytes",
+      "Cache-Control": "private, max-age=60",
+    },
+  });
 }
 
 export async function DELETE(

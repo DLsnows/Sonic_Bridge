@@ -53,13 +53,15 @@ export function FileBrowser({ projectId, userId, initialFolders }: FileBrowserPr
         return;
       }
     } catch {
-      alert("Network error during download. Please try again.");
+      alert("Download failed: Network error");
       return;
     }
     const a = document.createElement("a");
     a.href = `/api/projects/${projectId}/files/${fileId}`;
     a.download = fileName;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   const handleRenameFolder = (folderId: string, currentName: string) => {
