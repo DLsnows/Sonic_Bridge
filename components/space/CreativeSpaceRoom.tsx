@@ -9,6 +9,7 @@ import { ControlBar } from "./ControlBar";
 import { ChatPanel } from "./ChatPanel";
 import { VstConnectionPanel } from "./VstConnectionPanel";
 import { VstAudioBridge } from "./VstAudioBridge";
+import { MicVolumeBridge } from "./MicVolumeBridge";
 import { AudioMixer } from "./AudioMixer";
 import { ParticipantList } from "./ParticipantList";
 import { MediaSettingsPanel } from "./MediaSettingsPanel";
@@ -138,6 +139,9 @@ export function CreativeSpaceRoom({
           userId={userId}
           username={username}
         />
+
+        {/* Mic volume bridge — invisible, syncs mic gain to processor */}
+        <MicVolumeBridge />
 
         {/* Left sidebar: VST panel */}
         <aside className="w-72 flex-shrink-0 border-r border-[#00F0FF]/10 bg-[#09090B]/60 backdrop-blur-sm">

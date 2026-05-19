@@ -15,6 +15,13 @@ const sliderClass =
   "[&::-moz-range-thumb]:bg-[#00F0FF] [&::-moz-range-thumb]:border-0 " +
   "[&::-moz-range-track]:bg-transparent";
 
+function micMeterLevelColor(level: number): string {
+  if (level > 0.9) return "#FF4444";
+  if (level > 0.5) return "#FFB800";
+  if (level > 0.05) return "#00FF41";
+  return "#00F0FF";
+}
+
 export function AudioMixer() {
   const remoteParticipants = useRemoteParticipants();
   const mixerOpen = useSpaceStore((s) => s.mixerOpen);
@@ -28,6 +35,9 @@ export function AudioMixer() {
   const meterLeft = useVstStore((s) => s.meterLeft);
   const meterRight = useVstStore((s) => s.meterRight);
   const meterPeak = useVstStore((s) => s.meterPeak);
+  const micVolume = useVstStore((s) => s.micVolume);
+  const setMicVolume = useVstStore((s) => s.setMicVolume);
+  const micMeterLevel = useVstStore((s) => s.micMeterLevel);
 
   const handleRemoteVolumeChange = useCallback(
     (participantIdentity: string, value: number) => {
@@ -76,6 +86,40 @@ export function AudioMixer() {
           <h4 className="font-['Share_Tech_Mono',monospace] text-[10px] text-[#00F0FF]/60 uppercase tracking-wider border-b border-[#00F0FF]/10 pb-1">
             Inputs
           </h4>
+
+          {/* Local Microphone */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-[#F0F0F0] font-['Share_Tech_Mono',monospace] truncate max-w-[130px]">
+                Local Microphone
+              </span>
+              <span className="text-[10px] text-[#A0A0B0] tabular-nums">
+                Gain: {Math.round(micVolume * 100)}%
+              </span>
+            </div>
+            <div className="h-2 bg-white/5 rounded-full overflow-hidden border border-[#00FF41]/10 relative">
+              <div
+                className="h-full rounded-full transition-all duration-75"
+                style={{
+                  width: `${micMeterLevel * 100}%`,
+                  backgroundColor: micMeterLevelColor(micMeterLevel),
+                  boxShadow: `0 0 6px ${micMeterLevelColor(micMeterLevel)}40`,
+                }}
+              />
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="2"
+              step="0.01"
+              value={micVolume}
+              onChange={(e) => setMicVolume(parseFloat(e.target.value))}
+              className={sliderClass}
+              style={{
+                background: `linear-gradient(to right, rgba(0,240,255,0.25) ${micVolume * 50}%, rgba(255,255,255,0.1) ${micVolume * 50}%)`,
+              }}
+            />
+          </div>
 
           {/* DAW/VST Channel */}
           <div className="space-y-1">
