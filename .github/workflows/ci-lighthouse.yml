@@ -1,0 +1,40 @@
+name: CI / lighthouse
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  lighthouse:
+    if: ${{ ! github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+
+    env:
+      AUTH_SECRET: 'ci-test-secret-do-not-use-in-production-00000000000000000000000000000000'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Restore Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('package-lock.json') }}-${{ hashFiles('**/*.ts', '**/*.tsx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('package-lock.json') }}-
+            ${{ runner.os }}-nextjs-
+
+      - name: Build Next.js app
+        run: npm run build
+
+      - name: Run Lighthouse CI
+        run: npx lhci autorun --config=./lighthouserc.js
