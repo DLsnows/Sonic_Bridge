@@ -24,6 +24,7 @@ export function VstAudioBridge({
   const participantRef = useRef(localParticipant);
   participantRef.current = localParticipant;
   const triggerReconnect = useVstStore((s) => s.triggerReconnect);
+  const vstVolume = useVstStore((s) => s.vstVolume);
 
   // Watch for manual reconnect requests (triggerReconnect > 0 guards against mount-time fire)
   useEffect(() => {
@@ -32,6 +33,10 @@ export function VstAudioBridge({
       bridgeRef.current.connect({ projectId, userId, username });
     }
   }, [triggerReconnect, projectId, userId, username]);
+
+  useEffect(() => {
+    pipelineRef.current?.setVolume(vstVolume);
+  }, [vstVolume]);
 
   useEffect(() => {
     if (!VstAudioPipeline.isSupported()) {

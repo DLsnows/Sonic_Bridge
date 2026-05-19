@@ -7,6 +7,7 @@ export class VstAudioPipeline {
   private channels = 2;
   private ready = false;
   private destroyed = false;
+  private gainNode: GainNode | null = null;
 
   get isReady() {
     return this.ready;
@@ -42,7 +43,10 @@ export class VstAudioPipeline {
       },
     );
 
-    this.workletNode.connect(this.destination);
+    this.gainNode = this.audioContext.createGain();
+    this.gainNode.gain.value = 1.0;
+    this.workletNode.connect(this.gainNode);
+    this.gainNode.connect(this.destination);
 
     this.decoder = new AudioDecoder({
       output: (audioData: AudioData) => {
@@ -78,6 +82,15 @@ export class VstAudioPipeline {
     return this.destination?.stream.getAudioTracks()[0] ?? null;
   }
 
+  setVolume(volume: number) {
+    if (this.gainNode && this.audioContext) {
+      this.gainNode.gain.setValueAtTime(
+        Math.max(0, Math.min(1, volume)),
+        this.audioContext.currentTime,
+      );
+    }
+  }
+
   shutdown() {
     this.destroyed = true;
     this.ready = false;
@@ -89,6 +102,9 @@ export class VstAudioPipeline {
 
     this.workletNode?.disconnect();
     this.workletNode = null;
+
+    this.gainNode?.disconnect();
+    this.gainNode = null;
 
     this.destination?.disconnect();
     this.destination = null;
