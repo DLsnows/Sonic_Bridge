@@ -77,6 +77,10 @@ export class VstBridge {
     this.send({ type: "set_settings", opusBitrate });
   }
 
+  sendBufferChange(sendBufferSamples: number) {
+    this.send({ type: "set_settings", bufferSize: sendBufferSamples });
+  }
+
   requestSettings() {
     this.send({ type: "get_settings" });
   }

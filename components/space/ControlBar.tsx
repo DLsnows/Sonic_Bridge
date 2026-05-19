@@ -4,16 +4,21 @@ import { useState, useCallback } from "react";
 import { useLocalParticipant, useMaybeRoomContext } from "@livekit/components-react";
 import { useRouter } from "next/navigation";
 import { useSpaceStore } from "@/lib/store/space";
+import { useMediaSettingsStore } from "@/lib/store/media-settings";
 import { DeviceSelector } from "./DeviceSelector";
 
 export function ControlBar({
   projectId,
   onToggleMixer,
   mixerOpen,
+  onToggleMediaSettings,
+  mediaSettingsOpen,
 }: {
   projectId: string;
   onToggleMixer: () => void;
   mixerOpen: boolean;
+  onToggleMediaSettings: () => void;
+  mediaSettingsOpen: boolean;
 }) {
   const router = useRouter();
   const room = useMaybeRoomContext();
@@ -42,7 +47,25 @@ export function ControlBar({
 
   async function handleToggleScreenShare() {
     try {
-      await localParticipant.setScreenShareEnabled(!isScreenShareEnabled);
+      if (isScreenShareEnabled) {
+        await localParticipant.setScreenShareEnabled(false);
+        return;
+      }
+      const ss = useMediaSettingsStore.getState().screenShare;
+      const options: { resolution?: { width: number; height: number; frameRate: number }; audio: boolean; selfBrowserSurface: "exclude" } = {
+        audio: false,
+        selfBrowserSurface: "exclude",
+      };
+      if (ss.resolution !== "original") {
+        options.resolution = {
+          width: ss.resolution === "720p" ? 1280 : 1920,
+          height: ss.resolution === "720p" ? 720 : 1080,
+          frameRate: ss.frameRate,
+        };
+      } else {
+        options.resolution = { width: 0, height: 0, frameRate: ss.frameRate };
+      }
+      await localParticipant.setScreenShareEnabled(true, options);
     } catch { /* screen share may not be available */ }
   }
 
@@ -180,6 +203,19 @@ export function ControlBar({
           title={mixerOpen ? "Close audio mixer" : "Open audio mixer"}
         >
           🎚
+        </button>
+
+        {/* Media settings */}
+        <button
+          onClick={onToggleMediaSettings}
+          className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 ${
+            mediaSettingsOpen
+              ? "bg-[#00FF41]/15 text-[#00FF41]"
+              : "bg-white/5 text-[#A0A0B0] hover:bg-white/10 hover:text-[#F0F0F0]"
+          }`}
+          title="Media quality settings"
+        >
+          ⚙
         </button>
 
         {/* Separator */}
