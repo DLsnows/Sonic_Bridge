@@ -25,6 +25,7 @@ jobs:
           config.model: "deepseek/deepseek-v4-pro"
           config.fallback_models: '["deepseek/deepseek-v4-pro"]'
           config.custom_model_max_tokens: "131072"
+          config.max_model_tokens: "120000"
           github_action_config.auto_review: "true"
           github_action_config.auto_describe: "true"
           github_action_config.auto_improve: "true"
