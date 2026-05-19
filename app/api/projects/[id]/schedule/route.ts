@@ -72,6 +72,7 @@ export async function GET(
       createdBy: scheduleEvents.createdBy,
       createdAt: scheduleEvents.createdAt,
       creatorName: users.username,
+      creatorAvatar: users.avatar,
     })
     .from(scheduleEvents)
     .innerJoin(users, eq(scheduleEvents.createdBy, users.id))

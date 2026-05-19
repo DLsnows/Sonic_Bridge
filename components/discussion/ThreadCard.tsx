@@ -11,6 +11,7 @@ interface DiscussionPost {
   projectId: string;
   userId: string;
   username: string;
+  avatar?: string | null;
   title: string;
   content: string;
   parentId: string | null;
@@ -153,9 +154,18 @@ export function ThreadCard({
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <span className="w-6 h-6 rounded-full bg-[#FF8C00]/20 border border-[#FF8C00]/30 flex items-center justify-center text-[10px] text-[#FF8C00] font-['Share_Tech_Mono',monospace] shrink-0">
-                {post.username.charAt(0).toUpperCase()}
-              </span>
+              {post.avatar ? (
+                <img
+                  src={`/api/user/avatar/${post.userId}`}
+                  alt={post.username}
+                  className="w-6 h-6 rounded-full object-cover border border-[#FF8C00]/30 shrink-0"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <span className="w-6 h-6 rounded-full bg-[#FF8C00]/20 border border-[#FF8C00]/30 flex items-center justify-center text-[10px] text-[#FF8C00] font-['Share_Tech_Mono',monospace] shrink-0">
+                  {post.username.charAt(0).toUpperCase()}
+                </span>
+              )}
               <span className="text-sm text-[#F0F0F0] font-medium truncate">
                 {post.username}
               </span>
@@ -322,9 +332,18 @@ export function ThreadCard({
               {replies.map((reply) => (
                 <div key={reply.id} className="animate-fade-in">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="w-5 h-5 rounded-full bg-[#FF8C00]/10 border border-[#FF8C00]/20 flex items-center justify-center text-[9px] text-[#FF8C00] font-['Share_Tech_Mono',monospace] shrink-0">
-                      {reply.username.charAt(0).toUpperCase()}
-                    </span>
+                    {reply.avatar ? (
+                      <img
+                        src={`/api/user/avatar/${reply.userId}`}
+                        alt={reply.username}
+                        className="w-5 h-5 rounded-full object-cover border border-[#FF8C00]/20 shrink-0"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <span className="w-5 h-5 rounded-full bg-[#FF8C00]/10 border border-[#FF8C00]/20 flex items-center justify-center text-[9px] text-[#FF8C00] font-['Share_Tech_Mono',monospace] shrink-0">
+                        {reply.username.charAt(0).toUpperCase()}
+                      </span>
+                    )}
                     <span className="text-xs text-[#F0F0F0] font-medium">
                       {reply.username}
                     </span>
