@@ -141,13 +141,13 @@ export function AudioMixer() {
             <input
               type="range"
               min="0"
-              max="1"
+              max="2"
               step="0.01"
               value={vstVolume}
               onChange={(e) => setVstVolume(parseFloat(e.target.value))}
               className={sliderClass}
               style={{
-                background: `linear-gradient(to right, rgba(0,240,255,0.25) ${vstVolume * 100}%, rgba(255,255,255,0.1) ${vstVolume * 100}%)`,
+                background: `linear-gradient(to right, rgba(0,240,255,0.25) ${vstVolume * 50}%, rgba(255,255,255,0.1) ${vstVolume * 50}%)`,
               }}
             />
           </div>
@@ -183,7 +183,7 @@ export function AudioMixer() {
                   <div
                     className="h-full rounded-full transition-all duration-75"
                     style={{
-                      width: `${vol * 100}%`,
+                      width: `${vol * 50}%`,
                       backgroundColor: "#00F0FF",
                     }}
                   />
@@ -191,7 +191,7 @@ export function AudioMixer() {
                 <input
                   type="range"
                   min="0"
-                  max="1"
+                  max="2"
                   step="0.01"
                   value={vol}
                   onChange={(e) =>
@@ -202,7 +202,7 @@ export function AudioMixer() {
                   }
                   className={sliderClass}
                   style={{
-                    background: `linear-gradient(to right, rgba(0,240,255,0.25) ${vol * 100}%, rgba(255,255,255,0.1) ${vol * 100}%)`,
+                    background: `linear-gradient(to right, rgba(0,240,255,0.25) ${vol * 50}%, rgba(255,255,255,0.1) ${vol * 50}%)`,
                   }}
                 />
               </div>
