@@ -21,7 +21,7 @@ function ParticipantRow({
   const name = participant.name ?? participant.identity ?? "Unknown";
   const initial = name.charAt(0).toUpperCase();
   const isSpeaking = participant.isSpeaking;
-  const audioLevel = participant.audioLevel ?? 0;
+  const audioLevel = isSpeaking ? (participant.audioLevel ?? 0) : 0;
   const isMicOn = participant.isMicrophoneEnabled;
   const isCameraOn = participant.isCameraEnabled;
   const isScreenOn = participant.isScreenShareEnabled;
@@ -114,13 +114,15 @@ export function ParticipantList({ userId }: ParticipantListProps) {
       list.push({ participant: p, isLocal: false });
     }
 
-    const byName = list.slice(0, 1).concat(
-      list.slice(1).sort((a, b) =>
+    const local = list.find((item) => item.isLocal);
+    const remotes = list
+      .filter((item) => !item.isLocal)
+      .sort((a, b) =>
         (a.participant.name ?? a.participant.identity ?? "").localeCompare(
-          b.participant.name ?? b.participant.identity ?? ""
-        )
-      )
-    );
+          b.participant.name ?? b.participant.identity ?? "",
+        ),
+      );
+    const byName = local ? [local, ...remotes] : remotes;
 
     return byName;
   }, [localParticipant, remoteParticipants]);
