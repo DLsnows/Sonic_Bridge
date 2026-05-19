@@ -75,7 +75,7 @@ export async function HEAD(
     .limit(1);
 
   if (!file) {
-    return NextResponse.json({ error: "File not found" }, { status: 404 });
+    return new NextResponse(null, { status: 404 });
   }
 
   return new NextResponse(null, {

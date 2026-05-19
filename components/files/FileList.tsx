@@ -135,8 +135,17 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
     return () => {
       if (errorTimeoutRef.current) {
         clearTimeout(errorTimeoutRef.current);
+        errorTimeoutRef.current = null;
       }
       if (audioRef.current) {
+        const listeners = audioListenersRef.current;
+        if (listeners) {
+          audioRef.current.removeEventListener("ended", listeners.ended);
+          audioRef.current.removeEventListener("pause", listeners.pause);
+          audioRef.current.removeEventListener("error", listeners.error);
+          audioRef.current.removeEventListener("canplay", listeners.canplay);
+          audioListenersRef.current = null;
+        }
         audioRef.current.pause();
         audioRef.current.src = "";
         audioRef.current = null;
