@@ -10,6 +10,7 @@ import { ChatPanel } from "./ChatPanel";
 import { VstConnectionPanel } from "./VstConnectionPanel";
 import { VstAudioBridge } from "./VstAudioBridge";
 import { AudioMixer } from "./AudioMixer";
+import { MediaSettingsPanel } from "./MediaSettingsPanel";
 
 interface CreativeSpaceRoomProps {
   projectId: string;
@@ -35,6 +36,9 @@ export function CreativeSpaceRoom({
   const setRoomName = useSpaceStore((s) => s.setRoomName);
   const toggleMixer = useSpaceStore((s) => s.toggleMixer);
   const mixerOpen = useSpaceStore((s) => s.mixerOpen);
+  const toggleMediaSettings = useSpaceStore((s) => s.toggleMediaSettings);
+  const mediaSettingsOpen = useSpaceStore((s) => s.mediaSettingsOpen);
+  const setMediaSettingsOpen = useSpaceStore((s) => s.setMediaSettingsOpen);
   const abortRef = useRef<AbortController | null>(null);
 
   const fetchToken = useCallback(
@@ -154,10 +158,18 @@ export function CreativeSpaceRoom({
           projectId={projectId}
           onToggleMixer={toggleMixer}
           mixerOpen={mixerOpen}
+          onToggleMediaSettings={toggleMediaSettings}
+          mediaSettingsOpen={mediaSettingsOpen}
         />
 
         {/* Audio mixer — fixed overlay inside room context */}
         <AudioMixer />
+
+        {/* Media quality settings modal */}
+        <MediaSettingsPanel
+          open={mediaSettingsOpen}
+          onClose={() => setMediaSettingsOpen(false)}
+        />
       </LiveKitRoom>
     </div>
   );
