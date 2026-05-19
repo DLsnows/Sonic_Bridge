@@ -56,7 +56,7 @@ export function MediaSettingsPanel({ open, onClose }: MediaSettingsPanelProps) {
       <div className="space-y-6">
         {/* Audio Quality Section */}
         <section>
-          <h3 className="text-xs font-['Share_Tech_Mono',monospace] text-[#00FF41] uppercase tracking-wider mb-3">
+          <h3 className="text-xs font-['Share_Tech_Mono',monospace] text-[#00F0FF] uppercase tracking-wider mb-3">
             Audio Quality (Opus)
           </h3>
 
@@ -74,8 +74,8 @@ export function MediaSettingsPanel({ open, onClose }: MediaSettingsPanelProps) {
               value={audioQuality.bitrate}
               onChange={(e) => setAudioBitrate(Number(e.target.value))}
               className="w-full h-1.5 rounded-full appearance-none cursor-pointer
-                bg-[#00FF41]/20 accent-[#00FF41]
-                [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#00FF41] [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(0,255,65,0.5)]"
+                bg-[#00F0FF]/20 accent-[#00F0FF]
+                [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#00F0FF] [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(0,240,255,0.5)]"
             />
             <div className="flex justify-between text-[8px] text-[#A0A0B0] mt-0.5">
               <span>192 kbps</span>
@@ -135,7 +135,7 @@ export function MediaSettingsPanel({ open, onClose }: MediaSettingsPanelProps) {
 
         {/* Screen Share Section */}
         <section>
-          <h3 className="text-xs font-['Share_Tech_Mono',monospace] text-[#00FF41] uppercase tracking-wider mb-3">
+          <h3 className="text-xs font-['Share_Tech_Mono',monospace] text-[#00F0FF] uppercase tracking-wider mb-3">
             Screen Share
           </h3>
 
@@ -151,7 +151,7 @@ export function MediaSettingsPanel({ open, onClose }: MediaSettingsPanelProps) {
                   onClick={() => setScreenFps(opt.value)}
                   className={`flex-1 py-1.5 rounded text-[11px] font-['Share_Tech_Mono',monospace] transition-colors border ${
                     screenShare.frameRate === opt.value
-                      ? "bg-[#00FF41]/15 text-[#00FF41] border-[#00FF41]/30"
+                      ? "bg-[#00F0FF]/15 text-[#00F0FF] border-[#00F0FF]/30"
                       : "bg-white/5 text-[#A0A0B0] border-white/10 hover:bg-white/10"
                   }`}
                 >
@@ -173,7 +173,7 @@ export function MediaSettingsPanel({ open, onClose }: MediaSettingsPanelProps) {
                   onClick={() => setScreenResolution(opt.value)}
                   className={`flex-1 py-1.5 rounded text-[11px] font-['Share_Tech_Mono',monospace] transition-colors border ${
                     screenShare.resolution === opt.value
-                      ? "bg-[#00FF41]/15 text-[#00FF41] border-[#00FF41]/30"
+                      ? "bg-[#00F0FF]/15 text-[#00F0FF] border-[#00F0FF]/30"
                       : "bg-white/5 text-[#A0A0B0] border-white/10 hover:bg-white/10"
                   }`}
                 >
@@ -197,8 +197,8 @@ export function MediaSettingsPanel({ open, onClose }: MediaSettingsPanelProps) {
               value={screenShare.bitrate}
               onChange={(e) => setScreenBitrate(Number(e.target.value))}
               className="w-full h-1.5 rounded-full appearance-none cursor-pointer
-                bg-[#00FF41]/20 accent-[#00FF41]
-                [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#00FF41] [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(0,255,65,0.5)]"
+                bg-[#00F0FF]/20 accent-[#00F0FF]
+                [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#00F0FF] [&::-webkit-slider-thumb]:shadow-[0_0_8px_rgba(0,240,255,0.5)]"
             />
             <div className="flex justify-between text-[8px] text-[#A0A0B0] mt-0.5">
               <span>0.5 Mbps</span>
