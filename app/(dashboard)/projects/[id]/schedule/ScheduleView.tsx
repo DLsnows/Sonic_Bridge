@@ -30,9 +30,10 @@ interface ScheduleViewProps {
   projectId: string;
   userId: string;
   userRole: string;
+  backHref?: string;
 }
 
-export function ScheduleView({ projectId, userId, userRole }: ScheduleViewProps) {
+export function ScheduleView({ projectId, userId, userRole, backHref }: ScheduleViewProps) {
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
@@ -103,6 +104,7 @@ export function ScheduleView({ projectId, userId, userRole }: ScheduleViewProps)
         title="Schedule"
         subtitle="Project timeline"
         showBack
+        backHref={backHref}
         actions={
           <Button size="sm" onClick={handleCreate}>
             + Add Event

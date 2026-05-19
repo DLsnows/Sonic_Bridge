@@ -65,6 +65,7 @@ export default async function DiscussionPage({
       }))}
       currentUserId={userId}
       isAdmin={membership.role === "admin"}
+      backHref={`/projects/${projectId}`}
     />
   );
 }
