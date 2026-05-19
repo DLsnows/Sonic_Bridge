@@ -52,8 +52,9 @@ export async function POST(
 
   if (!aiUrl || !aiKey) {
     const missing = !aiUrl && !aiKey ? "AI_API_URL and AI_API_KEY" : !aiUrl ? "AI_API_URL" : "AI_API_KEY";
+    console.error(`AI formatting not configured: missing ${missing}`);
     return NextResponse.json(
-      { error: `AI formatting not configured (missing: ${missing})` },
+      { error: "AI formatting not configured" },
       { status: 503 },
     );
   }
