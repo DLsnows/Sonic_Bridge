@@ -24,6 +24,7 @@ interface ScheduleEvent {
   createdBy: string;
   createdAt: string;
   creatorName: string;
+  creatorAvatar?: string | null;
 }
 
 interface ScheduleViewProps {

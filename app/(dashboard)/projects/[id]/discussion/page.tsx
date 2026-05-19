@@ -41,6 +41,7 @@ export default async function DiscussionPage({
       projectId: discussionPosts.projectId,
       userId: discussionPosts.userId,
       username: users.username,
+      avatar: users.avatar,
       title: discussionPosts.title,
       content: discussionPosts.content,
       parentId: discussionPosts.parentId,
