@@ -37,12 +37,11 @@ export function AudioMixer() {
       );
       if (!participant) return;
       participant.audioTrackPublications.forEach((pub) => {
-        if (typeof pub.setVolume === "function") {
-          pub.setVolume(value);
-        }
-        const audioTrack = pub.track;
-        if (audioTrack?.attachedElements) {
-          for (const el of audioTrack.attachedElements) {
+        const p = pub as { setVolume?(v: number): void; track?: { attachedElements?: HTMLMediaElement[] } };
+        if (typeof p.setVolume === "function") {
+          p.setVolume(value);
+        } else if (p.track?.attachedElements) {
+          for (const el of p.track.attachedElements) {
             el.volume = value;
           }
         }
