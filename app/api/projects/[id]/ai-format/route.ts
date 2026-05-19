@@ -60,7 +60,15 @@ export async function POST(
 
   if (dbConfig) {
     aiUrl = dbConfig.apiUrl;
-    aiKey = decrypt(dbConfig.encryptedApiKey);
+    try {
+      aiKey = decrypt(dbConfig.encryptedApiKey);
+    } catch {
+      console.error("Failed to decrypt AI API key - AUTH_SECRET may have changed");
+      return NextResponse.json(
+        { error: "AI formatting not configured. Ask a project admin to reconfigure it in Project Settings." },
+        { status: 503 },
+      );
+    }
     aiModel = dbConfig.model;
   } else {
     aiUrl = process.env.AI_API_URL ?? "";
