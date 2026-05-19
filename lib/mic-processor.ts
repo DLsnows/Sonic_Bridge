@@ -19,6 +19,7 @@ export class MicProcessor
   private destination: MediaStreamAudioDestinationNode | null = null;
   private meterRafId: number | null = null;
   private meterDataArray: Uint8Array<ArrayBuffer> | null = null;
+  private meterSmoothingFactor = 0.3;
 
   async init(opts: AudioProcessorOptions): Promise<void> {
     const { audioContext, track } = opts;
@@ -66,6 +67,7 @@ export class MicProcessor
       this.sourceNode.connect(this.analyserNode);
       this.analyserNode.connect(this.gainNode);
       this.gainNode.connect(this.destination);
+      this.processedTrack = this.destination.stream.getAudioTracks()[0];
     }
 
     this.startMeterLoop();
@@ -108,7 +110,6 @@ export class MicProcessor
     if (!this.analyserNode || !this.meterDataArray) return;
 
     let smoothedLevel = 0;
-    const smoothingFactor = 0.3;
 
     const poll = () => {
       if (!this.analyserNode || !this.meterDataArray) return;
@@ -123,7 +124,8 @@ export class MicProcessor
       const rms = Math.sqrt(sumSquares / this.meterDataArray.length);
 
       smoothedLevel =
-        smoothingFactor * rms + (1 - smoothingFactor) * smoothedLevel;
+        this.meterSmoothingFactor * rms +
+        (1 - this.meterSmoothingFactor) * smoothedLevel;
 
       useVstStore.getState().setMicMeterLevel(smoothedLevel);
 

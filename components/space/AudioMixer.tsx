@@ -16,7 +16,7 @@ const sliderClass =
   "[&::-moz-range-track]:bg-transparent";
 
 function micMeterLevelColor(level: number): string {
-  if (level > 0.9) return "#FF4444";
+  if (level > 0.75) return "#FF4444";
   if (level > 0.5) return "#FFB800";
   if (level > 0.05) return "#00FF41";
   return "#00F0FF";
