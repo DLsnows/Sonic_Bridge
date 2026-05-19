@@ -86,7 +86,7 @@ export function Sidebar({ username, avatar }: { username?: string; avatar?: stri
             />
           ) : (
             <div className="w-8 h-8 rounded-full bg-[#00FF41]/20 flex items-center justify-center text-xs text-[#00FF41] font-['Share_Tech_Mono',monospace] shrink-0">
-              {(username ?? "U")[0].toUpperCase()}
+              {(username || "U")[0].toUpperCase()}
             </div>
           )}
           {!collapsed && (

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -18,6 +18,7 @@ interface Props {
 
 export function UserSettingsForm({ userId, username: initialUsername, email, avatar: currentAvatar }: Props) {
   const router = useRouter();
+  const { update } = useSession();
 
   // Name
   const [name, setName] = useState(initialUsername);
@@ -105,6 +106,7 @@ export function UserSettingsForm({ userId, username: initialUsername, email, ava
         setDisplayAvatar(data.avatar);
         setSelectedFile(null);
         if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }
+        update({ image: data.avatar });
         router.refresh();
       } else {
         setAvatarMsg(data.error ?? "Failed");
@@ -124,6 +126,7 @@ export function UserSettingsForm({ userId, username: initialUsername, email, ava
       setDisplayAvatar(null);
       setSelectedFile(null);
       if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }
+      update({ image: null });
       router.refresh();
     } else {
       const data = await res.json().catch(() => ({ error: "Failed" }));
@@ -177,7 +180,7 @@ export function UserSettingsForm({ userId, username: initialUsername, email, ava
               />
             ) : (
               <div className="w-16 h-16 rounded-full bg-[#00FF41]/20 flex items-center justify-center text-lg text-[#00FF41] font-['Share_Tech_Mono',monospace] border-2 border-[#00FF41]/30 shrink-0">
-                {initialUsername[0].toUpperCase()}
+                {(initialUsername || "U")[0].toUpperCase()}
               </div>
             )}
             <div className="flex flex-col gap-2">
