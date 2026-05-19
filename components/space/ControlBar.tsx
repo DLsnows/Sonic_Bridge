@@ -210,7 +210,7 @@ export function ControlBar({
           onClick={onToggleMediaSettings}
           className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 ${
             mediaSettingsOpen
-              ? "bg-[#00FF41]/15 text-[#00FF41]"
+              ? "bg-[#00F0FF]/15 text-[#00F0FF]"
               : "bg-white/5 text-[#A0A0B0] hover:bg-white/10 hover:text-[#F0F0F0]"
           }`}
           title="Media quality settings"
