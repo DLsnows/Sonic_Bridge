@@ -92,6 +92,12 @@ export class VstAudioPipeline {
     }
   }
 
+  setReceiveBufferSize(samples: number) {
+    if (this.workletNode && !this.destroyed) {
+      this.workletNode.port.postMessage({ type: "resize", capacity: samples });
+    }
+  }
+
   shutdown() {
     this.destroyed = true;
     this.ready = false;

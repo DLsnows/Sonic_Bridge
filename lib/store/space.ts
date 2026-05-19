@@ -7,6 +7,7 @@ interface SpaceState {
   chatOpen: boolean;
   mixerOpen: boolean;
   videoWatchEnabled: boolean;
+  mediaSettingsOpen: boolean;
   setConnected: (connected: boolean) => void;
   setRoomName: (name: string) => void;
   incrementUnread: () => void;
@@ -16,6 +17,8 @@ interface SpaceState {
   setMixerOpen: (open: boolean) => void;
   toggleVideoWatch: () => void;
   setVideoWatchEnabled: (enabled: boolean) => void;
+  toggleMediaSettings: () => void;
+  setMediaSettingsOpen: (open: boolean) => void;
 }
 
 export const useSpaceStore = create<SpaceState>((set) => ({
@@ -25,6 +28,7 @@ export const useSpaceStore = create<SpaceState>((set) => ({
   chatOpen: false,
   mixerOpen: false,
   videoWatchEnabled: true,
+  mediaSettingsOpen: false,
   setConnected: (connected) => set({ isConnected: connected }),
   setRoomName: (name) => set({ roomName: name }),
   incrementUnread: () => set((s) => ({ unreadCount: s.unreadCount + 1 })),
@@ -34,4 +38,6 @@ export const useSpaceStore = create<SpaceState>((set) => ({
   setMixerOpen: (open) => set({ mixerOpen: open }),
   toggleVideoWatch: () => set((s) => ({ videoWatchEnabled: !s.videoWatchEnabled })),
   setVideoWatchEnabled: (enabled) => set({ videoWatchEnabled: enabled }),
+  toggleMediaSettings: () => set((s) => ({ mediaSettingsOpen: !s.mediaSettingsOpen })),
+  setMediaSettingsOpen: (open) => set({ mediaSettingsOpen: open }),
 }));
