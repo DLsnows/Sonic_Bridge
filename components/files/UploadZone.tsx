@@ -73,13 +73,13 @@ export function UploadZone({ projectId, folderId, onComplete, onClose }: UploadZ
         <div
           className={`border-2 border-dashed rounded-lg p-8 text-center transition-all cursor-pointer
             ${dragOver ? "border-[#00FF41] bg-[#00FF41]/5 shadow-[0_0_20px_rgba(0,255,65,0.15)]"
-              : "border-white/20 hover:border-[#00F0FF]/50 hover:bg-white/[0.02]"}`}
+              : "border-white/20 hover:border-[#00FF41]/50 hover:bg-white/[0.02]"}`}
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onDrop={(e) => { e.preventDefault(); setDragOver(false); if (e.dataTransfer.files.length > 0) addFiles(e.dataTransfer.files); }}
           onClick={() => inputRef.current?.click()}>
           <div className="text-3xl mb-2">↑</div>
-          <p className="text-sm text-[#A0A0B0]">Drop files here or <span className="text-[#00F0FF]">click to browse</span></p>
+          <p className="text-sm text-[#A0A0B0]">Drop files here or <span className="text-[#00FF41]">click to browse</span></p>
           <p className="text-[10px] text-[#A0A0B0]/60 mt-1">{`Audio ${SIZE_LIMITS.audio / 1048576}MB / Archives ${SIZE_LIMITS.archive / 1073741824}GB / Video ${SIZE_LIMITS.video / 1048576}MB / Other ${SIZE_LIMITS.other / 1048576}MB`}</p>
         </div>
         <input ref={inputRef} type="file" multiple className="hidden"

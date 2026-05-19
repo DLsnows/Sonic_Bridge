@@ -88,7 +88,7 @@ export function FileBrowser({ projectId, userId, initialFolders }: FileBrowserPr
         </div>
         <div className="flex-1 overflow-auto p-4">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-['Share_Tech_Mono',monospace] text-sm text-[#00F0FF]">
+            <h3 className="font-['Share_Tech_Mono',monospace] text-sm text-[#00FF41]">
               {currentFolderId ? folders.find((f) => f.id === currentFolderId)?.name ?? "Files" : "Root"}
             </h3>
             <Button size="sm" onClick={() => setShowUpload(true)}>Upload Files</Button>

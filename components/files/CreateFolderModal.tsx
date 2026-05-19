@@ -67,7 +67,7 @@ export function CreateFolderModal({
       <div className="space-y-4">
         {parentFolder ? (
           <p className="text-xs text-[#A0A0B0]">
-            Parent: <span className="text-[#00F0FF]">{parentFolder.name}</span>
+            Parent: <span className="text-[#00FF41]">{parentFolder.name}</span>
           </p>
         ) : (
           <p className="text-xs text-[#A0A0B0]">

@@ -51,7 +51,7 @@ export function FolderTree({ folders, currentFolderId, onSelect, onRename, onDel
       <div>
         <button
           className={`group w-full text-left px-2 py-1.5 rounded text-xs font-mono flex items-center gap-1.5 transition-colors
-            ${isCurrent ? "bg-[#00F0FF]/10 text-[#00F0FF]" : "text-[#A0A0B0] hover:text-[#F0F0F0] hover:bg-white/5"}`}
+            ${isCurrent ? "bg-[#00FF41]/10 text-[#00FF41]" : "text-[#A0A0B0] hover:text-[#F0F0F0] hover:bg-white/5"}`}
           style={{ paddingLeft: `${8 + depth * 12}px` }}
           onClick={() => {
             if (hasChildren) setExpanded(!expanded);
@@ -69,7 +69,7 @@ export function FolderTree({ folders, currentFolderId, onSelect, onRename, onDel
             <span className="ml-auto flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
               <button
                 onClick={(e) => { e.stopPropagation(); onRename(node.id!, node.name); }}
-                className="text-[10px] text-[#A0A0B0] hover:text-[#00F0FF] px-1"
+                className="text-[10px] text-[#A0A0B0] hover:text-[#00FF41] px-1"
                 title="Rename"
               >✎</button>
               <button
