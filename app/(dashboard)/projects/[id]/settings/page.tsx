@@ -7,6 +7,7 @@ import { TopBar } from "@/components/TopBar";
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { CopyProjectId } from "./CopyProjectId";
 import { GenerateToken } from "./GenerateToken";
+import { AiConfigForm } from "@/components/settings/AiConfigForm";
 
 export default async function SettingsPage({
   params,
@@ -56,6 +57,16 @@ export default async function SettingsPage({
             Generate an API token for automated file management via AI agents or scripts.
           </p>
           <GenerateToken />
+        </GlassPanel>
+
+        <GlassPanel>
+          <h3 className="font-['Share_Tech_Mono',monospace] text-sm text-[#FF8C00] mb-4">
+            AI Features
+          </h3>
+          <p className="text-sm text-[#A0A0B0] mb-4">
+            Configure AI-powered formatting for discussion posts.
+          </p>
+          <AiConfigForm projectId={project.id} />
         </GlassPanel>
       </div>
     </div>
