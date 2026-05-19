@@ -20,19 +20,25 @@ export async function GET(
     return new NextResponse(null, { status: 404 });
   }
 
-  // Backward compat: extract pathname from old full URLs
   let storageKey: string;
-  if (user.avatar.includes("blob.vercel-storage.com")) {
-    storageKey = new URL(user.avatar).pathname.slice(1);
-  } else {
-    storageKey = user.avatar;
+  try {
+    if (user.avatar.includes("blob.vercel-storage.com")) {
+      storageKey = new URL(user.avatar).pathname.slice(1);
+    } else {
+      storageKey = user.avatar;
+    }
+  } catch {
+    return new NextResponse(null, { status: 404 });
   }
 
-  const blob = await head(storageKey);
-
-  return NextResponse.redirect(blob.downloadUrl, {
-    headers: {
-      "Cache-Control": "public, max-age=300, s-maxage=300, stale-while-revalidate=3600",
-    },
-  });
+  try {
+    const blob = await head(storageKey);
+    return NextResponse.redirect(blob.downloadUrl, {
+      headers: {
+        "Cache-Control": "public, max-age=300, s-maxage=300, stale-while-revalidate=3600",
+      },
+    });
+  } catch {
+    return new NextResponse(null, { status: 404 });
+  }
 }
