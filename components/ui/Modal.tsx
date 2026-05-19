@@ -33,9 +33,9 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in"
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
     >
-      <div className="glass-panel w-full max-w-lg mx-4 shadow-[0_0_60px_rgba(0,255,65,0.1)] animate-slide-up">
+      <div className="glass-panel w-full max-w-lg mx-4 shadow-[0_0_60px_rgba(0,240,255,0.1)] animate-slide-up">
         <div className="flex items-center justify-between p-4 border-b border-white/10">
-          <h2 className="text-lg font-['Share_Tech_Mono',monospace] text-[#00FF41] neon-text">
+          <h2 className="text-lg font-['Share_Tech_Mono',monospace] neon-text-cyan">
             {title}
           </h2>
           <Button variant="ghost" size="sm" onClick={onClose} aria-label="Close">
