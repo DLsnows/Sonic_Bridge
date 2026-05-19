@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useTracks, ParticipantTile, useMaybeRoomContext } from "@livekit/components-react";
-import { Track, RoomEvent } from "livekit-client";
+import { Track, RoomEvent, type RemoteParticipant } from "livekit-client";
 import { useSpaceStore } from "@/lib/store/space";
 
 export function ParticipantGrid() {
@@ -33,12 +33,9 @@ export function ParticipantGrid() {
   useEffect(() => {
     if (!room || videoWatchEnabled) return;
 
-    function handleParticipantConnected() {
-      for (const [, participant] of room!.remoteParticipants) {
-        for (const [, pub] of participant.videoTrackPublications) {
-          if (!pub.isSubscribed) continue;
-          pub.setSubscribed(false);
-        }
+    function handleParticipantConnected(participant: RemoteParticipant) {
+      for (const [, pub] of participant.videoTrackPublications) {
+        pub.setSubscribed(false);
       }
     }
 
