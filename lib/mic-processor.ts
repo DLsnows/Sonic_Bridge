@@ -4,6 +4,7 @@ import type {
   AudioCaptureOptions,
 } from "livekit-client";
 import { Track } from "livekit-client";
+import { useVstStore } from "@/lib/store/vst";
 
 export class MicProcessor
   implements TrackProcessor<Track.Kind.Audio, AudioProcessorOptions>
@@ -24,7 +25,7 @@ export class MicProcessor
       new MediaStream([track]),
     );
     this.gainNode = audioContext.createGain();
-    this.gainNode.gain.value = 1;
+    this.gainNode.gain.value = useVstStore.getState().micVolume;
     this.destination = audioContext.createMediaStreamDestination();
 
     this.sourceNode.connect(this.gainNode).connect(this.destination);

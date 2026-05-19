@@ -90,7 +90,13 @@ export function AudioMixer() {
               </span>
             </div>
             <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-              <div className="h-full w-0 rounded-full" />
+              <div
+                className="h-full rounded-full transition-all duration-75"
+                style={{
+                  width: `${micVolume * 100}%`,
+                  backgroundColor: "#00F0FF",
+                }}
+              />
             </div>
             <input
               type="range"
