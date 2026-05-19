@@ -140,7 +140,7 @@ export function CreativeSpaceRoom({
           username={username}
         />
 
-        {/* Mic volume bridge — invisible, manages mic gain processing */}
+        {/* Mic volume bridge — invisible, syncs mic gain to processor */}
         <MicVolumeBridge />
 
         {/* Left sidebar: VST panel */}

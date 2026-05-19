@@ -12,5 +12,11 @@ export function MicVolumeBridge() {
     processorRef.current.setVolume(micVolume);
   }, [micVolume]);
 
+  useEffect(() => {
+    return () => {
+      useVstStore.getState().setMicMeterLevel(0);
+    };
+  }, []);
+
   return null;
 }
