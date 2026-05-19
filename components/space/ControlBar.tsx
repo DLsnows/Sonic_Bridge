@@ -5,6 +5,7 @@ import { useLocalParticipant, useMaybeRoomContext } from "@livekit/components-re
 import { useRouter } from "next/navigation";
 import { useSpaceStore } from "@/lib/store/space";
 import { useMediaSettingsStore } from "@/lib/store/media-settings";
+import { getMicProcessor } from "@/lib/mic-processor";
 import { DeviceSelector } from "./DeviceSelector";
 
 export function ControlBar({
@@ -35,7 +36,14 @@ export function ControlBar({
 
   async function handleToggleMic() {
     try {
-      await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
+      if (!isMicrophoneEnabled) {
+        await localParticipant.setMicrophoneEnabled(
+          true,
+          getMicProcessor().getCaptureOptions(),
+        );
+      } else {
+        await localParticipant.setMicrophoneEnabled(false);
+      }
     } catch { /* device access may be denied */ }
   }
 
