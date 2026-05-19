@@ -34,6 +34,7 @@ interface VstState {
   audioTrackPublished: boolean;
   broadcastEnabled: boolean;
   triggerReconnect: number;
+  vstVolume: number;
 
   setStatus: (status: VstConnectionStatus) => void;
   setPluginInfo: (info: { name: string; version: string }) => void;
@@ -41,6 +42,7 @@ interface VstState {
   setAudioSettings: (settings: VstAudioSettings) => void;
   setAudioTrackPublished: (published: boolean) => void;
   setBroadcastEnabled: (enabled: boolean) => void;
+  setVstVolume: (volume: number) => void;
   setError: (error: string | null) => void;
   requestReconnect: () => void;
   reset: () => void;
@@ -61,6 +63,7 @@ const initialState = {
   audioTrackPublished: false,
   broadcastEnabled: true,
   triggerReconnect: 0,
+  vstVolume: 1,
 };
 
 export const useVstStore = create<VstState>((set) => ({
@@ -84,6 +87,7 @@ export const useVstStore = create<VstState>((set) => ({
     }),
   setAudioTrackPublished: (published) => set({ audioTrackPublished: published }),
   setBroadcastEnabled: (enabled) => set({ broadcastEnabled: enabled }),
+  setVstVolume: (volume) => set({ vstVolume: volume }),
   setError: (error) => set({ lastError: error }),
   requestReconnect: () => set((s) => ({ triggerReconnect: s.triggerReconnect + 1 })),
   reset: () => set(initialState),
