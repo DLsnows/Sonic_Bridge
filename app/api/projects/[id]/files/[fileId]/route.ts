@@ -31,8 +31,8 @@ export async function GET(
 
   const rangeHeader = request.headers.get("range");
   const isInline = request.nextUrl.searchParams.has("inline");
-  const isAudio = file.mimeType.startsWith("audio/");
-  const isVideo = file.mimeType.startsWith("video/");
+  const isAudio = file.mimeType?.startsWith("audio/") ?? false;
+  const isVideo = file.mimeType?.startsWith("video/") ?? false;
 
   const {
     body, contentType, size, contentLength, isRange, rangeStart, rangeEnd,

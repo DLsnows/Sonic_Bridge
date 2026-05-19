@@ -100,6 +100,8 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
       audio.play().catch((err) => {
         console.error("Audio play() rejected:", err);
         setAudioLoading(false);
+        playingFileIdRef.current = null;
+        setPlayingFileId(null);
       });
       audioRef.current = audio;
       playingFileIdRef.current = fileId;
