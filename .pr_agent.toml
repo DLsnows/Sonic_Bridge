@@ -1,6 +1,6 @@
 [config]
-model = "deepseek/deepseek-chat"
-fallback_models = ["deepseek/deepseek-chat"]
+model = "deepseek/deepseek-v4-pro"
+fallback_models = ["deepseek/deepseek-v4-pro"]
 custom_model_max_tokens = 131072
 
 [pr_reviewer]
