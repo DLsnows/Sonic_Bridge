@@ -152,7 +152,7 @@ export function ParticipantList({ userId }: ParticipantListProps) {
           />
         ))}
 
-        {!hasRemote && (
+        {localParticipant && !hasRemote && (
           <p className="text-[10px] text-[#A0A0B0] text-center py-6 italic font-['Fira_Code',monospace]">
             Only you are here
           </p>
