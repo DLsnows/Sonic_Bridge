@@ -37,7 +37,7 @@ export function BreadcrumbNav({
               <span className="text-[#A0A0B0]/50 text-xs">&gt;</span>
             )}
             {isLast ? (
-              <span className="font-['Share_Tech_Mono',monospace] text-xs text-[#00F0FF]">
+              <span className="font-['Share_Tech_Mono',monospace] text-xs text-[#00FF41]">
                 {segment.name}
               </span>
             ) : (

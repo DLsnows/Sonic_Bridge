@@ -104,7 +104,11 @@ export function ScheduleView({ projectId, userId, userRole }: ScheduleViewProps)
         subtitle="Project timeline"
         showBack
         actions={
-          <Button size="sm" onClick={handleCreate}>
+          <Button
+            size="sm"
+            onClick={handleCreate}
+            className="bg-[#B44DFF] text-white hover:bg-[#9B3DFF] shadow-[0_0_20px_rgba(180,77,255,0.2)] hover:shadow-[0_0_30px_rgba(180,77,255,0.3)]"
+          >
             + Add Event
           </Button>
         }

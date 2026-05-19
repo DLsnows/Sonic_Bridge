@@ -31,7 +31,7 @@ function fileIcon(mimeType: string): string {
 
 const iconColors: Record<string, string> = {
   SPEAKER: "text-[#00FF41]",
-  IMG: "text-[#00F0FF]",
+  IMG: "text-[#00FF41]",
   VID: "text-[#BD00FF]",
   TXT: "text-[#FFB800]",
   FILE: "text-[#A0A0B0]",
