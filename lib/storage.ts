@@ -42,72 +42,28 @@ export async function saveFile(
 
 export async function getFileUrl(storageKey: string): Promise<string> {
   const blob = await head(storageKey);
-  return blob.downloadUrl;
-}
-
-export interface FileBodyResult {
-  body: ReadableStream<Uint8Array> | null;
-  contentType: string;
-  size: number;
-  contentLength: number;
-  isRange: boolean;
-  rangeStart: number;
-  rangeEnd: number;
+  return blob.url;
 }
 
 export async function getFileBody(
   storageKey: string,
-  options?: { range?: string },
-): Promise<FileBodyResult> {
+): Promise<{ body: ReadableStream<Uint8Array>; contentType: string; size: number }> {
   const blob = await head(storageKey);
-  const fetchHeaders: Record<string, string> = {};
-  if (options?.range) fetchHeaders.Range = options.range;
-
-  const response = await fetch(blob.downloadUrl, { headers: fetchHeaders });
-  if (!response.ok && response.status !== 206) {
+  const response = await fetch(blob.url);
+  if (!response.ok || !response.body) {
     throw new Error("Failed to fetch blob content");
   }
-  if (!response.body) {
-    throw new Error("Blob returned empty body");
-  }
-
-  if (response.status === 206) {
-    const contentRange = response.headers.get("content-range");
-    if (!contentRange) {
-      throw new Error("Missing Content-Range header in 206 response");
-    }
-    const match = contentRange.match(/bytes (\d+)-(\d+)\/(\d+)/);
-    if (!match) {
-      throw new Error(`Invalid Content-Range format: ${contentRange}`);
-    }
-    const rangeStart = parseInt(match[1], 10);
-    const rangeEnd = parseInt(match[2], 10);
-    const totalSize = parseInt(match[3], 10);
-    return {
-      body: response.body,
-      contentType: blob.contentType || "application/octet-stream",
-      size: totalSize,
-      contentLength: rangeEnd - rangeStart + 1,
-      isRange: true,
-      rangeStart,
-      rangeEnd,
-    };
-  }
-
   return {
     body: response.body,
     contentType: blob.contentType || "application/octet-stream",
     size: blob.size,
-    contentLength: blob.size,
-    isRange: false,
-    rangeStart: 0,
-    rangeEnd: blob.size - 1,
   };
 }
 
 export async function deleteFile(storageKey: string): Promise<void> {
   try {
-    await del(storageKey);
+    const blob = await head(storageKey);
+    await del(blob.url);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     if (message.toLowerCase().includes("not found")) return;
