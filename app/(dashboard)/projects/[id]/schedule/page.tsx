@@ -31,6 +31,7 @@ export default async function SchedulePage({
       projectId={id}
       userId={userId}
       userRole={membership.role}
+      backHref={`/projects/${id}`}
     />
   );
 }

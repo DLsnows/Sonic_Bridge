@@ -33,6 +33,7 @@ export default async function SpacePage({
         title="Creative Space"
         subtitle="Real-time audio · screen sharing · voice & video"
         showBack
+        backHref={`/projects/${id}`}
       />
       <CreativeSpaceRoom
         projectId={id}

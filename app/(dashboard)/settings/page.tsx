@@ -11,7 +11,7 @@ export default async function SettingsPage() {
 
   return (
     <div>
-      <TopBar title="User Settings" showBack />
+      <TopBar title="User Settings" showBack backHref="/" />
       <div className="p-6 max-w-xl mx-auto">
         <UserSettingsForm
           userId={user.id}

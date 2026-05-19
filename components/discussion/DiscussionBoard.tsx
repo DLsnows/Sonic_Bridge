@@ -26,6 +26,7 @@ interface DiscussionBoardProps {
   initialPosts: DiscussionPost[];
   currentUserId: string;
   isAdmin: boolean;
+  backHref?: string;
 }
 
 function collectDescendantIds(
@@ -55,6 +56,7 @@ export function DiscussionBoard({
   initialPosts,
   currentUserId,
   isAdmin,
+  backHref,
 }: DiscussionBoardProps) {
   const [posts, setPosts] = useState<DiscussionPost[]>(initialPosts);
   const [showNewThread, setShowNewThread] = useState(false);
@@ -194,6 +196,7 @@ export function DiscussionBoard({
         title="Discussion"
         subtitle={projectName}
         showBack
+        backHref={backHref}
         actions={
           <Button
             variant="primary"

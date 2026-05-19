@@ -115,6 +115,8 @@ export default async function ProjectPage({
       <TopBar
         title={project.name}
         subtitle={project.description ?? undefined}
+        showBack
+        backHref="/"
         actions={
           isAdmin ? (
             <Link href={`/projects/${id}/settings`}>
