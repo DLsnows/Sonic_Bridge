@@ -204,7 +204,7 @@ export function UserSettingsForm({ userId, username: initialUsername, email, ava
             </div>
           </div>
           <p className="text-xs text-[#A0A0B0]">JPEG, PNG, GIF, or WebP. Max 5 MB. Images are resized to 256x256.</p>
-          {avatarMsg && <p className={`text-xs ${avatarMsg.includes("updated") || avatarMsg.includes("removed") ? "text-[#00FF41]" : "text-[#FF4444]"}`}>{avatarMsg}</p>}
+          {avatarMsg && <p className={`text-xs ${avatarMsg === "Avatar updated." || avatarMsg === "Avatar removed." ? "text-[#00FF41]" : "text-[#FF4444]"}`}>{avatarMsg}</p>}
         </div>
       </GlassPanel>
 
