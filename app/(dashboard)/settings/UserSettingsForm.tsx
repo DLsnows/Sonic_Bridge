@@ -1,20 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
+import { validateImageFile, resizeAvatarImage } from "@/lib/image-utils";
 
 interface Props {
   userId: string;
   username: string;
   email: string;
+  avatar?: string | null;
 }
 
-export function UserSettingsForm({ userId, username: initialUsername, email }: Props) {
+export function UserSettingsForm({ userId, username: initialUsername, email, avatar: currentAvatar }: Props) {
   const router = useRouter();
 
   // Name
@@ -29,9 +31,31 @@ export function UserSettingsForm({ userId, username: initialUsername, email }: P
   const [pwMsg, setPwMsg] = useState("");
 
   // Avatar
-  const [avatarUrl, setAvatarUrl] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [avatarLoading, setAvatarLoading] = useState(false);
   const [avatarMsg, setAvatarMsg] = useState("");
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const result = validateImageFile(file);
+    if (!result.valid) {
+      setAvatarMsg(result.error ?? "Invalid file");
+      return;
+    }
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+    setAvatarMsg("");
+  }
 
   // Delete
   const [showDelete, setShowDelete] = useState(false);
@@ -65,16 +89,43 @@ export function UserSettingsForm({ userId, username: initialUsername, email }: P
     setPwLoading(false);
   }
 
-  async function handleUpdateAvatar() {
+  async function handleUpload() {
+    if (!selectedFile) return;
     setAvatarLoading(true);
     setAvatarMsg("");
-    const res = await fetch("/api/user", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ avatar: avatarUrl }),
-    });
-    const data = await res.json();
-    setAvatarMsg(res.ok ? "Avatar updated." : data.error ?? "Failed");
+    try {
+      const resized = await resizeAvatarImage(selectedFile);
+      const formData = new FormData();
+      formData.append("file", resized, "avatar.jpg");
+      const res = await fetch("/api/user/avatar", { method: "POST", body: formData });
+      const data = await res.json();
+      if (res.ok) {
+        setAvatarMsg("Avatar updated.");
+        setSelectedFile(null);
+        if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }
+        window.location.reload();
+      } else {
+        setAvatarMsg(data.error ?? "Failed");
+      }
+    } catch (err) {
+      setAvatarMsg(err instanceof Error ? err.message : "Failed to process image");
+    }
+    setAvatarLoading(false);
+  }
+
+  async function handleRemove() {
+    setAvatarLoading(true);
+    setAvatarMsg("");
+    const res = await fetch("/api/user/avatar", { method: "DELETE" });
+    if (res.ok) {
+      setAvatarMsg("Avatar removed.");
+      setSelectedFile(null);
+      if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }
+      window.location.reload();
+    } else {
+      const data = await res.json().catch(() => ({ error: "Failed" }));
+      setAvatarMsg(data.error ?? "Failed");
+    }
     setAvatarLoading(false);
   }
 
@@ -114,9 +165,43 @@ export function UserSettingsForm({ userId, username: initialUsername, email }: P
       <GlassPanel>
         <h3 className="font-['Share_Tech_Mono',monospace] text-sm text-[#00FF41] mb-4">Avatar</h3>
         <div className="space-y-3">
-          <Input label="Avatar URL" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://..." />
-          {avatarMsg && <p className={`text-xs ${avatarMsg.includes("updated") ? "text-[#00FF41]" : "text-[#FF4444]"}`}>{avatarMsg}</p>}
-          <Button size="sm" loading={avatarLoading} onClick={handleUpdateAvatar}>Update Avatar</Button>
+          <div className="flex items-center gap-4">
+            {(previewUrl || currentAvatar) ? (
+              <img
+                src={previewUrl ?? currentAvatar ?? ""}
+                alt="Avatar preview"
+                className="w-16 h-16 rounded-full object-cover border-2 border-[#00FF41]/30 shrink-0"
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-[#00FF41]/20 flex items-center justify-center text-lg text-[#00FF41] font-['Share_Tech_Mono',monospace] border-2 border-[#00FF41]/30 shrink-0">
+                {initialUsername[0].toUpperCase()}
+              </div>
+            )}
+            <div className="flex flex-col gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+              <Button size="sm" variant="secondary" onClick={() => fileInputRef.current?.click()}>
+                Choose Image
+              </Button>
+              {selectedFile && (
+                <Button size="sm" loading={avatarLoading} onClick={handleUpload}>
+                  Upload
+                </Button>
+              )}
+              {currentAvatar && !selectedFile && (
+                <Button size="sm" variant="danger" loading={avatarLoading} onClick={handleRemove}>
+                  Remove
+                </Button>
+              )}
+            </div>
+          </div>
+          <p className="text-xs text-[#A0A0B0]">JPEG, PNG, GIF, or WebP. Max 5 MB. Images are resized to 256x256.</p>
+          {avatarMsg && <p className={`text-xs ${avatarMsg.includes("updated") || avatarMsg.includes("removed") ? "text-[#00FF41]" : "text-[#FF4444]"}`}>{avatarMsg}</p>}
         </div>
       </GlassPanel>
 
