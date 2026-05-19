@@ -8,6 +8,31 @@ import { randomBytes } from "crypto";
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
 
+// Magic byte signatures for whitelisted image formats
+const MAGIC_BYTES: Record<string, number[][]> = {
+  "image/jpeg": [[0xFF, 0xD8, 0xFF]],
+  "image/png": [[0x89, 0x50, 0x4E, 0x47]],
+  "image/gif": [[0x47, 0x49, 0x46, 0x38]],
+  "image/webp": [[0x52, 0x49, 0x46, 0x46]], // "RIFF" + "WEBP" at offset 8, checked separately
+};
+
+async function validateMagicBytes(file: File): Promise<boolean> {
+  const sig = MAGIC_BYTES[file.type];
+  if (!sig) return false;
+  const buf = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+  for (const pattern of sig) {
+    if (pattern.every((byte, i) => buf[i] === byte)) {
+      // WebP: also check bytes 8-11 for "WEBP"
+      if (file.type === "image/webp") {
+        const webpTag = [0x57, 0x45, 0x42, 0x50]; // "WEBP"
+        return webpTag.every((b, i) => buf[8 + i] === b);
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
 export async function POST(request: Request) {
   try {
     const session = await auth();
@@ -33,6 +58,9 @@ export async function POST(request: Request) {
     }
     if (file.size > MAX_SIZE) {
       return Response.json({ error: "Image must be under 5 MB." }, { status: 400 });
+    }
+    if (!(await validateMagicBytes(file))) {
+      return Response.json({ error: "File content does not match its declared image type." }, { status: 400 });
     }
 
     const [currentUser] = await db
