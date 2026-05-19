@@ -49,6 +49,11 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes pulse-amber {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
 :root {
   --background: #09090B;
   --foreground: #F0F0F0;

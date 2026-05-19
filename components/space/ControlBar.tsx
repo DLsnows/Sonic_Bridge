@@ -20,6 +20,8 @@ export function ControlBar({
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled } =
     useLocalParticipant();
   const isConnected = useSpaceStore((s) => s.isConnected);
+  const videoWatchEnabled = useSpaceStore((s) => s.videoWatchEnabled);
+  const toggleVideoWatch = useSpaceStore((s) => s.toggleVideoWatch);
 
   const [showMicSelector, setShowMicSelector] = useState(false);
   const [showCameraSelector, setShowCameraSelector] = useState(false);
@@ -152,6 +154,19 @@ export function ControlBar({
           title={isScreenShareEnabled ? "Stop sharing screen" : "Share screen"}
         >
           🖥
+        </button>
+
+        {/* Stop/Resume watching video */}
+        <button
+          onClick={toggleVideoWatch}
+          className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 ${
+            videoWatchEnabled
+              ? "bg-white/5 text-[#A0A0B0] hover:bg-white/10 hover:text-[#F0F0F0]"
+              : "bg-[#FFB800]/15 text-[#FFB800] hover:bg-[#FFB800]/25"
+          }`}
+          title={videoWatchEnabled ? "Pause video to save bandwidth" : "Resume watching"}
+        >
+          {videoWatchEnabled ? "👁" : "👁‍🗨"}
         </button>
 
         {/* Audio mixer toggle */}
