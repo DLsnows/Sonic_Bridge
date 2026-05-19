@@ -84,9 +84,10 @@ export class VstAudioPipeline {
 
   setVolume(volume: number) {
     if (this.gainNode && this.audioContext) {
-      this.gainNode.gain.setValueAtTime(
-        Math.max(0, Math.min(1, volume)),
-        this.audioContext.currentTime,
+      const clamped = Math.max(0, Math.min(1, volume));
+      this.gainNode.gain.linearRampToValueAtTime(
+        clamped,
+        this.audioContext.currentTime + 0.05,
       );
     }
   }
