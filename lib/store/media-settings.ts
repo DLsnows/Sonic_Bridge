@@ -65,7 +65,3 @@ export const useMediaSettingsStore = create<MediaSettingsState>((set) => ({
 export function msToSamples(ms: number, sampleRate: number = 48000): number {
   return Math.round((ms / 1000) * sampleRate);
 }
-
-export function samplesToMs(samples: number, sampleRate: number = 48000): number {
-  return Math.round((samples / sampleRate) * 1000);
-}
