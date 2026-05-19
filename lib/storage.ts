@@ -65,9 +65,10 @@ export async function getFileBody(
 
   const response = await fetch(blob.downloadUrl, { headers: fetchHeaders });
   if (!response.ok && response.status !== 206) {
-    // 206 Partial Content is OK; other non-200 statuses are errors
-    if (response.status === 404) throw new Error("Failed to fetch blob content");
     throw new Error("Failed to fetch blob content");
+  }
+  if (!response.body) {
+    throw new Error("Blob returned empty body");
   }
 
   if (response.status === 206) {

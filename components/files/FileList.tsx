@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import type { FileItem } from "./types";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
@@ -71,6 +71,7 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
         const msg = audio.error?.message ?? "Audio playback failed";
         console.error("Audio error:", msg);
         setAudioError(msg);
+        setAudioLoading(false);
         playingFileIdRef.current = null;
         setPlayingFileId(null);
         setTimeout(() => setAudioError(null), 5000);
@@ -90,6 +91,17 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
     },
     [projectId],
   );
+
+  // Clean up audio element on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+        audioRef.current = null;
+      }
+    };
+  }, []);
 
   if (loading) {
     return (

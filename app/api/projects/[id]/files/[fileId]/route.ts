@@ -47,6 +47,7 @@ export async function GET(
   const responseHeaders = new Headers();
   responseHeaders.set("Content-Type", contentType);
   responseHeaders.set("Accept-Ranges", "bytes");
+  responseHeaders.set("Content-Disposition", disposition);
   responseHeaders.set("Cache-Control", "private, max-age=60");
 
   if (isRange && body) {
@@ -56,7 +57,6 @@ export async function GET(
   }
 
   responseHeaders.set("Content-Length", String(size));
-  responseHeaders.set("Content-Disposition", disposition);
   return new NextResponse(body, { headers: responseHeaders });
 }
 
