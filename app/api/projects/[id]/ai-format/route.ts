@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { connection } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { discussionPosts, users } from "@/lib/db/schema";
@@ -43,11 +44,15 @@ export async function POST(
     );
   }
 
+  await connection();
+
   const aiUrl = process.env.AI_API_URL;
   const aiKey = process.env.AI_API_KEY;
   const aiModel = process.env.AI_MODEL || "gpt-4o-mini";
 
   if (!aiUrl || !aiKey) {
+    const missing = !aiUrl && !aiKey ? "AI_API_URL and AI_API_KEY" : !aiUrl ? "AI_API_URL" : "AI_API_KEY";
+    console.error(`AI formatting not configured: missing ${missing}`);
     return NextResponse.json(
       { error: "AI formatting not configured" },
       { status: 503 },
