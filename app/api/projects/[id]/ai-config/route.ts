@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { projectAiConfigs, projectMembers } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
-import { encrypt, decrypt } from "@/lib/encryption";
+import { encrypt } from "@/lib/encryption";
 
 const putSchema = z.object({
   apiUrl: z.string().min(1, "API URL is required"),

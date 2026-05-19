@@ -2,15 +2,18 @@ import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "crypt
 
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 16;
-const SALT_LENGTH = 32;
 const TAG_LENGTH = 16;
 
+let _key: Buffer | null = null;
+
 function getKey(): Buffer {
+  if (_key) return _key;
   const secret = process.env.AUTH_SECRET;
   if (!secret) {
     throw new Error("AUTH_SECRET is not configured");
   }
-  return scryptSync(secret, "ai-config-salt", 32);
+  _key = scryptSync(secret, "ai-config-salt", 32);
+  return _key;
 }
 
 export function encrypt(plaintext: string): string {
