@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { files, folders, users } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { authenticate } from "@/lib/api-auth";
-import { saveFile, getMaxFileSize } from "@/lib/storage";
+import { saveFile, getMaxFileSize, detectMimeType } from "@/lib/storage";
 
 export async function GET(
   request: NextRequest,
@@ -111,7 +111,19 @@ export async function POST(
   }> = [];
 
   for (const file of uploadedFiles) {
-    const { storageKey } = await saveFile(id, folderPath, file);
+    const mimeType = detectMimeType(file.name, file.type);
+
+    let storageKey: string;
+    try {
+      const result = await saveFile(id, folderPath, file);
+      storageKey = result.storageKey;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      return NextResponse.json(
+        { error: `Failed to store "${file.name}": ${message}` },
+        { status: 500 },
+      );
+    }
 
     const [record] = await db
       .insert(files)
@@ -120,7 +132,7 @@ export async function POST(
         folderId: folderId ?? null,
         name: file.name,
         size: file.size,
-        mimeType: file.type || "application/octet-stream",
+        mimeType,
         storageKey,
         uploadedBy: authResult.userId,
       })

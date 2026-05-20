@@ -1,6 +1,33 @@
 import { put, del, list, head } from "@vercel/blob";
 import { randomBytes } from "crypto";
 
+const MIME_BY_EXT: Record<string, string> = {
+  mp3: "audio/mpeg",
+  wav: "audio/wav",
+  flac: "audio/flac",
+  m4a: "audio/mp4",
+  ogg: "audio/ogg",
+  wma: "audio/x-ms-wma",
+  aac: "audio/aac",
+  mp4: "video/mp4",
+  webm: "video/webm",
+  mov: "video/quicktime",
+  avi: "video/x-msvideo",
+  mkv: "video/x-matroska",
+  pdf: "application/pdf",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  gif: "image/gif",
+  webp: "image/webp",
+};
+
+export function detectMimeType(fileName: string, fallback?: string): string {
+  if (fallback && fallback !== "application/octet-stream") return fallback;
+  const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
+  return MIME_BY_EXT[ext] ?? fallback ?? "application/octet-stream";
+}
+
 // Per-type file size limits
 const AUDIO_EXTENSIONS = ["m4a", "mp3", "wav", "flac", "aac", "ogg", "wma"];
 const ARCHIVE_EXTENSIONS = ["zip", "rar", "7z", "tar", "gz"];
@@ -57,7 +84,7 @@ export interface FileBodyResult {
 
 export async function getFileBody(
   storageKey: string,
-  options?: { range?: string },
+  options?: { range?: string; mimeType?: string },
 ): Promise<FileBodyResult> {
   const blob = await head(storageKey);
   const headers: Record<string, string> = {};
@@ -79,7 +106,7 @@ export async function getFileBody(
     }
     return {
       body: response.body,
-      contentType: blob.contentType || "application/octet-stream",
+      contentType: options?.mimeType || blob.contentType || "application/octet-stream",
       size: Number(match[3]),
       contentLength: Number(response.headers.get("content-length") || "0"),
       isRange: true,
@@ -94,7 +121,7 @@ export async function getFileBody(
 
   return {
     body: response.body,
-    contentType: blob.contentType || "application/octet-stream",
+    contentType: options?.mimeType || blob.contentType || "application/octet-stream",
     size: blob.size,
     contentLength: blob.size,
     isRange: false,
