@@ -11,6 +11,7 @@ jobs:
 
     env:
       AUTH_SECRET: 'ci-test-secret-do-not-use-in-production-00000000000000000000000000000000'
+      AUTH_URL: 'http://localhost:3000'
 
     steps:
       - uses: actions/checkout@v4
@@ -42,7 +43,7 @@ jobs:
 
           # Wait for server ready (retry up to 30s)
           for i in $(seq 1 30); do
-            if curl -sf http://localhost:3000/api/auth/csrf > /dev/null 2>&1; then
+            if curl -sf http://localhost:3000/ -o /dev/null 2>&1; then
               echo "Server ready"
               break
             fi
