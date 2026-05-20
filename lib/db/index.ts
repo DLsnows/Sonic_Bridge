@@ -1,26 +1,20 @@
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { Pool } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-serverless";
 
 let _db: ReturnType<typeof drizzle> | undefined;
-let _initError: Error | null = null;
+let _configError: Error | null = null;
 
 function getDb() {
-  if (_initError) throw _initError;
-  if (!_db) {
-    if (!process.env.DATABASE_URL) {
-      _initError = new Error(
-        "DATABASE_URL is not configured. Add it in Vercel dashboard → Settings → Environment Variables and scope to Preview/Production environments.",
-      );
-      throw _initError;
-    }
-    try {
-      const sql = neon(process.env.DATABASE_URL);
-      _db = drizzle({ client: sql });
-    } catch (err) {
-      _initError = err instanceof Error ? err : new Error(String(err));
-      throw _initError;
-    }
+  if (_db) return _db;
+  if (_configError) throw _configError;
+  if (!process.env.DATABASE_URL) {
+    _configError = new Error(
+      "DATABASE_URL is not configured. Add it in Vercel dashboard → Settings → Environment Variables and scope to Preview/Production environments.",
+    );
+    throw _configError;
   }
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  _db = drizzle(pool);
   return _db;
 }
 
