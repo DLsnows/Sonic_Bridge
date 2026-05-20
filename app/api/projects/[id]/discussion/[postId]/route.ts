@@ -19,7 +19,7 @@ export async function PATCH(
   }
 
   const { id: projectId, postId } = await params;
-  const userId = (session.user as any).id as string;
+  const userId = session.user.id as string;
 
   const [membership] = await db
     .select()
@@ -105,7 +105,7 @@ export async function DELETE(
   }
 
   const { id: projectId, postId } = await params;
-  const userId = (session.user as any).id as string;
+  const userId = session.user.id as string;
 
   const [membership] = await db
     .select()

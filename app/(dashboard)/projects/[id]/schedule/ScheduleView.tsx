@@ -60,8 +60,25 @@ export function ScheduleView({ projectId, userId, userRole, backHref }: Schedule
   }, [projectId, currentMonth]);
 
   useEffect(() => {
-    fetchEvents();
-  }, [fetchEvents]);
+    let ignore = false;
+    (async () => {
+      const monthStart = startOfMonth(currentMonth);
+      const monthEnd = endOfMonth(currentMonth);
+      const url = `/api/projects/${projectId}/schedule?startDate=${monthStart.toISOString()}&endDate=${monthEnd.toISOString()}`;
+      try {
+        const res = await fetch(url);
+        if (!ignore && res.ok) {
+          const data = await res.json();
+          setEvents(data.events ?? []);
+        }
+      } catch (err) {
+        if (!ignore) console.error("Failed to fetch schedule events:", err);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    })();
+    return () => { ignore = true; };
+  }, [projectId, currentMonth]);
 
   function handleCreate() {
     setEditingEvent(null);
@@ -175,7 +192,7 @@ export function ScheduleView({ projectId, userId, userRole, backHref }: Schedule
               <div className="glass-panel text-center py-12">
                 <div className="text-4xl mb-3">◷</div>
                 <p className="text-sm text-[#A0A0B0]">
-                  No events this month. Click "Add Event" to create one.
+                  No events this month. Click &quot;Add Event&quot; to create one.
                 </p>
               </div>
             )}
@@ -184,6 +201,7 @@ export function ScheduleView({ projectId, userId, userRole, backHref }: Schedule
       </div>
 
       <EventForm
+        key={editingEvent?.id ?? "new"}
         open={formOpen}
         onClose={() => {
           setFormOpen(false);

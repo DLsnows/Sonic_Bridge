@@ -7,7 +7,7 @@ export default async function SettingsPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const user = session.user as any;
+  const user = session.user;
 
   return (
     <div>
@@ -15,8 +15,8 @@ export default async function SettingsPage() {
       <div className="p-6 max-w-xl mx-auto">
         <UserSettingsForm
           userId={user.id}
-          username={user.username}
-          email={user.email}
+          username={user.username ?? ''}
+          email={user.email ?? ''}
           avatar={user.image ?? null}
         />
       </div>

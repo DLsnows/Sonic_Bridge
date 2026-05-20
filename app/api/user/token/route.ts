@@ -1,17 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { randomBytes, createHash } from "crypto";
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const userId = (session.user as any).id as string;
+  const userId = session.user.id as string;
   const rawToken = `sb_${randomBytes(32).toString("hex")}`;
   const hashedToken = createHash("sha256").update(rawToken).digest("hex");
 

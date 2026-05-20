@@ -42,19 +42,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user, trigger, session }) {
       if (user) {
-        token.id = user.id;
-        token.username = (user as any).name;
+        token.id = user.id!;
+        token.username = user.name ?? undefined;
         token.picture = user.image ?? null;
       }
       if (trigger === "update" && session && typeof session === "object" && "image" in session) {
-        token.picture = (session as any).image;
+        token.picture = (session as { image?: string | null }).image ?? null;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).id = token.id as string;
-        (session.user as any).username = token.username;
+        session.user.id = token.id as string;
+        session.user.username = token.username ?? undefined;
         session.user.image = token.picture as string | null | undefined;
       }
       return session;

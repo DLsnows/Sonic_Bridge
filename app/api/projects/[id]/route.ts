@@ -22,7 +22,7 @@ export async function GET(
   }
 
   const { id } = await params;
-  const userId = (session.user as any).id as string;
+  const userId = session.user.id;
 
   const [membership] = await db
     .select()
@@ -70,7 +70,7 @@ export async function PATCH(
   }
 
   const { id } = await params;
-  const userId = (session.user as any).id as string;
+  const userId = session.user.id;
 
   const [membership] = await db
     .select()
@@ -109,7 +109,7 @@ export async function DELETE(
   }
 
   const { id } = await params;
-  const userId = (session.user as any).id as string;
+  const userId = session.user.id;
 
   const [membership] = await db
     .select()

@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     if (!session?.user) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const userId = (session.user as any).id as string;
+    const userId = session.user.id as string;
 
     let formData: FormData;
     try {
@@ -92,7 +92,7 @@ export async function DELETE() {
     if (!session?.user) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const userId = (session.user as any).id as string;
+    const userId = session.user.id as string;
 
     const [currentUser] = await db
       .select({ avatar: users.avatar })

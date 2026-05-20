@@ -41,7 +41,7 @@ export function ParticipantGrid() {
 
     function handleTrackPublished(
       publication: RemoteTrackPublication,
-      _participant: RemoteParticipant,
+      _participant: RemoteParticipant, // eslint-disable-line @typescript-eslint/no-unused-vars
     ) {
       if (publication.kind === Track.Kind.Video) {
         publication.setSubscribed(false);

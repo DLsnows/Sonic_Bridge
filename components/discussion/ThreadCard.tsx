@@ -57,7 +57,7 @@ function timeAgo(dateStr: string): string {
 }
 
 const markdownComponents = {
-  a: ({ href, children }: any) => (
+  a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
     <a
       href={href}
       target="_blank"
@@ -67,7 +67,7 @@ const markdownComponents = {
       {children}
     </a>
   ),
-  code: ({ children, className }: any) => {
+  code: ({ children, className }: { children?: React.ReactNode; className?: string }) => {
     if (className) {
       return (
         <pre className="bg-[#09090B] border border-[#FF8C00]/10 rounded p-3 overflow-x-auto text-xs text-[#00F0FF] my-2">
@@ -81,7 +81,7 @@ const markdownComponents = {
       </code>
     );
   },
-  blockquote: ({ children }: any) => (
+  blockquote: ({ children }: { children?: React.ReactNode }) => (
     <blockquote className="border-l-2 border-[#FF8C00]/20 pl-3 italic text-[#A0A0B0] my-2">
       {children}
     </blockquote>

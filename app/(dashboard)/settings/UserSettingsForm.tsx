@@ -16,7 +16,7 @@ interface Props {
   avatar?: string | null;
 }
 
-export function UserSettingsForm({ userId, username: initialUsername, email, avatar: currentAvatar }: Props) {
+export function UserSettingsForm({ username: initialUsername, email, avatar: currentAvatar }: Props) {
   const router = useRouter();
   const { update } = useSession();
 
@@ -173,6 +173,7 @@ export function UserSettingsForm({ userId, username: initialUsername, email, ava
         <div className="space-y-3">
           <div className="flex items-center gap-4">
             {(previewUrl || displayAvatar) ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={previewUrl ?? displayAvatar ?? ""}
                 alt="Avatar preview"

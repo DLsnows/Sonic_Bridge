@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { projectAiConfigs, projectMembers } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
-import { encrypt, decrypt } from "@/lib/encryption";
+import { encrypt } from "@/lib/encryption";
 
 async function requireAdmin(projectId: string) {
   const session = await auth();
@@ -16,7 +16,7 @@ async function requireAdmin(projectId: string) {
     .where(
       and(
         eq(projectMembers.projectId, projectId),
-        eq(projectMembers.userId, (session.user as any).id),
+        eq(projectMembers.userId, session.user.id),
       ),
     )
     .limit(1);
@@ -121,7 +121,7 @@ export async function PUT(
     apiUrl,
     encryptedApiKey,
     model,
-    createdBy: (session.user as any).id,
+    createdBy: session.user.id,
   });
 
   return NextResponse.json(

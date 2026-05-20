@@ -14,7 +14,7 @@ export default async function DiscussionPage({
   if (!session?.user) redirect("/login");
 
   const { id: projectId } = await params;
-  const userId = (session.user as any).id as string;
+  const userId = session.user.id;
 
   const [membership] = await db
     .select()

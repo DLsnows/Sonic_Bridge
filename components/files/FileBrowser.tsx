@@ -15,7 +15,7 @@ interface FileBrowserProps {
   initialFolders: Folder[];
 }
 
-export function FileBrowser({ projectId, userId, initialFolders }: FileBrowserProps) {
+export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
   const [folders, setFolders] = useState<Folder[]>(initialFolders);
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [files, setFiles] = useState<FileItem[]>([]);
@@ -32,7 +32,18 @@ export function FileBrowser({ projectId, userId, initialFolders }: FileBrowserPr
     setLoading(false);
   }, [projectId]);
 
-  useEffect(() => { fetchFiles(currentFolderId); }, [currentFolderId, fetchFiles]);
+  useEffect(() => {
+    let ignore = false;
+    (async () => {
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (currentFolderId) params.set("folderId", currentFolderId);
+      const res = await fetch(`/api/projects/${projectId}/files?${params}`);
+      if (!ignore && res.ok) { const data = await res.json(); setFiles(data.files); }
+      if (!ignore) setLoading(false);
+    })();
+    return () => { ignore = true; };
+  }, [currentFolderId, projectId]);
 
   const refreshFolders = async () => {
     const res = await fetch(`/api/projects/${projectId}/folders`);

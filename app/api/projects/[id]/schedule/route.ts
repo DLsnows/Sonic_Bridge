@@ -25,7 +25,7 @@ export async function GET(
   }
 
   const { id } = await params;
-  const userId = (session.user as any).id as string;
+  const userId = session.user.id as string;
 
   const [membership] = await db
     .select()
@@ -91,7 +91,7 @@ export async function POST(
   }
 
   const { id } = await params;
-  const userId = (session.user as any).id as string;
+  const userId = session.user.id as string;
 
   const [membership] = await db
     .select()
