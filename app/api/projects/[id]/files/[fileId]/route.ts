@@ -35,7 +35,7 @@ export async function GET(
 
   const useInline = isInline || ((isAudio || isVideo) && result.isRange);
   const asciiName = file.name.replace(/[^\x20-\x7E]/g, "_").replace(/["\\;,]/g, "").trim() || "download";
-  const encodedName = encodeURIComponent(file.name);
+  const encodedName = encodeURIComponent(file.name).replace(/'/g, "%27");
   const disposition = useInline
     ? `inline; filename="${asciiName}"; filename*=UTF-8''${encodedName}`
     : `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`;
