@@ -9,6 +9,8 @@ import { ProjectIdBadge } from "@/components/ProjectIdBadge";
 import { Card } from "@/components/ui/Card";
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { Button } from "@/components/ui/Button";
+import { resolveProjectId, projectHref } from "@/lib/project-utils";
+import { ProjectStatusBadge } from "@/components/ProjectStatusBadge";
 
 const navCards = [
   {
@@ -49,7 +51,9 @@ export default async function ProjectPage({
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const { id } = await params;
+  const { id: idParam } = await params;
+  const id = await resolveProjectId(idParam);
+  if (!id) redirect("/");
   const userId = session.user.id;
 
   const [membership] = await db
@@ -119,10 +123,15 @@ export default async function ProjectPage({
         subtitle={project.description ?? undefined}
         showBack
         backHref="/"
-        badge={<ProjectIdBadge projectId={project.id} />}
+        badge={
+          <div className="flex items-center gap-2">
+            <ProjectIdBadge projectId={project.id} />
+            <ProjectStatusBadge status={project.status ?? "in_progress"} isAdmin={isAdmin} projectId={project.id} />
+          </div>
+        }
         actions={
           isAdmin ? (
-            <Link href={`/projects/${id}/settings`}>
+            <Link href={`/projects/${project.customId || project.id}/settings`}>
               <Button variant="secondary" size="sm">
                 Project Settings
               </Button>
@@ -135,7 +144,7 @@ export default async function ProjectPage({
         {/* Navigation Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           {navCards.map((card) => (
-            <Link key={card.href} href={`/projects/${id}/${card.href}`}>
+            <Link key={card.href} href={`/projects/${project.customId || project.id}/${card.href}`}>
               <Card hover glow={card.glow} className="h-full group">
                 <div className="flex items-start gap-4">
                   <span className="text-2xl mt-1">{card.icon}</span>

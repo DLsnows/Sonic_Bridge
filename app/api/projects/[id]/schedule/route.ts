@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { scheduleEvents, projectMembers, users } from "@/lib/db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { z } from "zod";
+import { resolveProjectId } from "@/lib/project-utils";
 
 const dateParamSchema = z.string().refine((s) => !isNaN(Date.parse(s)), "Invalid date");
 
@@ -25,13 +26,17 @@ export async function GET(
   }
 
   const { id } = await params;
+  const projectId = await resolveProjectId(id);
+  if (!projectId) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
   const userId = session.user.id as string;
 
   const [membership] = await db
     .select()
     .from(projectMembers)
     .where(
-      and(eq(projectMembers.projectId, id), eq(projectMembers.userId, userId)),
+      and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)),
     )
     .limit(1);
 
@@ -43,7 +48,7 @@ export async function GET(
   const startDate = url.searchParams.get("startDate");
   const endDate = url.searchParams.get("endDate");
 
-  const conditions = [eq(scheduleEvents.projectId, id)];
+  const conditions = [eq(scheduleEvents.projectId, projectId)];
 
   if (startDate) {
     const parsed = dateParamSchema.safeParse(startDate);
@@ -92,13 +97,17 @@ export async function POST(
   }
 
   const { id } = await params;
+  const projectId = await resolveProjectId(id);
+  if (!projectId) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
   const userId = session.user.id as string;
 
   const [membership] = await db
     .select()
     .from(projectMembers)
     .where(
-      and(eq(projectMembers.projectId, id), eq(projectMembers.userId, userId)),
+      and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)),
     )
     .limit(1);
 
@@ -135,7 +144,7 @@ export async function POST(
   const [event] = await db
     .insert(scheduleEvents)
     .values({
-      projectId: id,
+      projectId,
       title,
       description: description ?? null,
       startTime: start,

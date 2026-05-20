@@ -8,6 +8,8 @@ import { GlassPanel } from "@/components/ui/GlassPanel";
 import { CopyProjectId } from "./CopyProjectId";
 import { GenerateToken } from "./GenerateToken";
 import { AiConfigForm } from "@/components/settings/AiConfigForm";
+import { resolveProjectId, projectHref } from "@/lib/project-utils";
+import { EditProjectForm } from "./EditProjectForm";
 
 export default async function SettingsPage({
   params,
@@ -17,7 +19,9 @@ export default async function SettingsPage({
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const { id } = await params;
+  const { id: idParam } = await params;
+  const id = await resolveProjectId(idParam);
+  if (!id) redirect("/");
   const userId = session.user.id;
 
   const [membership] = await db
@@ -40,13 +44,20 @@ export default async function SettingsPage({
 
   return (
     <div>
-      <TopBar title="Project Settings" showBack backHref={`/projects/${id}`} />
+      <TopBar title="Project Settings" showBack backHref={projectHref(project)} />
       <div className="p-6 max-w-2xl space-y-6">
         <GlassPanel>
           <h3 className="font-['Share_Tech_Mono',monospace] text-sm text-[#00FF41] mb-4">
             General
           </h3>
           <CopyProjectId projectId={project.id} />
+        </GlassPanel>
+
+        <GlassPanel>
+          <h3 className="font-['Share_Tech_Mono',monospace] text-sm text-[#00FF41] mb-4">
+            Edit Project
+          </h3>
+          <EditProjectForm projectId={project.id} initialName={project.name} initialDescription={project.description ?? ""} />
         </GlassPanel>
 
         <GlassPanel>

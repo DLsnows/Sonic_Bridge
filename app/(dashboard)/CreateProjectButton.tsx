@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
+import { projectHref } from "@/lib/project-utils";
 
 export function CreateProjectButton() {
   const router = useRouter();
@@ -52,7 +53,7 @@ export function CreateProjectButton() {
       if (res.ok) {
         const data = await res.json();
         setOpen(false);
-        router.push(`/projects/${data.id}`);
+        router.push(projectHref(data));
         router.refresh();
       } else {
         let data: { error?: string; details?: { fieldErrors?: Record<string, string[]> } } = {};
