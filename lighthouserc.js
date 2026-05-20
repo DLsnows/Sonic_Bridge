@@ -1,8 +1,6 @@
 module.exports = {
   ci: {
     collect: {
-      startServerCommand: 'npx next start --port 3000',
-      startServerReadyPattern: 'ready started server',
       url: ['http://localhost:3000/'],
       numberOfRuns: 1,
       settings: {
