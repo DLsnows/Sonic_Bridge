@@ -11,6 +11,7 @@ import {
   users,
 } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
+import { z } from "zod";
 import { resolveProjectId } from "@/lib/project-utils";
 
 export async function GET(
@@ -94,7 +95,16 @@ export async function PATCH(
   }
 
   const body = await request.json();
-  const { name, description, status } = body;
+  const updateSchema = z.object({
+    name: z.string().min(1).max(100).optional(),
+    description: z.string().max(500).optional().nullable(),
+    status: z.enum(["not_started", "in_progress", "paused", "pending_release", "archived"]).optional(),
+  });
+  const parsed = updateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid input", details: parsed.error.flatten() }, { status: 400 });
+  }
+  const { name, description, status } = parsed.data;
 
   const setData: Record<string, unknown> = {};
   if (name !== undefined) setData.name = name;
