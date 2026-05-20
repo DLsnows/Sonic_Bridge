@@ -124,9 +124,10 @@ export function AiConfigForm({ projectId }: { projectId: string }) {
             type="text"
             value={apiUrl}
             onChange={(e) => setApiUrl(e.target.value)}
-            placeholder="https://api.openai.com/v1/chat/completions"
+            placeholder="https://api.openai.com/v1"
             className="w-full bg-[#09090B] border border-[#FF8C00]/10 rounded px-3 py-2 text-sm text-[#F0F0F0] placeholder:text-[#A0A0B0]/40 focus:outline-none focus:border-[#FF8C00]/40"
           />
+          <p className="text-[10px] text-[#A0A0B0]/60 mt-1">Enter the base URL — /chat/completions will be appended automatically</p>
         </div>
 
         <div>
