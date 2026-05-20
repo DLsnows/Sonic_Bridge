@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { discussionPosts, projectMembers, users } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { z } from "zod";
+import { resolveProjectId } from "@/lib/project-utils";
 
 const createPostSchema = z.discriminatedUnion("hasParent", [
   z.object({
@@ -27,7 +28,11 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { id: projectId } = await params;
+  const { id } = await params;
+  const projectId = await resolveProjectId(id);
+  if (!projectId) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
   const userId = session.user.id as string;
 
   const [membership] = await db
@@ -76,7 +81,11 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { id: projectId } = await params;
+  const { id } = await params;
+  const projectId = await resolveProjectId(id);
+  if (!projectId) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
   const userId = session.user.id as string;
 
   const [membership] = await db

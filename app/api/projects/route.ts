@@ -14,6 +14,7 @@ const createSchema = z.object({
     .max(32)
     .regex(/^[a-zA-Z0-9_-]+$/, "Custom ID can only contain letters, numbers, hyphens, and underscores")
     .optional(),
+  status: z.enum(["not_started", "in_progress", "paused", "pending_release", "archived"]).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
   }
 
   const userId = session.user.id;
-  const { name, description, customId } = parsed.data;
+  const { name, description, customId, status } = parsed.data;
 
   try {
     const project = await db.transaction(async (tx) => {
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
 
       const [newProject] = await tx
         .insert(projects)
-        .values({ name, description: description ?? null, customId: customId ?? null, createdBy: userId })
+        .values({ name, description: description ?? null, customId: customId ?? null, status: status ?? "in_progress", createdBy: userId })
         .returning();
 
       await tx.insert(projectMembers).values({
