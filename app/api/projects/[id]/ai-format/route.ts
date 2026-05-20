@@ -89,7 +89,7 @@ export async function POST(
   try {
     // Normalize the AI URL: auto-append /chat/completions if missing
     let resolvedUrl = aiUrl.replace(/\/+$/, ""); // remove trailing slashes
-    if (!resolvedUrl.endsWith("/chat/completions")) {
+    if (!resolvedUrl.includes("/chat/completions")) {
       resolvedUrl += "/chat/completions";
     }
 

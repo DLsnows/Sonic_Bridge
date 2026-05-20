@@ -15,7 +15,7 @@ export function MemberAvatar({
 
   if (failed) {
     return (
-      <div className={className}>
+      <div className={`${className ?? ""} bg-[#00FF41]/20 flex items-center justify-center text-xs text-[#00FF41] font-['Share_Tech_Mono',monospace]`}>
         {username[0].toUpperCase()}
       </div>
     );
