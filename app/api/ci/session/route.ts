@@ -46,12 +46,12 @@ export async function GET() {
     process.env.AUTH_SECRET,
   );
 
-  const resp = NextResponse.json({ ok: true });
-  resp.cookies.set("authjs.session-token", token, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    secure: false,
-  });
-  return resp;
+  return NextResponse.json(
+    { ok: true },
+    {
+      headers: {
+        "Set-Cookie": `authjs.session-token=${token}; HttpOnly; SameSite=Lax; Path=/`,
+      },
+    },
+  );
 }
