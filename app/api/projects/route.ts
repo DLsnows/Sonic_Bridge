@@ -43,7 +43,6 @@ export async function POST(request: NextRequest) {
           .where(eq(projects.customId, customId))
           .limit(1);
         if (existing) {
-          tx.rollback();
           return { conflict: true as const };
         }
       }
