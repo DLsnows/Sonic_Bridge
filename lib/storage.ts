@@ -63,7 +63,12 @@ export async function saveFile(
   file: File,
 ): Promise<{ storageKey: string }> {
   const storageKey = getStorageKey(projectId, folderPath, file.name);
-  await put(storageKey, file, { access: "private", addRandomSuffix: false });
+  const buffer = Buffer.from(await file.arrayBuffer());
+  await put(storageKey, buffer, {
+    access: "private",
+    addRandomSuffix: false,
+    contentType: detectMimeType(file.name, file.type),
+  });
   return { storageKey };
 }
 

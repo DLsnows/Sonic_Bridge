@@ -5,6 +5,8 @@ import { eq, and } from "drizzle-orm";
 import { authenticate } from "@/lib/api-auth";
 import { saveFile, getMaxFileSize, detectMimeType } from "@/lib/storage";
 
+export const maxDuration = 60;
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -119,6 +121,7 @@ export async function POST(
       storageKey = result.storageKey;
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
+      console.error(`Failed to store "${file.name}":`, message, err);
       return NextResponse.json(
         { error: `Failed to store "${file.name}": ${message}` },
         { status: 500 },
