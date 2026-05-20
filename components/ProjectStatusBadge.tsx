@@ -18,13 +18,21 @@ export function ProjectStatusBadge({ status, isAdmin, projectId }: {
 
   const handleStatusChange = async (newStatus: string) => {
     if (!projectId) return;
+    const previousStatus = currentStatus;
     setCurrentStatus(newStatus);
     setOpen(false);
-    await fetch(`/api/projects/${projectId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: newStatus }),
-    });
+    try {
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) {
+        setCurrentStatus(previousStatus);
+      }
+    } catch {
+      setCurrentStatus(previousStatus);
+    }
   };
 
   const badge = (

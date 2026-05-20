@@ -1,10 +1,9 @@
 ﻿import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { users, projectMembers, projects } from "@/lib/db/schema";
+import { users, projectMembers } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { createHash } from "crypto";
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { resolveProjectId } from "@/lib/project-utils";
 
 function validateRole(role: unknown): "admin" | "member" {
   if (role !== "admin" && role !== "member") {
@@ -17,14 +16,6 @@ export interface AuthResult {
   userId: string;
   username: string;
   membership: { role: "admin" | "member" };
-}
-
-async function resolveProjectId(idOrCustomId: string): Promise<string | null> {
-  const isUuid = UUID_RE.test(idOrCustomId);
-  const [project] = isUuid
-    ? await db.select({ id: projects.id }).from(projects).where(eq(projects.id, idOrCustomId)).limit(1)
-    : await db.select({ id: projects.id }).from(projects).where(eq(projects.customId, idOrCustomId)).limit(1);
-  return project?.id ?? null;
 }
 
 export async function authenticate(
