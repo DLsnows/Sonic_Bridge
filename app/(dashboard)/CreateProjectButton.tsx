@@ -22,6 +22,7 @@ export function CreateProjectButton() {
     setCustomId("");
     setError("");
     setCustomIdError("");
+    setLoading(false);
   };
 
   const handleClose = () => {
