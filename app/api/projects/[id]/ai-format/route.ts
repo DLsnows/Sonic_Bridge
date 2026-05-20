@@ -87,7 +87,22 @@ export async function POST(
 
   let formattedContent: string;
   try {
-    const aiRes = await fetch(aiUrl, {
+    // Normalize the AI URL: auto-append /chat/completions if missing from pathname
+    let resolvedUrl = aiUrl.replace(/\/+$/, ""); // remove trailing slashes
+    try {
+      const urlObj = new URL(resolvedUrl);
+      if (!urlObj.pathname.endsWith("/chat/completions")) {
+        urlObj.pathname = urlObj.pathname.replace(/\/+$/, "") + "/chat/completions";
+        resolvedUrl = urlObj.toString();
+      }
+    } catch {
+      // Not a parseable URL — fall back to simple concatenation
+      if (!resolvedUrl.endsWith("/chat/completions")) {
+        resolvedUrl += "/chat/completions";
+      }
+    }
+
+    const aiRes = await fetch(resolvedUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

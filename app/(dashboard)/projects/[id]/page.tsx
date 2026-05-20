@@ -9,6 +9,7 @@ import { ProjectIdBadge } from "@/components/ProjectIdBadge";
 import { Card } from "@/components/ui/Card";
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { Button } from "@/components/ui/Button";
+import { MemberAvatar } from "@/components/MemberAvatar";
 
 const navCards = [
   {
@@ -238,11 +239,10 @@ export default async function ProjectPage({
                 >
                   <div className="flex items-center gap-3">
                     {member.avatar ? (
-                      <img
-                        src={`/api/user/avatar/${member.userId}`}
-                        alt={member.username}
+                      <MemberAvatar
+                        userId={member.userId}
+                        username={member.username}
                         className="w-7 h-7 rounded-full object-cover border border-[#00FF41]/20 shrink-0"
-                        referrerPolicy="no-referrer"
                       />
                     ) : (
                       <div className="w-7 h-7 rounded-full bg-[#00FF41]/20 flex items-center justify-center text-xs text-[#00FF41] font-['Share_Tech_Mono',monospace]">

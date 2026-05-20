@@ -16,10 +16,11 @@ export async function GET(
     .where(eq(users.id, userId))
     .limit(1);
 
+  const cacheHeaders = { "Cache-Control": "public, max-age=300, s-maxage=300, stale-while-revalidate=3600" };
+  const dicebearUrl = `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(userId)}&backgroundColor=1a1a2e&textColor=00ff41`;
+
   if (!user?.avatar) {
-    return NextResponse.redirect(
-      `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(userId)}&backgroundColor=1a1a2e&textColor=00ff41`,
-    );
+    return NextResponse.redirect(dicebearUrl, { headers: cacheHeaders });
   }
 
   let storageKey: string;
@@ -30,21 +31,25 @@ export async function GET(
       storageKey = user.avatar;
     }
   } catch {
-    return NextResponse.redirect(
-      `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(userId)}&backgroundColor=1a1a2e&textColor=00ff41`,
-    );
+    return NextResponse.redirect(dicebearUrl, { headers: cacheHeaders });
   }
 
   try {
     const blob = await head(storageKey);
-    return NextResponse.redirect(blob.downloadUrl, {
+    const response = await fetch(blob.downloadUrl);
+    if (!response.ok) {
+      return NextResponse.redirect(dicebearUrl, { headers: cacheHeaders });
+    }
+    const imageBuffer = await response.arrayBuffer();
+    const contentType = response.headers.get("content-type") || blob.contentType || "image/jpeg";
+    return new NextResponse(imageBuffer, {
       headers: {
+        "Content-Type": contentType,
         "Cache-Control": "public, max-age=300, s-maxage=300, stale-while-revalidate=3600",
+        "Content-Length": String(imageBuffer.byteLength),
       },
     });
   } catch {
-    return NextResponse.redirect(
-      `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(userId)}&backgroundColor=1a1a2e&textColor=00ff41`,
-    );
+    return NextResponse.redirect(dicebearUrl, { headers: cacheHeaders });
   }
 }

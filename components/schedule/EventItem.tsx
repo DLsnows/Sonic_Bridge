@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { Button } from "@/components/ui/Button";
 import { GlassPanel } from "@/components/ui/GlassPanel";
@@ -56,6 +57,7 @@ interface EventItemProps {
 }
 
 export function EventItem({ event, canEdit, onEdit, onDelete }: EventItemProps) {
+  const [avatarFailed, setAvatarFailed] = useState(false);
   const cfg = typeConfig[event.type];
   const start = parseISO(event.startTime);
   const end = parseISO(event.endTime);
@@ -88,13 +90,14 @@ export function EventItem({ event, canEdit, onEdit, onDelete }: EventItemProps) 
               </p>
             )}
             <div className="flex items-center gap-1.5 mt-1">
-              {event.creatorAvatar ? (
+              {event.creatorAvatar && !avatarFailed ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={`/api/user/avatar/${event.createdBy}`}
                   alt={event.creatorName}
                   className="w-4 h-4 rounded-full object-cover shrink-0"
                   referrerPolicy="no-referrer"
+                  onError={() => setAvatarFailed(true)}
                 />
               ) : (
                 <span className="w-4 h-4 rounded-full bg-[#A0A0B0]/20 flex items-center justify-center text-[7px] text-[#A0A0B0]/60 font-['Share_Tech_Mono',monospace] shrink-0">
