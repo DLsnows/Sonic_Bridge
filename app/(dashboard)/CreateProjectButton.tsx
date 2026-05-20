@@ -31,7 +31,10 @@ export function CreateProjectButton() {
   };
 
   const handleCreate = async () => {
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      setError("Project name is required");
+      return;
+    }
     setError("");
     setCustomIdError("");
     setLoading(true);
