@@ -87,6 +87,61 @@ const markdownComponents = {
       {children}
     </blockquote>
   ),
+  table: ({ children }: { children?: React.ReactNode }) => (
+    <div className="overflow-x-auto my-3">
+      <table className="w-full border-collapse text-sm">
+        {children}
+      </table>
+    </div>
+  ),
+  thead: ({ children }: { children?: React.ReactNode }) => (
+    <thead className="bg-[#FF8C00]/10">{children}</thead>
+  ),
+  tbody: ({ children }: { children?: React.ReactNode }) => (
+    <tbody className="divide-y divide-[#FF8C00]/10">{children}</tbody>
+  ),
+  tr: ({ children }: { children?: React.ReactNode }) => (
+    <tr className="border-b border-[#FF8C00]/10">{children}</tr>
+  ),
+  th: ({ children }: { children?: React.ReactNode }) => (
+    <th className="px-3 py-1.5 text-left text-[#FF8C00] font-['Share_Tech_Mono',monospace] text-xs font-semibold border-r border-[#FF8C00]/10 last:border-r-0">
+      {children}
+    </th>
+  ),
+  td: ({ children }: { children?: React.ReactNode }) => (
+    <td className="px-3 py-1.5 text-[#D0D0D0] text-xs border-r border-[#FF8C00]/10 last:border-r-0">
+      {children}
+    </td>
+  ),
+  h1: ({ children }: { children?: React.ReactNode }) => (
+    <h1 className="text-xl text-[#FF8C00] font-['Share_Tech_Mono',monospace] mt-4 mb-2">{children}</h1>
+  ),
+  h2: ({ children }: { children?: React.ReactNode }) => (
+    <h2 className="text-lg text-[#FF8C00] font-['Share_Tech_Mono',monospace] mt-3 mb-2">{children}</h2>
+  ),
+  h3: ({ children }: { children?: React.ReactNode }) => (
+    <h3 className="text-base text-[#FF8C00] font-['Share_Tech_Mono',monospace] mt-3 mb-1.5">{children}</h3>
+  ),
+  h4: ({ children }: { children?: React.ReactNode }) => (
+    <h4 className="text-sm text-[#FF8C00] font-['Share_Tech_Mono',monospace] mt-2 mb-1">{children}</h4>
+  ),
+  h5: ({ children }: { children?: React.ReactNode }) => (
+    <h5 className="text-xs text-[#FF8C00] font-['Share_Tech_Mono',monospace] mt-2 mb-1">{children}</h5>
+  ),
+  h6: ({ children }: { children?: React.ReactNode }) => (
+    <h6 className="text-[10px] text-[#FF8C00] font-['Share_Tech_Mono',monospace] mt-2 mb-1">{children}</h6>
+  ),
+  ul: ({ children }: { children?: React.ReactNode }) => (
+    <ul className="list-none pl-5 my-2 space-y-1">{children}</ul>
+  ),
+  ol: ({ children }: { children?: React.ReactNode }) => (
+    <ol className="list-none pl-5 my-2 space-y-1">{children}</ol>
+  ),
+  li: ({ children }: { children?: React.ReactNode }) => (
+    <li className="text-[#D0D0D0] text-sm relative before:content-['\25B8'] before:text-[#00FF41] before:absolute before:left-[-1.25rem] before:top-0">
+      {children}
+    </li>
+  ),
 };
 
 function PostBody({ post }: { post: DiscussionPost }) {
