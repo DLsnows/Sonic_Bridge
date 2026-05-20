@@ -74,6 +74,7 @@ export default async function ProjectPage({
     .select({
       userId: projectMembers.userId,
       username: users.username,
+      avatar: users.avatar,
       role: projectMembers.role,
     })
     .from(projectMembers)
@@ -236,9 +237,18 @@ export default async function ProjectPage({
                   className="flex items-center justify-between py-1"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-7 h-7 rounded-full bg-[#00FF41]/20 flex items-center justify-center text-xs text-[#00FF41] font-['Share_Tech_Mono',monospace]">
-                      {member.username[0].toUpperCase()}
-                    </div>
+                    {member.avatar ? (
+                      <img
+                        src={`/api/user/avatar/${member.userId}`}
+                        alt={member.username}
+                        className="w-7 h-7 rounded-full object-cover border border-[#00FF41]/20 shrink-0"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="w-7 h-7 rounded-full bg-[#00FF41]/20 flex items-center justify-center text-xs text-[#00FF41] font-['Share_Tech_Mono',monospace]">
+                        {member.username[0].toUpperCase()}
+                      </div>
+                    )}
                     <span className="text-sm text-[#F0F0F0]">
                       {member.username}
                     </span>

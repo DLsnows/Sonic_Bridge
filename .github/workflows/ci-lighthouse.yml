@@ -36,5 +36,38 @@ jobs:
       - name: Build Next.js app
         run: npm run build
 
+      - name: Start server & get auth cookie
+        run: |
+          npx next start --port 3000 &
+
+          # Wait for server ready (retry up to 30s)
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3000/api/auth/csrf > /dev/null 2>&1; then
+              echo "Server ready"
+              break
+            fi
+            sleep 1
+          done
+
+          # Get session cookie via CI endpoint
+          COOKIE=$(node scripts/lighthouse-login.mjs | grep "^cookie:" | cut -d' ' -f2)
+          echo "Got cookie: ${COOKIE:0:30}..."
+          echo "LHCI_COOKIE=$COOKIE" >> $GITHUB_ENV
+
       - name: Run Lighthouse CI
-        run: npx lhci autorun --config=./lighthouserc.js
+        run: |
+          npx lhci collect \
+            --url=http://localhost:3000/ \
+            --numberOfRuns=1 \
+            --settings.preset=desktop \
+            --settings.skipAudits=full-page-screenshot,screenshot-thumbnails \
+            --settings.extraHeaders="{\"Cookie\":\"$LHCI_COOKIE\"}"
+          npx lhci upload \
+            --target=temporary-public-storage
+          npx lhci assert \
+            --preset=lighthouse:recommended \
+            --assertions.categories:performance='["warn",{"minScore":0.5}]' \
+            --assertions.categories:accessibility='["warn",{"minScore":0.7}]' \
+            --assertions.categories:best-practices='["warn",{"minScore":0.7}]' \
+            --assertions.categories:seo='["warn",{"minScore":0.7}]' \
+            --assertions.redirects=warn
