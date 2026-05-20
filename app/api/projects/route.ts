@@ -49,25 +49,29 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const [project] = await db
-      .insert(projects)
-      .values({ name, description: description ?? null, customId: customId ?? null, createdBy: userId })
-      .returning();
+    const project = await db.transaction(async (tx) => {
+      const [newProject] = await tx
+        .insert(projects)
+        .values({ name, description: description ?? null, customId: customId ?? null, createdBy: userId })
+        .returning();
 
-    await db.insert(projectMembers).values({
-      projectId: project.id,
-      userId,
-      role: "admin",
-    });
-
-    const defaultFolders = ["Materials", "Demos", "Finished"];
-    for (const folderName of defaultFolders) {
-      await db.insert(folders).values({
-        projectId: project.id,
-        name: folderName,
-        createdBy: userId,
+      await tx.insert(projectMembers).values({
+        projectId: newProject.id,
+        userId,
+        role: "admin",
       });
-    }
+
+      const defaultFolders = ["Materials", "Demos", "Finished"];
+      for (const folderName of defaultFolders) {
+        await tx.insert(folders).values({
+          projectId: newProject.id,
+          name: folderName,
+          createdBy: userId,
+        });
+      }
+
+      return newProject;
+    });
 
     return NextResponse.json(project, { status: 201 });
   } catch (err) {
