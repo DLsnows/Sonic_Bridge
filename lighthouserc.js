@@ -20,6 +20,7 @@ module.exports = {
         'categories:accessibility': ['warn', { minScore: 0.7 }],
         'categories:best-practices': ['warn', { minScore: 0.7 }],
         'categories:seo': ['warn', { minScore: 0.7 }],
+        'redirects': 'warn',
       },
     },
   },
