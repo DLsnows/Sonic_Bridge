@@ -155,6 +155,7 @@ export function ThreadCard({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               {post.avatar ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={`/api/user/avatar/${post.userId}`}
                   alt={post.username}
@@ -334,6 +335,7 @@ export function ThreadCard({
                 <div key={reply.id} className="animate-fade-in">
                   <div className="flex items-center gap-2 mb-1">
                     {reply.avatar ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
                       <img
                         src={`/api/user/avatar/${reply.userId}`}
                         alt={reply.username}
