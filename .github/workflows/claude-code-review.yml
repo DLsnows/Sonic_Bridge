@@ -15,16 +15,30 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Run Claude Code Review
         uses: anthropics/claude-code-action@v1
         env:
           ANTHROPIC_BASE_URL: https://api.deepseek.com/anthropic
           ANTHROPIC_MODEL: deepseek-v4-pro[1M]
+          ANTHROPIC_DEFAULT_SONNET_MODEL: deepseek-v4-pro[1M]
+          ANTHROPIC_DEFAULT_HAIKU_MODEL: deepseek-v4-flash
         with:
           anthropic_api_key: ${{ secrets.DEEPSEEK_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
-          plugins: "code-review@claude-code-plugins"
-          prompt: "/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}"
-          claude_args: "--model deepseek-v4-pro[1M]"
+          prompt: |
+            Review pull request #${{ github.event.pull_request.number }} in this repository.
+
+            Steps:
+            1. Run `gh pr view ${{ github.event.pull_request.number }}` to see PR details
+            2. Run `gh pr diff ${{ github.event.pull_request.number }}` to see code changes
+            3. Analyze the diff for bugs, logic errors, security vulnerabilities, and CLAUDE.md violations
+            4. Post your findings as a PR comment using `gh pr comment ${{ github.event.pull_request.number }} --body "..."`
+
+            Rules:
+            - Only report real bugs that would break functionality. Skip formatting, style, and issues linters/typecheckers catch.
+            - If no issues found, post: "No issues found."
+            - Sign off with: 🤖 Generated with [Claude Code](https://claude.ai/code)
+          claude_args: "--model deepseek-v4-pro[1M] --max-turns 20"
