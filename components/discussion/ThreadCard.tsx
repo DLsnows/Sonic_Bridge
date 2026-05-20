@@ -160,6 +160,7 @@ export function ThreadCard({
                   alt={post.username}
                   className="w-6 h-6 rounded-full object-cover border border-[#FF8C00]/30 shrink-0"
                   referrerPolicy="no-referrer"
+                  loading="lazy"
                 />
               ) : (
                 <span className="w-6 h-6 rounded-full bg-[#FF8C00]/20 border border-[#FF8C00]/30 flex items-center justify-center text-[10px] text-[#FF8C00] font-['Share_Tech_Mono',monospace] shrink-0">
@@ -338,6 +339,7 @@ export function ThreadCard({
                         alt={reply.username}
                         className="w-5 h-5 rounded-full object-cover border border-[#FF8C00]/20 shrink-0"
                         referrerPolicy="no-referrer"
+                        loading="lazy"
                       />
                     ) : (
                       <span className="w-5 h-5 rounded-full bg-[#FF8C00]/10 border border-[#FF8C00]/20 flex items-center justify-center text-[9px] text-[#FF8C00] font-['Share_Tech_Mono',monospace] shrink-0">
