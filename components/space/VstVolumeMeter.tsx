@@ -27,18 +27,18 @@ function formatDB(db: number): string {
 }
 
 export function VstVolumeMeter({ left, right, peak }: VstVolumeMeterProps) {
+  const [peakHeld, setPeakHeld] = useState(-Infinity);
   const peakHeldRef = useRef(-Infinity);
   const decayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [, forceUpdate] = useState(0);
 
   useEffect(() => {
     if (peak > peakHeldRef.current) {
       peakHeldRef.current = peak;
-      forceUpdate(n => n + 1);
+      setPeakHeld(peak);
       if (decayRef.current) clearTimeout(decayRef.current);
       decayRef.current = setTimeout(() => {
         peakHeldRef.current = -Infinity;
-        forceUpdate(n => n + 1);
+        setPeakHeld(-Infinity);
       }, 2000);
     }
     return () => {
@@ -48,8 +48,7 @@ export function VstVolumeMeter({ left, right, peak }: VstVolumeMeterProps) {
 
   const leftPercent = dBToPercent(left);
   const rightPercent = dBToPercent(right);
-  // eslint-disable-next-line react-hooks/refs
-  const peakPercent = dBToPercent(peakHeldRef.current);
+  const peakPercent = dBToPercent(peakHeld);
 
   return (
     <div className="space-y-1.5">
@@ -67,9 +66,7 @@ export function VstVolumeMeter({ left, right, peak }: VstVolumeMeterProps) {
               boxShadow: `0 0 6px ${dBColor(left)}40`,
             }}
           />
-          {/* eslint-disable-next-line react-hooks/refs */}
-          {/* eslint-disable-next-line react-hooks/refs */}
-          {isFinite(peakHeldRef.current) && (
+          {isFinite(peakHeld) && (
             <div
               className="absolute top-0 h-full w-0.5 bg-white/80 rounded"
               style={{ left: `${peakPercent}%` }}
@@ -98,8 +95,7 @@ export function VstVolumeMeter({ left, right, peak }: VstVolumeMeterProps) {
               boxShadow: `0 0 6px ${dBColor(right)}40`,
             }}
           />
-          {/* eslint-disable-next-line react-hooks/refs */}
-          {isFinite(peakHeldRef.current) && (
+          {isFinite(peakHeld) && (
             <div
               className="absolute top-0 h-full w-0.5 bg-white/80 rounded"
               style={{ left: `${peakPercent}%` }}

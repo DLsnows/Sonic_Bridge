@@ -73,10 +73,32 @@ export function CreativeSpaceRoom({
 
   useEffect(() => {
     const controller = new AbortController();
-    fetchToken(controller.signal);
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`/api/projects/${projectId}/space/token`, {
+          method: "POST",
+          signal: controller.signal,
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error ?? "Failed to get token");
+        }
+        const data: TokenData = await res.json();
+        setTokenData(data);
+        setRoomName(data.roomName);
+      } catch (e: unknown) {
+        if (e instanceof DOMException && e.name === "AbortError") return;
+        setError(
+          e instanceof Error ? e.message : "Connection failed",
+        );
+      } finally {
+        setLoading(false);
+      }
+    })();
     return () => controller.abort();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-  }, [fetchToken]);
+  }, [projectId, setRoomName]);
 
   if (loading) {
     return (

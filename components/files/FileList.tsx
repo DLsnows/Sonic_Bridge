@@ -252,7 +252,7 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
         }
       >
         <p className="text-sm text-[#D0D0D0]">
-          Delete <span className="text-[#FF4444] font-medium">&ldquo;{deleteTarget?.name}&rdquo;</span>?
+          Delete <span className="text-[#FF4444] font-medium">&quot;{deleteTarget?.name}&quot;</span>?
           This action cannot be undone.
         </p>
       </Modal>

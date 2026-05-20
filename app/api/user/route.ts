@@ -19,7 +19,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const userId = session.user.id;
+  const userId = session.user.id as string;
 
   let body: unknown;
   try {
@@ -99,7 +99,7 @@ export async function DELETE() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const userId = session.user.id;
+  const userId = session.user.id as string;
 
   await db.delete(users).where(eq(users.id, userId));
 

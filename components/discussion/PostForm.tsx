@@ -45,7 +45,7 @@ export function PostForm({
         setTitle("");
         setContent("");
       }
-    } catch (err) {
+    } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
       setSubmitting(false);

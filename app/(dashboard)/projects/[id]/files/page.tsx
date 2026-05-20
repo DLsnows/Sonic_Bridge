@@ -15,7 +15,7 @@ export default async function FilesPage({
   if (!session?.user) redirect("/login");
 
   const { id } = await params;
-  const userId = (session.user as any).id as string;
+  const userId = session.user.id;
 
   const [membership] = await db
     .select()

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
@@ -15,8 +15,8 @@ export function Sidebar({ username, avatar }: { username?: string; avatar?: stri
   const pathname = usePathname();
   const collapsed = useSidebarStore((s) => s.collapsed);
   const toggle = useSidebarStore((s) => s.toggle);
-  const [imgError, setImgError] = useState(false);
-  useEffect(() => { setImgError(false); }, [avatar]); // eslint-disable-line react-hooks/set-state-in-effect
+  const [errorAvatar, setErrorAvatar] = useState<string | null>(null);
+  const imgError = errorAvatar === avatar;
 
   return (
     <aside
@@ -77,13 +77,13 @@ export function Sidebar({ username, avatar }: { username?: string; avatar?: stri
           }`}
         >
           {avatar && !imgError ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={avatar}
               alt={username ?? "User"}
               className="w-8 h-8 rounded-full object-cover border border-[#00FF41]/20 shrink-0"
               referrerPolicy="no-referrer"
-              onError={() => setImgError(true)}
+              onError={() => setErrorAvatar(avatar ?? null)}
             />
           ) : (
             <div className="w-8 h-8 rounded-full bg-[#00FF41]/20 flex items-center justify-center text-xs text-[#00FF41] font-['Share_Tech_Mono',monospace] shrink-0">

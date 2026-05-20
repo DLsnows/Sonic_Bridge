@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
+
 
 interface AiConfigData {
   configured: boolean;
@@ -23,30 +24,29 @@ export function AiConfigForm({ projectId }: { projectId: string }) {
   const [model, setModel] = useState("gpt-4o-mini");
   const [showKey, setShowKey] = useState(false);
 
-  const fetchConfig = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/projects/${projectId}/ai-config`);
-      if (res.ok) {
-        const data = await res.json();
-        setConfig(data);
-        if (data.configured) {
-          setApiUrl(data.apiUrl || "");
-          setModel(data.model || "gpt-4o-mini");
-          setApiKey("");
-        }
-      }
-    } catch {
-      // silently fail on load
-    } finally {
-      setLoading(false);
-    }
-  }, [projectId]);
-
   useEffect(() => {
-    fetchConfig();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-  }, [fetchConfig]);
+    let ignore = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/projects/${projectId}/ai-config`);
+        if (!ignore && res.ok) {
+          const data = await res.json();
+          setConfig(data);
+          if (data.configured) {
+            setApiUrl(data.apiUrl || "");
+            setModel(data.model || "gpt-4o-mini");
+            setApiKey("");
+          }
+        }
+      } catch {
+        // silently fail on load
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    })();
+    return () => { ignore = true; };
+  }, [projectId]);
 
   const handleSave = async () => {
     setSaving(true);

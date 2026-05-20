@@ -15,7 +15,7 @@ export default async function SpacePage({
   if (!session?.user) redirect("/login");
 
   const { id } = await params;
-  const userId = (session.user as any).id as string;
+  const userId = session.user.id;
 
   const [membership] = await db
     .select()
@@ -38,7 +38,7 @@ export default async function SpacePage({
       <CreativeSpaceRoom
         projectId={id}
         userId={userId}
-        username={(session.user as any).username ?? (session.user as any).name ?? "User"}
+        username={session.user.username ?? session.user.name ?? "User"}
       />
     </div>
   );
