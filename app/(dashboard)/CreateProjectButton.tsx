@@ -46,13 +46,14 @@ export function CreateProjectButton() {
         body: JSON.stringify(body),
       });
 
-      const data = await res.json();
-
       if (res.ok) {
+        const data = await res.json();
         setOpen(false);
         router.push(`/projects/${data.id}`);
         router.refresh();
       } else {
+        let data: { error?: string; details?: { fieldErrors?: Record<string, string[]> } } = {};
+        try { data = await res.json(); } catch { /* non-JSON response */ }
         setError(data.error ?? "Failed to create project");
         if (data.details?.fieldErrors?.customId) {
           setCustomIdError(data.details.fieldErrors.customId.join(" "));
