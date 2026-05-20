@@ -5,7 +5,7 @@ import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { randomBytes, createHash } from "crypto";
 
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

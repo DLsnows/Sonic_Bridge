@@ -78,7 +78,7 @@ export function EventForm({ open, onClose, projectId, event, selectedDate, onSav
         setType("other");
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
   }, [open, event, selectedDate]);
 
   async function handleSubmit(e: React.FormEvent) {

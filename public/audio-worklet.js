@@ -53,7 +53,7 @@ class VstAudioProcessor extends AudioWorkletProcessor {
     this.available = preserved;
   }
 
-  process(_inputs, outputs, _parameters) {
+  process(_inputs, outputs, _parameters) { // eslint-disable-line no-unused-vars
     const output = outputs[0];
     if (!output || output.length === 0) return true;
 

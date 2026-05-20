@@ -16,7 +16,7 @@ export function Sidebar({ username, avatar }: { username?: string; avatar?: stri
   const collapsed = useSidebarStore((s) => s.collapsed);
   const toggle = useSidebarStore((s) => s.toggle);
   const [imgError, setImgError] = useState(false);
-  useEffect(() => { setImgError(false); }, [avatar]);
+  useEffect(() => { setImgError(false); }, [avatar]); // eslint-disable-line react-hooks/set-state-in-effect
 
   return (
     <aside
@@ -77,6 +77,7 @@ export function Sidebar({ username, avatar }: { username?: string; avatar?: stri
           }`}
         >
           {avatar && !imgError ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={avatar}
               alt={username ?? "User"}

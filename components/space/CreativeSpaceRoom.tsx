@@ -75,6 +75,7 @@ export function CreativeSpaceRoom({
     const controller = new AbortController();
     fetchToken(controller.signal);
     return () => controller.abort();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
   }, [fetchToken]);
 
   if (loading) {

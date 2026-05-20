@@ -99,7 +99,7 @@ function ParticipantRow({
   );
 }
 
-export function ParticipantList({ userId }: ParticipantListProps) {
+export function ParticipantList({ userId: _userId }: ParticipantListProps) {
   const { localParticipant } = useLocalParticipant();
   const remoteParticipants = useRemoteParticipants();
 

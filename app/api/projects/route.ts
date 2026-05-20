@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const userId = (session.user as any).id as string;
+  const userId = session.user.id;
   const { name, description, customId } = parsed.data;
 
   if (customId) {
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const userId = (session.user as any).id as string;
+  const userId = session.user.id;
 
   const memberships = await db
     .select({ projectId: projectMembers.projectId })

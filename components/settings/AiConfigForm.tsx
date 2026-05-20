@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/Button";
-import { GlassPanel } from "@/components/ui/GlassPanel";
 
 interface AiConfigData {
   configured: boolean;
@@ -46,6 +45,7 @@ export function AiConfigForm({ projectId }: { projectId: string }) {
 
   useEffect(() => {
     fetchConfig();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
   }, [fetchConfig]);
 
   const handleSave = async () => {

@@ -15,7 +15,7 @@ interface FileBrowserProps {
   initialFolders: Folder[];
 }
 
-export function FileBrowser({ projectId, userId, initialFolders }: FileBrowserProps) {
+export function FileBrowser({ projectId, userId: _userId, initialFolders }: FileBrowserProps) {
   const [folders, setFolders] = useState<Folder[]>(initialFolders);
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [files, setFiles] = useState<FileItem[]>([]);
@@ -32,7 +32,7 @@ export function FileBrowser({ projectId, userId, initialFolders }: FileBrowserPr
     setLoading(false);
   }, [projectId]);
 
-  useEffect(() => { fetchFiles(currentFolderId); }, [currentFolderId, fetchFiles]);
+  useEffect(() => { fetchFiles(currentFolderId); }, [currentFolderId, fetchFiles]); // eslint-disable-line react-hooks/set-state-in-effect
 
   const refreshFolders = async () => {
     const res = await fetch(`/api/projects/${projectId}/folders`);

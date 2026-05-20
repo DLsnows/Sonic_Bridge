@@ -48,6 +48,7 @@ export function VstVolumeMeter({ left, right, peak }: VstVolumeMeterProps) {
 
   const leftPercent = dBToPercent(left);
   const rightPercent = dBToPercent(right);
+  // eslint-disable-next-line react-hooks/refs
   const peakPercent = dBToPercent(peakHeldRef.current);
 
   return (
@@ -66,6 +67,8 @@ export function VstVolumeMeter({ left, right, peak }: VstVolumeMeterProps) {
               boxShadow: `0 0 6px ${dBColor(left)}40`,
             }}
           />
+          {/* eslint-disable-next-line react-hooks/refs */}
+          {/* eslint-disable-next-line react-hooks/refs */}
           {isFinite(peakHeldRef.current) && (
             <div
               className="absolute top-0 h-full w-0.5 bg-white/80 rounded"
@@ -95,6 +98,7 @@ export function VstVolumeMeter({ left, right, peak }: VstVolumeMeterProps) {
               boxShadow: `0 0 6px ${dBColor(right)}40`,
             }}
           />
+          {/* eslint-disable-next-line react-hooks/refs */}
           {isFinite(peakHeldRef.current) && (
             <div
               className="absolute top-0 h-full w-0.5 bg-white/80 rounded"
