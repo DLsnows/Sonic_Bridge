@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 
 // Only usable in CI. Generates a valid Auth.js v5 JWT session cookie
@@ -21,19 +22,12 @@ function encodeJWT(payload: Record<string, unknown>, secret: string): string {
   return `${segments}.${sig}`;
 }
 
-function json(data: unknown, init?: ResponseInit): Response {
-  return new Response(JSON.stringify(data), {
-    ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
-  });
-}
-
 export async function GET() {
   if (process.env.CI !== "true") {
-    return json({ error: "CI only" }, { status: 403 });
+    return NextResponse.json({ error: "CI only" }, { status: 403 });
   }
   if (!process.env.AUTH_SECRET) {
-    return json({ error: "No AUTH_SECRET" }, { status: 500 });
+    return NextResponse.json({ error: "No AUTH_SECRET" }, { status: 500 });
   }
 
   const now = Math.floor(Date.now() / 1000);
@@ -46,18 +40,18 @@ export async function GET() {
       name: "ci-test",
       picture: null,
       iat: now,
-      exp: now + 3600,
+      exp: now + 3600, // 1 hour
       jti: crypto.randomUUID(),
     },
     process.env.AUTH_SECRET,
   );
 
-  return json(
-    { ok: true },
-    {
-      headers: {
-        "Set-Cookie": `authjs.session-token=${token}; HttpOnly; SameSite=Lax; Path=/`,
-      },
-    },
-  );
+  const resp = NextResponse.json({ ok: true });
+  resp.cookies.set("authjs.session-token", token, {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    secure: false,
+  });
+  return resp;
 }
