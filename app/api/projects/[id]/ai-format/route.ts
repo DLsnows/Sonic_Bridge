@@ -87,7 +87,13 @@ export async function POST(
 
   let formattedContent: string;
   try {
-    const aiRes = await fetch(aiUrl, {
+    // Normalize the AI URL: auto-append /chat/completions if missing
+    let resolvedUrl = aiUrl.replace(/\/+$/, ""); // remove trailing slashes
+    if (!resolvedUrl.endsWith("/chat/completions")) {
+      resolvedUrl += "/chat/completions";
+    }
+
+    const aiRes = await fetch(resolvedUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

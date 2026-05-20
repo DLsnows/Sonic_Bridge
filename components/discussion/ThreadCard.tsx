@@ -125,6 +125,8 @@ export function ThreadCard({
   const [deletingReplyId, setDeletingReplyId] = useState<string | null>(null);
   const [aiFormatting, setAiFormatting] = useState(false);
   const [aiFormatError, setAiFormatError] = useState<string | null>(null);
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  const [replyAvatarErrors, setReplyAvatarErrors] = useState<Set<string>>(new Set());
   const isOwner = post.userId === currentUserId;
   const canModify = isOwner || isAdmin;
 
@@ -154,7 +156,7 @@ export function ThreadCard({
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              {post.avatar ? (
+              {post.avatar && !avatarFailed ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={`/api/user/avatar/${post.userId}`}
@@ -162,6 +164,7 @@ export function ThreadCard({
                   className="w-6 h-6 rounded-full object-cover border border-[#FF8C00]/30 shrink-0"
                   referrerPolicy="no-referrer"
                   loading="lazy"
+                  onError={() => setAvatarFailed(true)}
                 />
               ) : (
                 <span className="w-6 h-6 rounded-full bg-[#FF8C00]/20 border border-[#FF8C00]/30 flex items-center justify-center text-[10px] text-[#FF8C00] font-['Share_Tech_Mono',monospace] shrink-0">
@@ -334,7 +337,7 @@ export function ThreadCard({
               {replies.map((reply) => (
                 <div key={reply.id} className="animate-fade-in">
                   <div className="flex items-center gap-2 mb-1">
-                    {reply.avatar ? (
+                    {reply.avatar && !replyAvatarErrors.has(reply.userId) ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img
                         src={`/api/user/avatar/${reply.userId}`}
@@ -342,6 +345,7 @@ export function ThreadCard({
                         className="w-5 h-5 rounded-full object-cover border border-[#FF8C00]/20 shrink-0"
                         referrerPolicy="no-referrer"
                         loading="lazy"
+                        onError={() => setReplyAvatarErrors(prev => new Set(prev).add(reply.userId))}
                       />
                     ) : (
                       <span className="w-5 h-5 rounded-full bg-[#FF8C00]/10 border border-[#FF8C00]/20 flex items-center justify-center text-[9px] text-[#FF8C00] font-['Share_Tech_Mono',monospace] shrink-0">
