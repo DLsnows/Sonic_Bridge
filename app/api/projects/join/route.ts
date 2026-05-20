@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     .from(projectMembers)
     .where(
       and(
-        eq(projectMembers.projectId, projectId),
+        eq(projectMembers.projectId, project.id),
         eq(projectMembers.userId, userId),
       ),
     )
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
   }
 
   await db.insert(projectMembers).values({
-    projectId,
+    projectId: project.id,
     userId,
     role: "member",
   });
