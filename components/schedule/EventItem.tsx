@@ -15,6 +15,7 @@ interface ScheduleEvent {
   createdBy: string;
   createdAt: string;
   creatorName: string;
+  creatorAvatar?: string | null;
 }
 
 const typeConfig: Record<
@@ -86,9 +87,21 @@ export function EventItem({ event, canEdit, onEdit, onDelete }: EventItemProps) 
                 {event.description}
               </p>
             )}
-            <p className="text-[10px] text-[#A0A0B0]/60 mt-1">
-              by {event.creatorName}
-            </p>
+            <div className="flex items-center gap-1.5 mt-1">
+              {event.creatorAvatar ? (
+                <img
+                  src={`/api/user/avatar/${event.createdBy}`}
+                  alt={event.creatorName}
+                  className="w-4 h-4 rounded-full object-cover shrink-0"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <span className="w-4 h-4 rounded-full bg-[#A0A0B0]/20 flex items-center justify-center text-[7px] text-[#A0A0B0]/60 font-['Share_Tech_Mono',monospace] shrink-0">
+                  {event.creatorName.charAt(0).toUpperCase()}
+                </span>
+              )}
+              <span className="text-[10px] text-[#A0A0B0]/60">by {event.creatorName}</span>
+            </div>
           </div>
 
           {canEdit && (
