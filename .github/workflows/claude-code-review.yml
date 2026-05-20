@@ -18,16 +18,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Fetch PR data
+      - name: Fetch PR diff
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p /tmp/pr-data
           gh pr diff ${{ github.event.pull_request.number }} > /tmp/pr-data/diff.txt
-          gh pr view ${{ github.event.pull_request.number }} --json title,body,baseRefName,headRefName > /tmp/pr-data/info.json
+          gh pr view ${{ github.event.pull_request.number }} --json title,body > /tmp/pr-data/info.json
 
       - name: Run Claude Code Review
-        id: review
         uses: anthropics/claude-code-action@v1
         env:
           ANTHROPIC_BASE_URL: https://api.deepseek.com/anthropic
@@ -38,38 +37,15 @@ jobs:
           anthropic_api_key: ${{ secrets.DEEPSEEK_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
-            Review the pull request using the data already fetched:
+            Review pull request #${{ github.event.pull_request.number }}.
 
-            PR info: /tmp/pr-data/info.json
-            PR diff: /tmp/pr-data/diff.txt
+            Read /tmp/pr-data/info.json for PR title/body.
+            Read /tmp/pr-data/diff.txt for all code changes.
 
-            Steps:
-            1. Read /tmp/pr-data/info.json to understand what this PR is about
-            2. Read /tmp/pr-data/diff.txt to see all code changes
-            3. Read CLAUDE.md if it exists for project-specific rules
-            4. Analyze the diff for:
-               - Bugs that would break functionality
-               - Logic errors and edge cases
-               - Security vulnerabilities
-               - CLAUDE.md violations (if CLAUDE.md exists)
-            5. Skip: formatting, style, type errors, pre-existing issues
-            6. Write your review to /tmp/pr-data/review.md
+            Find bugs, logic errors, and security issues. Skip formatting, style, type errors, pre-existing issues.
 
-            Review format in /tmp/pr-data/review.md:
-            ### Code Review
-            [Findings with file paths and line numbers, or "No issues found."]
-            🤖 Generated with [Claude Code](https://claude.ai/code)
-          claude_args: "--model deepseek-v4-pro[1M] --max-turns 15 --allowedTools Bash,Read,Write,Grep,Glob"
-
-      - name: Post review comment
-        if: always()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if [ -f /tmp/pr-data/review.md ]; then
-            gh pr comment ${{ github.event.pull_request.number }} --body-file /tmp/pr-data/review.md
-          else
+            Post your review as a PR comment:
             gh pr comment ${{ github.event.pull_request.number }} --body "### Code Review
-
-          ⚠️ Review did not produce output. Check the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details."
-          fi
+            [your findings here, or 'No issues found.']
+            🤖 Generated with [Claude Code](https://claude.ai/code)"
+          claude_args: "--model deepseek-v4-pro[1M] --max-turns 15 --allowedTools Bash,Read,Grep,Glob"
