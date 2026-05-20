@@ -10,7 +10,7 @@ function getKey(): Buffer {
   if (_key) return _key;
   const secret = process.env.AUTH_SECRET;
   if (!secret) {
-    throw new Error("AUTH_SECRET is not configured");
+    throw new Error("AUTH_SECRET environment variable is not configured. Please set it in Vercel project settings.");
   }
   _key = scryptSync(secret, "ai-config-salt", 32);
   return _key;

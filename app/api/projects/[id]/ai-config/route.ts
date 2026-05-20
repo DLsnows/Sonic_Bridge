@@ -66,68 +66,80 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await requireAdmin((await params).id);
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  try {
+    const session = await requireAdmin((await params).id);
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  const { id: projectId } = await params;
-  const parsed = putSchema.safeParse(await request.json().catch(() => ({})));
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid input" }, { status: 400 });
-  }
+    if (!process.env.AUTH_SECRET) {
+      return NextResponse.json(
+        { error: "AUTH_SECRET is not configured" },
+        { status: 500 },
+      );
+    }
 
-  const { apiUrl, apiKey, model } = parsed.data;
+    const { id: projectId } = await params;
+    const parsed = putSchema.safeParse(await request.json().catch(() => ({})));
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+    }
 
-  const [existing] = await db
-    .select()
-    .from(projectAiConfigs)
-    .where(eq(projectAiConfigs.projectId, projectId))
-    .limit(1);
+    const { apiUrl, apiKey, model } = parsed.data;
 
-  let encryptedApiKey: string;
-  if (apiKey) {
-    encryptedApiKey = encrypt(apiKey);
-  } else if (existing) {
-    encryptedApiKey = existing.encryptedApiKey;
-  } else {
-    return NextResponse.json(
-      { error: "API key is required for initial setup" },
-      { status: 400 },
-    );
-  }
+    const [existing] = await db
+      .select()
+      .from(projectAiConfigs)
+      .where(eq(projectAiConfigs.projectId, projectId))
+      .limit(1);
 
-  if (existing) {
-    const [updated] = await db
-      .update(projectAiConfigs)
-      .set({
-        apiUrl,
-        encryptedApiKey,
-        model,
-        updatedAt: new Date(),
-      })
-      .where(eq(projectAiConfigs.id, existing.id))
-      .returning();
-    return NextResponse.json({
-      configured: true,
-      apiUrl: updated.apiUrl,
-      model: updated.model,
-      hasKey: true,
+    let encryptedApiKey: string;
+    if (apiKey) {
+      encryptedApiKey = encrypt(apiKey);
+    } else if (existing) {
+      encryptedApiKey = existing.encryptedApiKey;
+    } else {
+      return NextResponse.json(
+        { error: "API key is required for initial setup" },
+        { status: 400 },
+      );
+    }
+
+    if (existing) {
+      const [updated] = await db
+        .update(projectAiConfigs)
+        .set({
+          apiUrl,
+          encryptedApiKey,
+          model,
+          updatedAt: new Date(),
+        })
+        .where(eq(projectAiConfigs.id, existing.id))
+        .returning();
+      return NextResponse.json({
+        configured: true,
+        apiUrl: updated.apiUrl,
+        model: updated.model,
+        hasKey: true,
+      });
+    }
+
+    await db.insert(projectAiConfigs).values({
+      projectId,
+      apiUrl,
+      encryptedApiKey,
+      model,
+      createdBy: session.user.id,
     });
+
+    return NextResponse.json(
+      { configured: true, apiUrl, model, hasKey: true },
+      { status: 201 },
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Internal server error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  await db.insert(projectAiConfigs).values({
-    projectId,
-    apiUrl,
-    encryptedApiKey,
-    model,
-    createdBy: session.user.id,
-  });
-
-  return NextResponse.json(
-    { configured: true, apiUrl, model, hasKey: true },
-    { status: 201 },
-  );
 }
 
 // DELETE — remove AI config
