@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "./Button";
 
 interface ModalProps {
@@ -27,13 +28,13 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in overflow-y-auto"
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
     >
-      <div className="glass-panel w-full max-w-lg mx-4 shadow-[0_0_60px_rgba(0,240,255,0.1)] animate-slide-up">
+      <div className="glass-panel w-full max-w-lg mx-4 shadow-[0_0_60px_rgba(0,240,255,0.1)] animate-slide-up max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b border-white/10">
           <h2 className="text-lg font-['Share_Tech_Mono',monospace] neon-text-cyan">
             {title}
@@ -49,6 +50,7 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

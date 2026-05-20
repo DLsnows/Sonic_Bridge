@@ -58,7 +58,7 @@ function timeAgo(dateStr: string): string {
 }
 
 const markdownComponents = {
-  a: ({ href, children }: any) => (
+  a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
     <a
       href={href}
       target="_blank"
@@ -68,7 +68,7 @@ const markdownComponents = {
       {children}
     </a>
   ),
-  code: ({ children, className }: any) => {
+  code: ({ children, className }: { children?: React.ReactNode; className?: string }) => {
     if (className) {
       return (
         <pre className="bg-[#09090B] border border-[#FF8C00]/10 rounded p-3 overflow-x-auto text-xs text-[#00F0FF] my-2">
@@ -82,7 +82,7 @@ const markdownComponents = {
       </code>
     );
   },
-  blockquote: ({ children }: any) => (
+  blockquote: ({ children }: { children?: React.ReactNode }) => (
     <blockquote className="border-l-2 border-[#FF8C00]/20 pl-3 italic text-[#A0A0B0] my-2">
       {children}
     </blockquote>
@@ -155,6 +155,7 @@ export function ThreadCard({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               {post.avatar ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={`/api/user/avatar/${post.userId}`}
                   alt={post.username}
@@ -334,6 +335,7 @@ export function ThreadCard({
                 <div key={reply.id} className="animate-fade-in">
                   <div className="flex items-center gap-2 mb-1">
                     {reply.avatar ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
                       <img
                         src={`/api/user/avatar/${reply.userId}`}
                         alt={reply.username}

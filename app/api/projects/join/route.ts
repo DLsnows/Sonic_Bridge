@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
 
   const { projectId } = parsed.data;
 
-  const userId = (session.user as any).id as string;
+  const userId = session.user.id as string;
 
   // Accept either UUID id or custom ID (check format to avoid PG cast errors)
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId);
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     .from(projectMembers)
     .where(
       and(
-        eq(projectMembers.projectId, projectId),
+        eq(projectMembers.projectId, project.id),
         eq(projectMembers.userId, userId),
       ),
     )
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
   }
 
   await db.insert(projectMembers).values({
-    projectId,
+    projectId: project.id,
     userId,
     role: "member",
   });

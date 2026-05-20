@@ -99,7 +99,8 @@ function ParticipantRow({
   );
 }
 
-export function ParticipantList({ userId }: ParticipantListProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function ParticipantList({ userId: _ }: ParticipantListProps) {
   const { localParticipant } = useLocalParticipant();
   const remoteParticipants = useRemoteParticipants();
 

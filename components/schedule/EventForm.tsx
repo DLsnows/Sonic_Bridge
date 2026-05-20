@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -45,41 +45,43 @@ function toLocalDatetimeString(date: Date): string {
 }
 
 export function EventForm({ open, onClose, projectId, event, selectedDate, onSaved }: EventFormProps) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const [type, setType] = useState<"meeting" | "production" | "release" | "other">("other");
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(false);
-
   const isEdit = !!event;
 
-  useEffect(() => {
-    if (open) {
-      setErrors({});
-      setLoading(false);
-      if (event) {
-        setTitle(event.title);
-        setDescription(event.description ?? "");
-        setStartTime(toLocalDatetimeString(new Date(event.startTime)));
-        setEndTime(toLocalDatetimeString(new Date(event.endTime)));
-        setType(event.type);
-      } else {
-        setTitle("");
-        setDescription("");
-        const base = selectedDate ?? new Date();
-        const start = new Date(base);
-        start.setHours(10, 0, 0, 0);
-        const end = new Date(base);
-        end.setHours(11, 0, 0, 0);
-        setStartTime(toLocalDatetimeString(start));
-        setEndTime(toLocalDatetimeString(end));
-        setType("other");
-      }
+  function computeInitial(): {
+    title: string; description: string; startTime: string; endTime: string;
+    type: "meeting" | "production" | "release" | "other";
+  } {
+    if (event) {
+      return {
+        title: event.title,
+        description: event.description ?? "",
+        startTime: toLocalDatetimeString(new Date(event.startTime)),
+        endTime: toLocalDatetimeString(new Date(event.endTime)),
+        type: event.type,
+      };
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, event, selectedDate]);
+    const base = selectedDate ?? new Date();
+    const start = new Date(base);
+    start.setHours(10, 0, 0, 0);
+    const end = new Date(base);
+    end.setHours(11, 0, 0, 0);
+    return {
+      title: "",
+      description: "",
+      startTime: toLocalDatetimeString(start),
+      endTime: toLocalDatetimeString(end),
+      type: "other",
+    };
+  }
+
+  const initial = computeInitial();
+  const [title, setTitle] = useState(initial.title);
+  const [description, setDescription] = useState(initial.description);
+  const [startTime, setStartTime] = useState(initial.startTime);
+  const [endTime, setEndTime] = useState(initial.endTime);
+  const [type, setType] = useState<"meeting" | "production" | "release" | "other">(initial.type);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

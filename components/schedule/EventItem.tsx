@@ -89,6 +89,7 @@ export function EventItem({ event, canEdit, onEdit, onDelete }: EventItemProps) 
             )}
             <div className="flex items-center gap-1.5 mt-1">
               {event.creatorAvatar ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={`/api/user/avatar/${event.createdBy}`}
                   alt={event.creatorName}

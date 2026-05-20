@@ -14,29 +14,56 @@ export function CreateProjectButton() {
   const [customId, setCustomId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [customIdError, setCustomIdError] = useState("");
+
+  const resetForm = () => {
+    setName("");
+    setDescription("");
+    setCustomId("");
+    setError("");
+    setCustomIdError("");
+    setLoading(false);
+  };
+
+  const handleClose = () => {
+    resetForm();
+    setOpen(false);
+  };
 
   const handleCreate = async () => {
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      setError("Project name is required");
+      return;
+    }
     setError("");
+    setCustomIdError("");
     setLoading(true);
 
     const body: Record<string, string> = { name: name.trim(), description: description.trim() };
     if (customId.trim()) body.customId = customId.trim();
 
-    const res = await fetch("/api/projects", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    try {
+      const res = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
 
-    if (res.ok) {
-      const data = await res.json();
-      setOpen(false);
-      router.push(`/projects/${data.id}`);
-      router.refresh();
-    } else {
-      const data = await res.json();
-      setError(data.error ?? "Failed to create project");
+      if (res.ok) {
+        const data = await res.json();
+        setOpen(false);
+        router.push(`/projects/${data.id}`);
+        router.refresh();
+      } else {
+        let data: { error?: string; details?: { fieldErrors?: Record<string, string[]> } } = {};
+        try { data = await res.json(); } catch { /* non-JSON response */ }
+        setError(data.error ?? "Failed to create project");
+        if (data.details?.fieldErrors?.customId) {
+          setCustomIdError(data.details.fieldErrors.customId.join(" "));
+        }
+      }
+    } catch {
+      setError("Network error — please check your connection and try again");
     }
     setLoading(false);
   };
@@ -48,11 +75,11 @@ export function CreateProjectButton() {
       </Button>
       <Modal
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={handleClose}
         title="Create Project"
         footer={
           <>
-            <Button variant="ghost" onClick={() => setOpen(false)}>
+            <Button variant="ghost" onClick={handleClose}>
               Cancel
             </Button>
             <Button onClick={handleCreate} loading={loading}>
@@ -74,6 +101,7 @@ export function CreateProjectButton() {
             value={customId}
             onChange={(e) => setCustomId(e.target.value)}
             placeholder="my-band (letters, numbers, hyphens, underscores)"
+            error={customIdError}
           />
           <p className="text-[10px] text-[#A0A0B0] -mt-2">
             4-32 chars, alphanumeric, hyphens, underscores. Leave blank for auto-generated UUID.

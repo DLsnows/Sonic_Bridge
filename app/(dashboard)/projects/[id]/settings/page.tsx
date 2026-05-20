@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { projects, projectMembers, users } from "@/lib/db/schema";
+import { projects, projectMembers } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { TopBar } from "@/components/TopBar";
 import { GlassPanel } from "@/components/ui/GlassPanel";
@@ -18,7 +18,7 @@ export default async function SettingsPage({
   if (!session?.user) redirect("/login");
 
   const { id } = await params;
-  const userId = (session.user as any).id as string;
+  const userId = session.user.id;
 
   const [membership] = await db
     .select()
