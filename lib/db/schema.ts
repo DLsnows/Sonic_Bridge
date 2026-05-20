@@ -10,6 +10,14 @@ import {
 
 export const userRole = pgEnum("user_role", ["admin", "member"]);
 
+export const projectStatus = pgEnum("project_status", [
+  "not_started",
+  "in_progress",
+  "paused",
+  "pending_release",
+  "archived",
+]);
+
 export const eventType = pgEnum("event_type", [
   "meeting",
   "production",
@@ -32,6 +40,7 @@ export const projects = pgTable("projects", {
   name: text("name").notNull(),
   description: text("description"),
   customId: text("custom_id").unique(),
+  status: projectStatus("status").notNull().default("in_progress"),
   createdBy: uuid("created_by")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),

@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { discussionPosts, projectMembers, users } from "@/lib/db/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
+import { resolveProjectId } from "@/lib/project-utils";
 
 const editPostSchema = z.object({
   content: z.string().min(1).max(10000),
@@ -18,7 +19,11 @@ export async function PATCH(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { id: projectId, postId } = await params;
+  const { id, postId } = await params;
+  const projectId = await resolveProjectId(id);
+  if (!projectId) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
   const userId = session.user.id as string;
 
   const [membership] = await db
@@ -104,7 +109,11 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { id: projectId, postId } = await params;
+  const { id, postId } = await params;
+  const projectId = await resolveProjectId(id);
+  if (!projectId) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
   const userId = session.user.id as string;
 
   const [membership] = await db

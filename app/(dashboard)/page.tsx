@@ -9,6 +9,9 @@ import { Card } from "@/components/ui/Card";
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { CreateProjectButton } from "./CreateProjectButton";
 import { JoinProjectButton } from "./JoinProjectButton";
+import { projectHref } from "@/lib/project-utils";
+import { ProjectStatusBadge } from "@/components/ProjectStatusBadge";
+import { InactiveProjectsSection } from "@/components/InactiveProjectsSection";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -87,29 +90,39 @@ export default async function DashboardPage() {
             </div>
           </GlassPanel>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {projectList.map((project) => (
-              <Link key={project.id} href={`/projects/${project.id}`}>
-                <Card hover glow="green" className="h-full">
-                  <h3 className="font-['Share_Tech_Mono',monospace] text-[#F0F0F0] text-lg mb-1">
-                    {project.name}
-                  </h3>
-                  {project.description && (
-                    <p className="text-sm text-[#A0A0B0] line-clamp-2">
-                      {project.description}
-                    </p>
-                  )}
-                  <div className="flex items-center gap-2 mt-4">
-                    <span className="text-xs text-[#A0A0B0]">
-                      {memberOf.find((m) => m.projectId === project.id)?.role === "admin"
-                        ? "Admin"
-                        : "Member"}
-                    </span>
-                  </div>
-                </Card>
-              </Link>
-            ))}
-          </div>
+          <>
+            <InactiveProjectsSection
+              projects={projectList
+                .filter((p) => p.status === "archived" || p.status === "paused")
+                .map((p) => ({ ...p, role: memberOf.find((m) => m.projectId === p.id)?.role ?? "member" }))}
+            />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {projectList
+                .filter((p) => p.status !== "archived" && p.status !== "paused")
+                .map((project) => (
+                  <Link key={project.id} href={projectHref(project)}>
+                    <Card hover glow="green" className="h-full">
+                      <h3 className="font-['Share_Tech_Mono',monospace] text-[#F0F0F0] text-lg mb-1">
+                        {project.name}
+                      </h3>
+                      {project.description && (
+                        <p className="text-sm text-[#A0A0B0] line-clamp-2">
+                          {project.description}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 mt-4">
+                        <ProjectStatusBadge status={project.status} isAdmin={false} />
+                        <span className="text-xs text-[#A0A0B0]">
+                          {memberOf.find((m) => m.projectId === project.id)?.role === "admin"
+                            ? "Admin"
+                            : "Member"}
+                        </span>
+                      </div>
+                    </Card>
+                  </Link>
+                ))}
+            </div>
+          </>
         )}
       </div>
     </div>

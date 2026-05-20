@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { users, projectMembers } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { createHash } from "crypto";
+import { resolveProjectId } from "@/lib/project-utils";
 
 function validateRole(role: unknown): "admin" | "member" {
   if (role !== "admin" && role !== "member") {
@@ -19,8 +20,13 @@ export interface AuthResult {
 
 export async function authenticate(
   request: Request,
-  projectId: string,
+  projectIdOrCustomId: string,
 ): Promise<AuthResult | Response> {
+  const projectId = await resolveProjectId(projectIdOrCustomId);
+  if (!projectId) {
+    return Response.json({ error: "Project not found" }, { status: 404 });
+  }
+
   const authHeader = request.headers.get("authorization");
 
   if (authHeader?.startsWith("Bearer sb_")) {

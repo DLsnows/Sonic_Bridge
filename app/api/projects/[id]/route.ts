@@ -11,6 +11,8 @@ import {
   users,
 } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
+import { z } from "zod";
+import { resolveProjectId } from "@/lib/project-utils";
 
 export async function GET(
   request: NextRequest,
@@ -22,13 +24,17 @@ export async function GET(
   }
 
   const { id } = await params;
+  const projectId = await resolveProjectId(id);
+  if (!projectId) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
   const userId = session.user.id;
 
   const [membership] = await db
     .select()
     .from(projectMembers)
     .where(
-      and(eq(projectMembers.projectId, id), eq(projectMembers.userId, userId)),
+      and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)),
     )
     .limit(1);
 
@@ -39,7 +45,7 @@ export async function GET(
   const [project] = await db
     .select()
     .from(projects)
-    .where(eq(projects.id, id))
+    .where(eq(projects.id, projectId))
     .limit(1);
 
   if (!project) {
@@ -55,7 +61,7 @@ export async function GET(
     })
     .from(projectMembers)
     .innerJoin(users, eq(projectMembers.userId, users.id))
-    .where(eq(projectMembers.projectId, id));
+    .where(eq(projectMembers.projectId, projectId));
 
   return NextResponse.json({ ...project, members, myRole: membership.role });
 }
@@ -70,13 +76,17 @@ export async function PATCH(
   }
 
   const { id } = await params;
+  const projectId = await resolveProjectId(id);
+  if (!projectId) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
   const userId = session.user.id;
 
   const [membership] = await db
     .select()
     .from(projectMembers)
     .where(
-      and(eq(projectMembers.projectId, id), eq(projectMembers.userId, userId)),
+      and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)),
     )
     .limit(1);
 
@@ -85,15 +95,26 @@ export async function PATCH(
   }
 
   const body = await request.json();
-  const { name, description } = body;
+  const updateSchema = z.object({
+    name: z.string().min(1).max(100).optional(),
+    description: z.string().max(500).optional().nullable(),
+    status: z.enum(["not_started", "in_progress", "paused", "pending_release", "archived"]).optional(),
+  });
+  const parsed = updateSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid input", details: parsed.error.flatten() }, { status: 400 });
+  }
+  const { name, description, status } = parsed.data;
+
+  const setData: Record<string, unknown> = {};
+  if (name !== undefined) setData.name = name;
+  if (description !== undefined) setData.description = description;
+  if (status !== undefined) setData.status = status;
 
   const [updated] = await db
     .update(projects)
-    .set({
-      ...(name && { name }),
-      ...(description !== undefined && { description }),
-    })
-    .where(eq(projects.id, id))
+    .set(setData)
+    .where(eq(projects.id, projectId))
     .returning();
 
   return NextResponse.json(updated);
@@ -109,13 +130,17 @@ export async function DELETE(
   }
 
   const { id } = await params;
+  const projectId = await resolveProjectId(id);
+  if (!projectId) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
   const userId = session.user.id;
 
   const [membership] = await db
     .select()
     .from(projectMembers)
     .where(
-      and(eq(projectMembers.projectId, id), eq(projectMembers.userId, userId)),
+      and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)),
     )
     .limit(1);
 
@@ -124,12 +149,12 @@ export async function DELETE(
   }
 
   await db.transaction(async (tx) => {
-    await tx.delete(files).where(eq(files.projectId, id));
-    await tx.delete(scheduleEvents).where(eq(scheduleEvents.projectId, id));
-    await tx.delete(discussionPosts).where(eq(discussionPosts.projectId, id));
-    await tx.delete(folders).where(eq(folders.projectId, id));
-    await tx.delete(projectMembers).where(eq(projectMembers.projectId, id));
-    await tx.delete(projects).where(eq(projects.id, id));
+    await tx.delete(files).where(eq(files.projectId, projectId));
+    await tx.delete(scheduleEvents).where(eq(scheduleEvents.projectId, projectId));
+    await tx.delete(discussionPosts).where(eq(discussionPosts.projectId, projectId));
+    await tx.delete(folders).where(eq(folders.projectId, projectId));
+    await tx.delete(projectMembers).where(eq(projectMembers.projectId, projectId));
+    await tx.delete(projects).where(eq(projects.id, projectId));
   });
 
   return NextResponse.json({ success: true });
