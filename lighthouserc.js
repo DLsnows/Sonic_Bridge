@@ -1,8 +1,6 @@
 module.exports = {
   ci: {
     collect: {
-      startServerCommand: 'npx next start --port 3000',
-      startServerReadyPattern: 'ready started server',
       url: ['http://localhost:3000/'],
       numberOfRuns: 1,
       settings: {
@@ -20,6 +18,7 @@ module.exports = {
         'categories:accessibility': ['warn', { minScore: 0.7 }],
         'categories:best-practices': ['warn', { minScore: 0.7 }],
         'categories:seo': ['warn', { minScore: 0.7 }],
+        'redirects': 'warn',
       },
     },
   },

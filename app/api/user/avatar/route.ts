@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { put, del } from "@vercel/blob";
+import { put, del, head } from "@vercel/blob";
 import { randomBytes } from "crypto";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
@@ -31,6 +31,11 @@ async function validateMagicBytes(file: File): Promise<boolean> {
     }
   }
   return false;
+}
+
+async function deleteBlobByPathname(pathname: string): Promise<void> {
+  const blob = await head(pathname);
+  await del(blob.url);
 }
 
 export async function POST(request: Request) {
@@ -70,16 +75,16 @@ export async function POST(request: Request) {
       .limit(1);
 
     const storageKey = `avatars/${userId}_${randomBytes(8).toString("hex")}.jpg`;
-    const result = await put(storageKey, file, { access: "private", addRandomSuffix: false });
+    await put(storageKey, file, { access: "private", addRandomSuffix: false });
 
-    await db.update(users).set({ avatar: result.url }).where(eq(users.id, userId));
+    await db.update(users).set({ avatar: storageKey }).where(eq(users.id, userId));
 
-    const oldUrl = currentUser?.avatar;
-    if (oldUrl && oldUrl.includes("blob.vercel-storage.com")) {
-      try { await del(oldUrl); } catch { /* orphaned blob acceptable */ }
+    const oldAvatar = currentUser?.avatar;
+    if (oldAvatar) {
+      try { await deleteBlobByPathname(oldAvatar); } catch { /* orphaned blob acceptable */ }
     }
 
-    return Response.json({ avatar: result.url });
+    return Response.json({ avatar: `/api/user/avatar/${userId}` });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return Response.json({ error: message }, { status: 500 });
@@ -102,9 +107,9 @@ export async function DELETE() {
 
     await db.update(users).set({ avatar: null }).where(eq(users.id, userId));
 
-    const oldUrl = currentUser?.avatar;
-    if (oldUrl && oldUrl.includes("blob.vercel-storage.com")) {
-      try { await del(oldUrl); } catch { /* orphaned blob acceptable */ }
+    const oldAvatar = currentUser?.avatar;
+    if (oldAvatar) {
+      try { await deleteBlobByPathname(oldAvatar); } catch { /* orphaned blob acceptable */ }
     }
 
     return Response.json({ success: true });

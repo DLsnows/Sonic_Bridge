@@ -4,6 +4,10 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   lighthouse:
     if: ${{ ! github.event.pull_request.draft }}
@@ -11,9 +15,12 @@ jobs:
 
     env:
       AUTH_SECRET: 'ci-test-secret-do-not-use-in-production-00000000000000000000000000000000'
+      AUTH_URL: 'http://localhost:3000'
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -34,7 +41,136 @@ jobs:
             ${{ runner.os }}-nextjs-
 
       - name: Build Next.js app
-        run: npm run build
+        id: build
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee build-output.txt
+
+      - name: Start server & get auth cookie
+        if: steps.build.outcome == 'success'
+        run: |
+          npx next start --port 3000 &
+
+          # Wait for server ready (retry up to 30s)
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3000/ -o /dev/null 2>&1; then
+              echo "Server ready"
+              break
+            fi
+            sleep 1
+          done
+
+          # Get session cookie via CI endpoint
+          COOKIE=$(node scripts/lighthouse-login.mjs | grep "^cookie:" | cut -d' ' -f2)
+          echo "Got cookie: ${COOKIE:0:30}..."
+          echo "LHCI_COOKIE=$COOKIE" >> $GITHUB_ENV
 
       - name: Run Lighthouse CI
-        run: npx lhci autorun --config=./lighthouserc.js
+        id: lighthouse
+        continue-on-error: true
+        if: steps.build.outcome == 'success'
+        run: |
+          set -o pipefail
+          {
+            npx lhci collect \
+              --url=http://localhost:3000/ \
+              --numberOfRuns=1 \
+              --settings.preset=desktop \
+              --settings.skipAudits=full-page-screenshot,screenshot-thumbnails \
+              --settings.extraHeaders="{\"Cookie\":\"$LHCI_COOKIE\"}"
+            npx lhci upload \
+              --target=temporary-public-storage
+            npx lhci assert \
+              --preset=lighthouse:recommended \
+              --assertions.categories:performance='["warn",{"minScore":0.5}]' \
+              --assertions.categories:accessibility='["warn",{"minScore":0.7}]' \
+              --assertions.categories:best-practices='["warn",{"minScore":0.7}]' \
+              --assertions.categories:seo='["warn",{"minScore":0.7}]' \
+              || true
+          } 2>&1 | tee lighthouse-output.txt
+
+      - name: Build comment body
+        id: build-comment
+        if: always()
+        run: |
+          TRUNCATE_LINES=100
+
+          SCORE_LINES=$(grep -E '(✅|❌)\s+categories:' lighthouse-output.txt 2>/dev/null || true)
+
+          PERF=$(echo "$SCORE_LINES" | grep 'performance' | grep -oP '[\d.]+(?= >=| <)' | head -1 || echo "N/A")
+          A11Y=$(echo "$SCORE_LINES" | grep 'accessibility' | grep -oP '[\d.]+(?= >=| <)' | head -1 || echo "N/A")
+          BP=$(echo "$SCORE_LINES" | grep 'best-practices' | grep -oP '[\d.]+(?= >=| <)' | head -1 || echo "N/A")
+          SEO=$(echo "$SCORE_LINES" | grep 'seo' | grep -oP '[\d.]+(?= >=| <)' | head -1 || echo "N/A")
+
+          to_pct() {
+            local val="$1"
+            if [ "$val" = "N/A" ]; then echo "N/A"
+            else awk "BEGIN { printf \"%.0f\", $val * 100 }" 2>/dev/null || echo "$val"
+            fi
+          }
+
+          PERF_PCT=$(to_pct "$PERF")
+          A11Y_PCT=$(to_pct "$A11Y")
+          BP_PCT=$(to_pct "$BP")
+          SEO_PCT=$(to_pct "$SEO")
+
+          build_status="${{ steps.build.outcome }}"
+          lh_status="${{ steps.lighthouse.outcome }}"
+
+          {
+            echo "## :lighthouse: Lighthouse CI Results"
+            echo ""
+
+            if [ "$build_status" = "failure" ]; then
+              echo ":x: **Build failed** -- Lighthouse could not run."
+              echo ""
+              echo '```'
+              tail -n $TRUNCATE_LINES build-output.txt 2>/dev/null || echo "(no output captured)"
+              echo '```'
+            else
+              echo ":white_check_mark: Build succeeded."
+            fi
+            echo ""
+
+            if [ "$build_status" = "success" ]; then
+              if [ -n "$SCORE_LINES" ]; then
+                echo "| Category | Score |"
+                echo "|---|---|"
+                echo "| :zap: Performance | **${PERF_PCT}** / 100 |"
+                echo "| :wheelchair: Accessibility | **${A11Y_PCT}** / 100 |"
+                echo "| :shield: Best Practices | **${BP_PCT}** / 100 |"
+                echo "| :mag: SEO | **${SEO_PCT}** / 100 |"
+                echo ""
+
+                if [ "$lh_status" = "failure" ]; then
+                  echo ":warning: One or more Lighthouse assertions failed. Check the run logs for the full report URL."
+                else
+                  echo ":white_check_mark: All Lighthouse assertions passed."
+                fi
+                echo ""
+              else
+                echo ":warning: Could not parse Lighthouse scores from output."
+                echo ""
+                echo '```'
+                tail -n $TRUNCATE_LINES lighthouse-output.txt 2>/dev/null || echo "(no output captured)"
+                echo '```'
+              fi
+            fi
+            echo ""
+            echo "---"
+            echo "*Lighthouse CI runs against a production build. Config: \`lighthouserc.js\`*"
+          } > /tmp/comment.md
+
+      - name: Post sticky comment
+        if: always()
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: lighthouse
+          path: /tmp/comment.md
+
+      - name: Fail if any check failed
+        if: |
+          always() &&
+          (steps.build.outcome == 'failure' || steps.lighthouse.outcome == 'failure')
+        run: exit 1

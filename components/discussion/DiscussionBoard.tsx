@@ -12,6 +12,7 @@ interface DiscussionPost {
   projectId: string;
   userId: string;
   username: string;
+  avatar?: string | null;
   title: string;
   content: string;
   parentId: string | null;
