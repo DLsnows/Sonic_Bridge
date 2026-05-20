@@ -134,7 +134,7 @@ export async function POST(
     .insert(discussionPosts)
     .values({
       projectId: post.projectId,
-      userId: (session.user as any).id as string,
+      userId: session.user.id,
       title: `AI formatted: ${post.title}`,
       content: formattedContent,
       parentId: post.id,

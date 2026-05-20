@@ -6,10 +6,7 @@ import { eq, inArray } from "drizzle-orm";
 import Link from "next/link";
 import { TopBar } from "@/components/TopBar";
 import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
 import { GlassPanel } from "@/components/ui/GlassPanel";
-import { Input } from "@/components/ui/Input";
-import { Modal } from "@/components/ui/Modal";
 import { CreateProjectButton } from "./CreateProjectButton";
 import { JoinProjectButton } from "./JoinProjectButton";
 
@@ -17,7 +14,7 @@ export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const userId = (session.user as any).id as string;
+  const userId = session.user.id;
 
   let memberOf: { projectId: string; role: "admin" | "member" }[] = [];
   let projectList: typeof projects.$inferSelect[] = [];

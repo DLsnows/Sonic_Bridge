@@ -23,7 +23,7 @@ export function VstAudioBridge({
   const bridgeRef = useRef<VstBridge | null>(null);
   const pipelineRef = useRef<VstAudioPipeline | null>(null);
   const participantRef = useRef(localParticipant);
-  participantRef.current = localParticipant;
+  useEffect(() => { participantRef.current = localParticipant; }, [localParticipant]);
   const triggerReconnect = useVstStore((s) => s.triggerReconnect);
   const vstVolume = useVstStore((s) => s.vstVolume);
   const vstStatus = useVstStore((s) => s.status);

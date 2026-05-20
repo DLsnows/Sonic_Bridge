@@ -67,7 +67,7 @@ export async function authenticate(
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const userId = (session.user as any).id as string;
+  const userId = session.user.id;
 
   const [membership] = await db
     .select()
@@ -86,7 +86,7 @@ export async function authenticate(
 
   return {
     userId,
-    username: (session.user as any).username ?? (session.user as any).name ?? "User",
+    username: session.user.username ?? session.user.name ?? "User",
     membership: { role: validateRole(membership.role) },
   };
 }
