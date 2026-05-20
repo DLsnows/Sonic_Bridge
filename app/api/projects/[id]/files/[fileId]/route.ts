@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { files } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { authenticate } from "@/lib/api-auth";
-import { getFileUrl, deleteFile, getFileBody } from "@/lib/storage";
+import { deleteFile, getFileBody } from "@/lib/storage";
 
 export async function GET(
   request: NextRequest,
@@ -28,14 +28,9 @@ export async function GET(
   const isAudio = file.mimeType?.startsWith("audio/") ?? false;
   const isVideo = file.mimeType?.startsWith("video/") ?? false;
 
-  // For files > 50MB, redirect to signed download URL to avoid server memory pressure
-  if (file.size > 50 * 1024 * 1024 && !rangeHeader) {
-    const url = await getFileUrl(file.storageKey);
-    return NextResponse.redirect(url);
-  }
-
   const result = await getFileBody(file.storageKey, {
     range: rangeHeader ?? undefined,
+    mimeType: file.mimeType ?? undefined,
   });
 
   const useInline = isInline || ((isAudio || isVideo) && result.isRange);
@@ -44,7 +39,7 @@ export async function GET(
     : `attachment; filename="${encodeURIComponent(file.name)}"`;
 
   const headers: Record<string, string> = {
-    "Content-Type": result.contentType,
+    "Content-Type": file.mimeType || result.contentType,
     "Content-Disposition": disposition,
     "Accept-Ranges": "bytes",
     "Cache-Control": "private, max-age=60",
