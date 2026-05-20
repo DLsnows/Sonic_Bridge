@@ -34,22 +34,19 @@ export async function POST(request: NextRequest) {
   const userId = session.user.id;
   const { name, description, customId } = parsed.data;
 
-  if (customId) {
-    const [existing] = await db
-      .select({ id: projects.id })
-      .from(projects)
-      .where(eq(projects.customId, customId))
-      .limit(1);
-    if (existing) {
-      return NextResponse.json(
-        { error: "Custom ID is already taken" },
-        { status: 409 },
-      );
-    }
-  }
-
   try {
     const project = await db.transaction(async (tx) => {
+      if (customId) {
+        const [existing] = await tx
+          .select({ id: projects.id })
+          .from(projects)
+          .where(eq(projects.customId, customId))
+          .limit(1);
+        if (existing) {
+          return { conflict: true as const };
+        }
+      }
+
       const [newProject] = await tx
         .insert(projects)
         .values({ name, description: description ?? null, customId: customId ?? null, createdBy: userId })
@@ -72,6 +69,13 @@ export async function POST(request: NextRequest) {
 
       return newProject;
     });
+
+    if (project && "conflict" in project) {
+      return NextResponse.json(
+        { error: "Custom ID is already taken" },
+        { status: 409 },
+      );
+    }
 
     return NextResponse.json(project, { status: 201 });
   } catch (err) {
