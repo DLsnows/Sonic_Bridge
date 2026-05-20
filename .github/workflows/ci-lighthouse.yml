@@ -87,6 +87,17 @@ jobs:
               --assertions.categories:accessibility='["warn",{"minScore":0.7}]' \
               --assertions.categories:best-practices='["warn",{"minScore":0.7}]' \
               --assertions.categories:seo='["warn",{"minScore":0.7}]' \
+              --assertions.redirects=warn \
+              --assertions.robots-txt=warn \
+              --assertions.legacy-javascript-insight=warn \
+              --assertions.legacy-javascript=warn \
+              --assertions.unused-javascript=warn \
+              --assertions.uses-rel-preconnect=warn \
+              --assertions.render-blocking-resources=warn \
+              --assertions.render-blocking-insight=warn \
+              --assertions.uses-long-cache-ttl=warn \
+              --assertions.cache-insight=warn \
+              --assertions.max-potential-fid=warn \
               || true
           } 2>&1 | tee lighthouse-output.txt
 
@@ -98,10 +109,15 @@ jobs:
 
           SCORE_LINES=$(grep -E '(✅|❌)\s+categories:' lighthouse-output.txt 2>/dev/null || true)
 
-          PERF=$(echo "$SCORE_LINES" | grep 'performance' | grep -oP '[\d.]+(?= >=| <)' | head -1 || echo "N/A")
-          A11Y=$(echo "$SCORE_LINES" | grep 'accessibility' | grep -oP '[\d.]+(?= >=| <)' | head -1 || echo "N/A")
-          BP=$(echo "$SCORE_LINES" | grep 'best-practices' | grep -oP '[\d.]+(?= >=| <)' | head -1 || echo "N/A")
-          SEO=$(echo "$SCORE_LINES" | grep 'seo' | grep -oP '[\d.]+(?= >=| <)' | head -1 || echo "N/A")
+          LHR_FILE=$(ls .lighthouseci/lhr-*.json 2>/dev/null | head -1)
+          if [ -n "$LHR_FILE" ] && [ -f "$LHR_FILE" ]; then
+            PERF=$(jq -r '.categories.performance.score // "N/A"' "$LHR_FILE")
+            A11Y=$(jq -r '.categories.accessibility.score // "N/A"' "$LHR_FILE")
+            BP=$(jq -r '.categories."best-practices".score // "N/A"' "$LHR_FILE")
+            SEO=$(jq -r '.categories.seo.score // "N/A"' "$LHR_FILE")
+          else
+            PERF="N/A"; A11Y="N/A"; BP="N/A"; SEO="N/A"
+          fi
 
           to_pct() {
             local val="$1"
@@ -134,7 +150,7 @@ jobs:
             echo ""
 
             if [ "$build_status" = "success" ]; then
-              if [ -n "$SCORE_LINES" ]; then
+              if [ -n "$SCORE_LINES" ] || [ "$PERF" != "N/A" ]; then
                 echo "| Category | Score |"
                 echo "|---|---|"
                 echo "| :zap: Performance | **${PERF_PCT}** / 100 |"
