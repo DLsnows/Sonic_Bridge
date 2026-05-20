@@ -87,17 +87,17 @@ jobs:
               --assertions.categories:accessibility='["warn",{"minScore":0.7}]' \
               --assertions.categories:best-practices='["warn",{"minScore":0.7}]' \
               --assertions.categories:seo='["warn",{"minScore":0.7}]' \
-              --assertions.redirects=warn \
-              --assertions.robots-txt=warn \
-              --assertions.legacy-javascript-insight=warn \
-              --assertions.legacy-javascript=warn \
-              --assertions.unused-javascript=warn \
-              --assertions.uses-rel-preconnect=warn \
-              --assertions.render-blocking-resources=warn \
-              --assertions.render-blocking-insight=warn \
-              --assertions.uses-long-cache-ttl=warn \
-              --assertions.cache-insight=warn \
-              --assertions.max-potential-fid=warn \
+              --assertions.redirects='"warn"' \
+              --assertions.robots-txt='"warn"' \
+              --assertions.legacy-javascript-insight='"warn"' \
+              --assertions.legacy-javascript='"warn"' \
+              --assertions.unused-javascript='"warn"' \
+              --assertions.uses-rel-preconnect='"warn"' \
+              --assertions.render-blocking-resources='"warn"' \
+              --assertions.render-blocking-insight='"warn"' \
+              --assertions.uses-long-cache-ttl='"warn"' \
+              --assertions.cache-insight='"warn"' \
+              --assertions.max-potential-fid='"warn"' \
               || true
           } 2>&1 | tee lighthouse-output.txt
 
