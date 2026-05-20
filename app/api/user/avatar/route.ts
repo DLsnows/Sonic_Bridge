@@ -34,8 +34,16 @@ async function validateMagicBytes(file: File): Promise<boolean> {
 }
 
 async function deleteBlobByPathname(pathname: string): Promise<void> {
-  const blob = await head(pathname);
-  await del(blob.url);
+  let key = pathname;
+  try {
+    if (key.includes("://")) {
+      key = new URL(key).pathname.slice(1);
+    }
+  } catch { /* not a valid URL, use as-is */ }
+  try {
+    const blob = await head(key);
+    await del(blob.url);
+  } catch { /* blob already deleted or not found */ }
 }
 
 export async function POST(request: Request) {
@@ -75,9 +83,9 @@ export async function POST(request: Request) {
       .limit(1);
 
     const storageKey = `avatars/${userId}_${randomBytes(8).toString("hex")}.jpg`;
-    await put(storageKey, file, { access: "private", addRandomSuffix: false });
+    const { url } = await put(storageKey, file, { access: "private", addRandomSuffix: false });
 
-    await db.update(users).set({ avatar: storageKey }).where(eq(users.id, userId));
+    await db.update(users).set({ avatar: url }).where(eq(users.id, userId));
 
     const oldAvatar = currentUser?.avatar;
     if (oldAvatar) {

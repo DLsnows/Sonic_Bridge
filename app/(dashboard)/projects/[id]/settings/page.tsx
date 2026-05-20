@@ -60,7 +60,7 @@ export default async function SettingsPage({
         </GlassPanel>
 
         <GlassPanel>
-          <h3 className="font-['Share_Tech_Mono',monospace] text-sm text-[#FF8C00] mb-4">
+          <h3 className="font-['Share_Tech_Mono',monospace] text-sm text-[#00FF41] mb-4">
             AI Features
           </h3>
           <p className="text-sm text-[#A0A0B0] mb-4">

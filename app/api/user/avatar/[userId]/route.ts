@@ -17,7 +17,9 @@ export async function GET(
     .limit(1);
 
   if (!user?.avatar) {
-    return new NextResponse(null, { status: 404 });
+    return NextResponse.redirect(
+      `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(userId)}&backgroundColor=1a1a2e&textColor=00ff41`,
+    );
   }
 
   let storageKey: string;
@@ -28,7 +30,9 @@ export async function GET(
       storageKey = user.avatar;
     }
   } catch {
-    return new NextResponse(null, { status: 404 });
+    return NextResponse.redirect(
+      `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(userId)}&backgroundColor=1a1a2e&textColor=00ff41`,
+    );
   }
 
   try {
@@ -39,6 +43,8 @@ export async function GET(
       },
     });
   } catch {
-    return new NextResponse(null, { status: 404 });
+    return NextResponse.redirect(
+      `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(userId)}&backgroundColor=1a1a2e&textColor=00ff41`,
+    );
   }
 }
