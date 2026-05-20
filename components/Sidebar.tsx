@@ -6,12 +6,24 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useSidebarStore } from "@/lib/store/sidebar";
 import { Button } from "./ui/Button";
+import { projectHref } from "@/lib/project-utils";
 
-const navItems = [
-  { href: "/", label: "Projects", icon: "◈" },
-];
+interface SidebarProject {
+  id: string;
+  name: string;
+  customId: string | null;
+  status: string;
+}
 
-export function Sidebar({ username, avatar }: { username?: string; avatar?: string | null }) {
+const STATUS_DOT: Record<string, string> = {
+  not_started: "bg-[#A0A0B0]",
+  in_progress: "bg-[#00FF41]",
+  paused: "bg-[#FFB800]",
+  pending_release: "bg-[#00F0FF]",
+  archived: "bg-[#FF4444]",
+};
+
+export function Sidebar({ username, avatar, projects }: { username?: string; avatar?: string | null; projects?: SidebarProject[] }) {
   const pathname = usePathname();
   const collapsed = useSidebarStore((s) => s.collapsed);
   const toggle = useSidebarStore((s) => s.toggle);
@@ -47,22 +59,35 @@ export function Sidebar({ username, avatar }: { username?: string; avatar?: stri
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-3 flex flex-col gap-1">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+      <nav className="flex-1 p-3 flex flex-col gap-1 overflow-y-auto">
+        <Link
+          href="/"
+          className={`flex items-center rounded-lg text-sm transition-all duration-200
+            ${collapsed ? "justify-center px-2 py-2" : "gap-3 px-3 py-2"}
+            ${pathname === "/"
+              ? "bg-[#00FF41]/10 text-[#00FF41] border border-[#00FF41]/20"
+              : "text-[#A0A0B0] hover:text-[#F0F0F0] hover:bg-white/5"}`}
+          title={collapsed ? "Projects" : undefined}
+        >
+          <span>{"◈"}</span>
+          {!collapsed && "Projects"}
+        </Link>
+        {projects?.filter((p) => p.status !== "archived").map((project) => {
+          const href = projectHref(project);
+          const isActive = pathname.startsWith(href);
           return (
             <Link
-              key={item.href}
-              href={item.href}
+              key={project.id}
+              href={href}
               className={`flex items-center rounded-lg text-sm transition-all duration-200
-                ${collapsed ? "justify-center px-2 py-2" : "gap-3 px-3 py-2"}
+                ${collapsed ? "justify-center px-2 py-2" : "gap-2 px-3 py-2"}
                 ${isActive
                   ? "bg-[#00FF41]/10 text-[#00FF41] border border-[#00FF41]/20"
                   : "text-[#A0A0B0] hover:text-[#F0F0F0] hover:bg-white/5"}`}
-              title={collapsed ? item.label : undefined}
+              title={collapsed ? project.name : undefined}
             >
-              <span>{item.icon}</span>
-              {!collapsed && item.label}
+              <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT[project.status] || STATUS_DOT.in_progress}`} />
+              {!collapsed && <span className="truncate">{project.name}</span>}
             </Link>
           );
         })}
@@ -103,7 +128,7 @@ export function Sidebar({ username, avatar }: { username?: string; avatar?: stri
             onClick={() => signOut({ callbackUrl: "/login" })}
             title="Sign out"
           >
-            ⏻
+            {"⏻"}
           </Button>
         )}
       </div>
