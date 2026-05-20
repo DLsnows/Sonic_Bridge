@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { projectMembers, users } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getLiveKitToken } from "@/lib/livekit";
+import { resolveProjectId } from "@/lib/project-utils";
 
 export async function POST(
   request: NextRequest,
@@ -15,13 +16,17 @@ export async function POST(
   }
 
   const { id } = await params;
+  const projectId = await resolveProjectId(id);
+  if (!projectId) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
   const userId = session.user.id as string;
 
   const [membership] = await db
     .select()
     .from(projectMembers)
     .where(
-      and(eq(projectMembers.projectId, id), eq(projectMembers.userId, userId)),
+      and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)),
     )
     .limit(1);
 
@@ -36,7 +41,7 @@ export async function POST(
     .limit(1);
 
   const username = user?.username ?? "Unknown";
-  const roomName = `project-${id}`;
+  const roomName = `project-${projectId}`;
 
   try {
     const token = await getLiveKitToken(roomName, username, userId);

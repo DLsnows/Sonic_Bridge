@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { scheduleEvents, projectMembers } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
+import { resolveProjectId } from "@/lib/project-utils";
 
 const updateEventSchema = z.object({
   title: z.string().min(1).max(200).optional(),
@@ -29,13 +30,17 @@ export async function PATCH(
   }
 
   const { id, eventId } = await params;
+  const projectId = await resolveProjectId(id);
+  if (!projectId) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
   const userId = session.user.id as string;
 
   const [membership] = await db
     .select()
     .from(projectMembers)
     .where(
-      and(eq(projectMembers.projectId, id), eq(projectMembers.userId, userId)),
+      and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)),
     )
     .limit(1);
 
@@ -47,7 +52,7 @@ export async function PATCH(
     .select()
     .from(scheduleEvents)
     .where(
-      and(eq(scheduleEvents.id, eventId), eq(scheduleEvents.projectId, id)),
+      and(eq(scheduleEvents.id, eventId), eq(scheduleEvents.projectId, projectId)),
     )
     .limit(1);
 
@@ -110,13 +115,17 @@ export async function DELETE(
   }
 
   const { id, eventId } = await params;
+  const projectId = await resolveProjectId(id);
+  if (!projectId) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
   const userId = session.user.id as string;
 
   const [membership] = await db
     .select()
     .from(projectMembers)
     .where(
-      and(eq(projectMembers.projectId, id), eq(projectMembers.userId, userId)),
+      and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)),
     )
     .limit(1);
 
@@ -128,7 +137,7 @@ export async function DELETE(
     .select()
     .from(scheduleEvents)
     .where(
-      and(eq(scheduleEvents.id, eventId), eq(scheduleEvents.projectId, id)),
+      and(eq(scheduleEvents.id, eventId), eq(scheduleEvents.projectId, projectId)),
     )
     .limit(1);
 
