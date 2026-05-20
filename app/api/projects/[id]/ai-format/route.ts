@@ -89,10 +89,17 @@ export async function POST(
   try {
     // Normalize the AI URL: auto-append /chat/completions if missing from pathname
     let resolvedUrl = aiUrl.replace(/\/+$/, ""); // remove trailing slashes
-    let pathname = "/";
-    try { pathname = new URL(resolvedUrl).pathname; } catch { /* not a valid URL, use as-is */ }
-    if (!pathname.endsWith("/chat/completions")) {
-      resolvedUrl += "/chat/completions";
+    try {
+      const urlObj = new URL(resolvedUrl);
+      if (!urlObj.pathname.endsWith("/chat/completions")) {
+        urlObj.pathname = urlObj.pathname.replace(/\/+$/, "") + "/chat/completions";
+        resolvedUrl = urlObj.toString();
+      }
+    } catch {
+      // Not a parseable URL — fall back to simple concatenation
+      if (!resolvedUrl.endsWith("/chat/completions")) {
+        resolvedUrl += "/chat/completions";
+      }
     }
 
     const aiRes = await fetch(resolvedUrl, {
