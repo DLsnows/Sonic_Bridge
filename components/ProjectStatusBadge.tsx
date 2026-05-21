@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   not_started: { label: "Not Started", color: "#A0A0B0", bg: "bg-[#A0A0B0]/10" },
@@ -14,7 +14,26 @@ export function ProjectStatusBadge({ status, isAdmin, projectId }: {
 }) {
   const [open, setOpen] = useState(false);
   const [currentStatus, setCurrentStatus] = useState(status);
+  const containerRef = useRef<HTMLDivElement>(null);
   const config = STATUS_CONFIG[currentStatus] || STATUS_CONFIG.not_started;
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [open]);
 
   const handleStatusChange = async (newStatus: string) => {
     if (!projectId) return;
@@ -46,7 +65,7 @@ export function ProjectStatusBadge({ status, isAdmin, projectId }: {
   if (!isAdmin || !projectId) return badge;
 
   return (
-    <div className="relative inline-block">
+    <div className="relative inline-block" ref={containerRef}>
       <button onClick={() => setOpen(!open)} className="cursor-pointer">
         {badge}
       </button>

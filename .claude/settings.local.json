@@ -11,7 +11,8 @@
       "Bash(Read components/files/FileBrowser.tsx 59 76)",
       "Bash(npx tsc *)",
       "Bash(gh pr *)",
-      "Bash(git pull *)"
+      "Bash(git pull *)",
+      "Bash(gh run *)"
     ]
   }
 }
