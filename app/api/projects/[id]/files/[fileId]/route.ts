@@ -20,7 +20,7 @@ export async function HEAD(request: NextRequest, { params }: { params: Promise<{
   if (authResult instanceof Response) return authResult;
   const [file] = await db.select().from(files).where(and(eq(files.id, fileId), eq(files.projectId, id))).limit(1);
   if (!file) return new NextResponse(null, { status: 404 });
-  return new NextResponse(null, { status: 200, headers: { "Content-Length": String(file.size), "Content-Type": file.mimeType || "application/octet-stream", "Cache-Control": "public, max-age=3600" } });
+  return new NextResponse(null, { status: 200, headers: { "Content-Length": String(file.size), "Content-Type": file.mimeType || "application/octet-stream", "Cache-Control": "private, max-age=60" } });
 }
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string; fileId: string }> }) {

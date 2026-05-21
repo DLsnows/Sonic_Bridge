@@ -50,6 +50,7 @@ export function PostForm({
   }, []);
 
   useEffect(() => {
+    if (mode === "edit") return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       if (title || content) localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, content }));
