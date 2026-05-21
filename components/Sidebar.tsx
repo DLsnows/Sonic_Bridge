@@ -32,13 +32,17 @@ export function Sidebar({ username, projects }: { username?: string; projects?: 
     }
   }, [projects, setProjects, storeProjects.length]);
 
-  // Listen for project status changes
+  // Listen for project status changes and new project creation
   useEffect(() => {
     const handler = () => {
       refreshProjects();
     };
     window.addEventListener("project-status-changed", handler);
-    return () => window.removeEventListener("project-status-changed", handler);
+    window.addEventListener("project-created", handler);
+    return () => {
+      window.removeEventListener("project-status-changed", handler);
+      window.removeEventListener("project-created", handler);
+    };
   }, [refreshProjects]);
 
   const displayProjects = storeProjects.length > 0 ? storeProjects : (projects ?? []);

@@ -47,6 +47,7 @@ export function CreateProjectButton() {
       if (res.ok) {
         const data = await res.json();
         setOpen(false);
+        window.dispatchEvent(new CustomEvent("project-created"));
         router.push(projectHref(data));
         router.refresh();
       } else {
