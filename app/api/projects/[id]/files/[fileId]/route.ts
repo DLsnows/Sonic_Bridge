@@ -26,12 +26,39 @@ export async function GET(
     return NextResponse.json({ error: "File not found" }, { status: 404 });
   }
 
+  const isInline = request.nextUrl.searchParams.has("inline");
+  const isAudio = file.mimeType?.startsWith("audio/") ?? false;
+  const isVideo = file.mimeType?.startsWith("video/") ?? false;
+
   try {
     const blob = await head(file.storageKey);
-    return NextResponse.redirect(blob.downloadUrl);
+    const response = await fetch(blob.downloadUrl);
+    if (!response.ok) {
+      throw new Error(`Blob fetch failed: HTTP ${response.status}`);
+    }
+
+    const asciiName = file.name.replace(/[^\x20-\x7E]/g, "_").replace(/["\\;,]/g, "").trim() || "download";
+    const encodedName = encodeURIComponent(file.name).replace(/'/g, "%27");
+    const useInline = isInline || isAudio || isVideo;
+    const disposition = useInline
+      ? `inline; filename="${asciiName}"; filename*=UTF-8''${encodedName}`
+      : `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`;
+
+    const headers: Record<string, string> = {
+      "Content-Type": file.mimeType || response.headers.get("content-type") || "application/octet-stream",
+      "Content-Disposition": disposition,
+      "Accept-Ranges": "bytes",
+      "Cache-Control": "private, max-age=300",
+      "X-Content-Type-Options": "nosniff",
+    };
+
+    const contentLength = response.headers.get("content-length");
+    if (contentLength) headers["Content-Length"] = contentLength;
+
+    return new NextResponse(response.body, { headers });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    console.error(`Failed to get download URL for "${file.name}" (${file.storageKey}):`, message);
+    console.error(`Failed to fetch file "${file.name}" (${file.storageKey}):`, message);
     return NextResponse.json(
       { error: "Failed to download file. The file may have been moved or deleted." },
       { status: 502 },

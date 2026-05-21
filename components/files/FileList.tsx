@@ -44,6 +44,7 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
   const [audioError, setAudioError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playingFileIdRef = useRef<string | null>(null);
+  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handlePlayAudio = useCallback(
     (fileId: string, fileUrl: string) => {
@@ -88,6 +89,8 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
         playingFileIdRef.current = null;
         setPlayingFileId(null);
         setAudioLoading(false);
+        if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+        errorTimeoutRef.current = setTimeout(() => setAudioError(null), 5000);
       });
 
       audio.addEventListener("canplay", () => {
@@ -96,9 +99,12 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
 
       audio.play().catch((err) => {
         console.error("Audio play() rejected:", err);
+        setAudioError("Playback failed. The file may be unavailable.");
         setAudioLoading(false);
         playingFileIdRef.current = null;
         setPlayingFileId(null);
+        if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+        errorTimeoutRef.current = setTimeout(() => setAudioError(null), 5000);
       });
 
       audioRef.current = audio;
@@ -110,6 +116,7 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
 
   useEffect(() => {
     return () => {
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.src = "";

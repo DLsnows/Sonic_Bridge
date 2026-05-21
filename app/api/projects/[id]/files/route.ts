@@ -82,6 +82,12 @@ export async function POST(
         { status: 400 },
       );
     }
+    if (!file.storageKey.startsWith(`${id}/`)) {
+      return NextResponse.json(
+        { error: `storageKey must be prefixed with project ID` },
+        { status: 400 },
+      );
+    }
     const { limit, category } = getMaxFileSize(file.name);
     if (file.size > limit) {
       const limitStr = limit >= 1073741824 ? `${(limit / 1073741824).toFixed(0)}GB` : `${(limit / 1048576).toFixed(0)}MB`;

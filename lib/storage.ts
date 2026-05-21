@@ -67,65 +67,6 @@ export async function getFileUrl(storageKey: string): Promise<string> {
   return blob.downloadUrl;
 }
 
-export interface FileBodyResult {
-  body: ReadableStream<Uint8Array> | null;
-  contentType: string;
-  size: number;
-  contentLength: number;
-  isRange: boolean;
-  rangeStart: number;
-  rangeEnd: number;
-}
-
-export async function getFileBody(
-  storageKey: string,
-  options?: { range?: string; mimeType?: string },
-): Promise<FileBodyResult> {
-  const blob = await head(storageKey);
-  const headers: Record<string, string> = {};
-  if (options?.range) headers.Range = options.range;
-
-  const response = await fetch(blob.downloadUrl, { headers });
-  if (!response.ok) {
-    console.error(`Blob fetch failed: HTTP ${response.status} for ${storageKey}`);
-    throw new Error(`Failed to fetch blob content: HTTP ${response.status}`);
-  }
-
-  if (response.status === 206) {
-    const contentRange = response.headers.get("content-range");
-    if (!contentRange) {
-      throw new Error("Received 206 but missing Content-Range header");
-    }
-    const match = contentRange.match(/bytes\s+(\d+)-(\d+)\/(\d+)/);
-    if (!match) {
-      throw new Error(`Unparseable Content-Range header: ${contentRange}`);
-    }
-    return {
-      body: response.body,
-      contentType: options?.mimeType || blob.contentType || "application/octet-stream",
-      size: Number(match[3]),
-      contentLength: Number(response.headers.get("content-length") || "0"),
-      isRange: true,
-      rangeStart: Number(match[1]),
-      rangeEnd: Number(match[2]),
-    };
-  }
-
-  if (!response.body) {
-    throw new Error("Blob fetch returned empty body");
-  }
-
-  return {
-    body: response.body,
-    contentType: options?.mimeType || blob.contentType || "application/octet-stream",
-    size: blob.size,
-    contentLength: blob.size,
-    isRange: false,
-    rangeStart: 0,
-    rangeEnd: blob.size - 1,
-  };
-}
-
 export async function deleteFile(storageKey: string): Promise<void> {
   try {
     const blob = await head(storageKey);
