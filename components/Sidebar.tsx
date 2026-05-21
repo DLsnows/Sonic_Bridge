@@ -104,7 +104,7 @@ export function Sidebar({ username, avatar, projects }: { username?: string; ava
           {avatar && !imgError ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={avatar}
+              src={`${avatar}${avatar.includes("?") ? "&" : "?"}name=${encodeURIComponent(username ?? "User")}`}
               alt={username ?? "User"}
               className="w-8 h-8 rounded-full object-cover border border-[#00FF41]/20 shrink-0"
               referrerPolicy="no-referrer"

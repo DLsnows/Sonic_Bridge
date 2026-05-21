@@ -5,19 +5,22 @@ import { eq } from "drizzle-orm";
 import { head } from "@vercel/blob";
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ userId: string }> },
 ) {
   const { userId } = await params;
+  const { searchParams } = new URL(request.url);
+  const fallbackName = searchParams.get("name");
 
   const [user] = await db
-    .select({ avatar: users.avatar })
+    .select({ avatar: users.avatar, username: users.username })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
 
   const cacheHeaders = { "Cache-Control": "public, max-age=300, s-maxage=300, stale-while-revalidate=3600" };
-  const dicebearUrl = `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(userId)}&backgroundColor=1a1a2e&textColor=00ff41`;
+  const seedName = user?.username || fallbackName || userId;
+  const dicebearUrl = `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(seedName)}&backgroundColor=1a1a2e&textColor=00ff41`;
 
   if (!user?.avatar) {
     return NextResponse.redirect(dicebearUrl, { headers: cacheHeaders });
@@ -30,7 +33,8 @@ export async function GET(
     } else {
       storageKey = user.avatar;
     }
-  } catch {
+  } catch (err) {
+    console.error(`Avatar URL parse failed for user ${userId}:`, err instanceof Error ? err.message : String(err));
     return NextResponse.redirect(dicebearUrl, { headers: cacheHeaders });
   }
 
@@ -49,7 +53,8 @@ export async function GET(
         "Content-Length": String(imageBuffer.byteLength),
       },
     });
-  } catch {
+  } catch (err) {
+    console.error(`Avatar fetch failed for user ${userId}:`, err instanceof Error ? err.message : String(err));
     return NextResponse.redirect(dicebearUrl, { headers: cacheHeaders });
   }
 }
