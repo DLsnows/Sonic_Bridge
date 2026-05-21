@@ -39,9 +39,11 @@ export function PostForm({
       const saved = localStorage.getItem(DRAFT_KEY);
       if (saved) {
         const draft = JSON.parse(saved);
-        if (draft.title) setTitle(draft.title);
-        if (draft.content) setContent(draft.content);
-        setDraftRestored(true);
+        requestAnimationFrame(() => {
+          if (draft.title) setTitle(draft.title);
+          if (draft.content) setContent(draft.content);
+          setDraftRestored(true);
+        });
       }
     } catch {}
   }, []);

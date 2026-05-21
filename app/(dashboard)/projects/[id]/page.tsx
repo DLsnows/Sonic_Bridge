@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/Card";
 import { GlassPanel } from "@/components/ui/GlassPanel";
 import { Button } from "@/components/ui/Button";
 import { MemberAvatar } from "@/components/MemberAvatar";
-import { resolveProjectId, projectHref } from "@/lib/project-utils";
+import { resolveProjectId } from "@/lib/project-utils";
 import { ProjectStatusBadge } from "@/components/ProjectStatusBadge";
 
 const navCards = [
