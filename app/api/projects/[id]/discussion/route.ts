@@ -5,6 +5,7 @@ import { discussionPosts, projectMembers, users } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { z } from "zod";
 import { resolveProjectId } from "@/lib/project-utils";
+import { createNotifications } from "@/lib/notifications";
 
 const createPostSchema = z.discriminatedUnion("hasParent", [
   z.object({
@@ -152,6 +153,18 @@ export async function POST(
       parentId,
     })
     .returning();
+
+  // Emit notifications (fire-and-forget — don't block the response)
+  const notifyParentId = parentId ?? null;
+  const notifyPostId = post.id;
+  createNotifications({
+    type: parentId ? "new_reply" : "new_post",
+    referenceId: notifyPostId,
+    referenceType: "discussion_post",
+    projectId,
+    actorUserId: userId,
+    parentUserId: parentId ? (await db.select({ userId: discussionPosts.userId }).from(discussionPosts).where(eq(discussionPosts.id, parentId)).limit(1).then(r => r[0]?.userId)) : undefined,
+  }).catch((e) => console.error("Notification creation failed:", e));
 
   const [result] = await db
     .select({

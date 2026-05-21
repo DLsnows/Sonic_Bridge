@@ -118,6 +118,7 @@ export const discussionPosts = pgTable("discussion_posts", {
   content: text("content").notNull(),
   parentId: uuid("parent_id"),
   isEdited: boolean("is_edited").default(false),
+  isAiGenerated: boolean("is_ai_generated").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -135,4 +136,16 @@ export const projectAiConfigs = pgTable("project_ai_configs", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const notifications = pgTable("notifications", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  type: text("type").notNull(),
+  referenceId: uuid("reference_id").notNull(),
+  referenceType: text("reference_type").notNull(),
+  isRead: boolean("is_read").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });

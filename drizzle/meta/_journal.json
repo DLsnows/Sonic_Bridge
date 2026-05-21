@@ -8,6 +8,13 @@
       "when": 1779224141882,
       "tag": "0000_needy_invisible_woman",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779332508721,
+      "tag": "0001_deep_namorita",
+      "breakpoints": true
     }
   ]
 }

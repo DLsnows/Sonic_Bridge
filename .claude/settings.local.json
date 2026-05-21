@@ -12,7 +12,9 @@
       "Bash(npx tsc *)",
       "Bash(gh pr *)",
       "Bash(git pull *)",
-      "Bash(gh run *)"
+      "Bash(gh run *)",
+      "Bash(git reset *)",
+      "Bash(npx drizzle-kit *)"
     ]
   }
 }
