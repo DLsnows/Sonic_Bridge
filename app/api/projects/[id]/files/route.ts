@@ -91,9 +91,8 @@ export async function POST(
       const result = await uploadFile(projectId, folderPath, file);
       publicUrl = result.publicUrl;
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
-      console.error(`Failed to upload "${file.name}" to R2:`, message);
-      return NextResponse.json({ error: `Failed to store "${file.name}": ${message}` }, { status: 500 });
+      console.error(`Failed to upload "${file.name}" to R2:`, err instanceof Error ? err.message : err);
+      return NextResponse.json({ error: `Failed to store "${file.name}". Please try again.` }, { status: 500 });
     }
 
     const [record] = await db.insert(files).values({
