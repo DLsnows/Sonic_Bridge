@@ -54,10 +54,11 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id: rawId } = await params;
-  const projectId = await resolveProjectId(rawId);
-  if (!projectId) return NextResponse.json({ error: "Project not found" }, { status: 404 });
   const authResult = await authenticate(request, rawId);
   if (authResult instanceof Response) return authResult;
+
+  const projectId = await resolveProjectId(rawId);
+  if (!projectId) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
   let formData: FormData;
   try { formData = await request.formData(); } catch { return NextResponse.json({ error: "Invalid form data" }, { status: 400 }); }
