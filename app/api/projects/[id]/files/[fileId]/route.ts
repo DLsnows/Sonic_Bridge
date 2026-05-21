@@ -3,7 +3,9 @@ import { db } from "@/lib/db";
 import { files } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { authenticate } from "@/lib/api-auth";
-import { deleteFile } from "@/lib/storage";
+import { deleteFile, normalizeKey } from "@/lib/storage";
+
+export const maxDuration = 300;
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string; fileId: string }> }) {
   const { id, fileId } = await params;
@@ -12,16 +14,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const [file] = await db.select().from(files).where(and(eq(files.id, fileId), eq(files.projectId, id))).limit(1);
   if (!file) return NextResponse.json({ error: "File not found" }, { status: 404 });
 
+  const url = normalizeKey(file.storageKey);
   const isInline = request.nextUrl.searchParams.has("inline");
 
-  // Inline (playback): redirect to R2 for native Range/CDN support
   if (isInline) {
-    return NextResponse.redirect(file.storageKey);
+    return NextResponse.redirect(url);
   }
 
-  // Download: proxy with Content-Disposition to ensure attachment behavior
   try {
-    const response = await fetch(file.storageKey);
+    const response = await fetch(url);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     if (!response.body) throw new Error("Empty body");
 
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       headers: {
         "Content-Type": file.mimeType || response.headers.get("content-type") || "application/octet-stream",
         "Content-Disposition": `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`,
-        "Content-Length": response.headers.get("content-length") || String(file.size),
+        "Content-Length": response.headers.get("content-length") ?? String(file.size),
         "Cache-Control": "private, max-age=60",
         "X-Content-Type-Options": "nosniff",
       },

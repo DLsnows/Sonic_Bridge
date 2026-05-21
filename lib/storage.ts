@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { randomBytes } from "crypto";
 
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
@@ -72,6 +72,11 @@ export async function uploadFile(projectId: string, folderPath: string, file: Fi
   const buffer = Buffer.from(await file.arrayBuffer());
   await getS3().send(new PutObjectCommand({ Bucket: R2_BUCKET_NAME, Key: storageKey, Body: buffer, ContentType: contentType, ContentLength: buffer.length }));
   return { storageKey, publicUrl: `${R2_PUBLIC_URL}/${storageKey}` };
+}
+
+export function normalizeKey(storageKey: string): string {
+  if (storageKey.startsWith("http")) return storageKey;
+  return `${R2_PUBLIC_URL}/${storageKey}`;
 }
 
 export async function deleteFile(urlOrKey: string): Promise<void> {
