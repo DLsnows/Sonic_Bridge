@@ -180,7 +180,7 @@ export function ThreadCard({
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deletingReplyId, setDeletingReplyId] = useState<string | null>(null);
-  const [aiFormatting, setAiFormatting] = useState(false);
+  const [formattingId, setFormattingId] = useState<string | null>(null);
   const [aiFormatError, setAiFormatError] = useState<string | null>(null);
   const [avatarFailed, setAvatarFailed] = useState(false);
   const [replyAvatarErrors, setReplyAvatarErrors] = useState<Set<string>>(new Set());
@@ -312,10 +312,10 @@ export function ThreadCard({
               <Button
                 variant="ghost"
                 size="sm"
-                loading={aiFormatting}
+                loading={formattingId === post.id}
                 onClick={async (e) => {
                   e.stopPropagation();
-                  setAiFormatting(true);
+                  setFormattingId(post.id);
                   setAiFormatError(null);
                   try {
                     await onAiFormat(post.id);
@@ -324,7 +324,7 @@ export function ThreadCard({
                       err instanceof Error ? err.message : "AI format failed",
                     );
                   } finally {
-                    setAiFormatting(false);
+                    setFormattingId(null);
                   }
                 }}
                 className="text-[#FF8C00]/70 hover:text-[#FF8C00]"
@@ -470,21 +470,26 @@ export function ThreadCard({
                       </>
                     )}
                     {reply.content.length > 20 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        loading={aiFormatting}
-                        onClick={async () => {
-                          setAiFormatting(true);
-                          setAiFormatError(null);
-                          try { await onAiFormat(reply.id); } catch (err) {
-                            setAiFormatError(err instanceof Error ? err.message : "AI format failed");
-                          } finally { setAiFormatting(false); }
-                        }}
-                        className="text-[#FF8C00]/70 hover:text-[#FF8C00]"
-                      >
-                        AI
-                      </Button>
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          loading={formattingId === reply.id}
+                          onClick={async () => {
+                            setFormattingId(reply.id);
+                            setAiFormatError(null);
+                            try { await onAiFormat(reply.id); } catch (err) {
+                              setAiFormatError(err instanceof Error ? err.message : "AI format failed");
+                            } finally { setFormattingId(null); }
+                          }}
+                          className="text-[#FF8C00]/70 hover:text-[#FF8C00]"
+                        >
+                          AI
+                        </Button>
+                        {aiFormatError && formattingId === reply.id && (
+                          <p className="text-[10px] text-[#FF4444] mt-1">{aiFormatError}</p>
+                        )}
+                      </>
                     )}
                   </div>
                   {editingId === reply.id && (
