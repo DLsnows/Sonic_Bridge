@@ -10,8 +10,8 @@ const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL;
 let _s3: S3Client | null = null;
 function getS3(): S3Client {
   if (!_s3) {
-    if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
-      throw new Error("Missing R2 environment variables.");
+    if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_PUBLIC_URL) {
+      throw new Error("Missing R2 environment variables (R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_PUBLIC_URL).");
     }
     _s3 = new S3Client({
       region: "auto",
@@ -70,7 +70,7 @@ export async function uploadFile(projectId: string, folderPath: string, file: Fi
   return { storageKey, publicUrl: `${R2_PUBLIC_URL}/${storageKey}` };
 }
 
-export async function getFileUrl(storageKey: string): Promise<string> {
+export function getFileUrl(storageKey: string): string {
   return `${R2_PUBLIC_URL}/${storageKey}`;
 }
 

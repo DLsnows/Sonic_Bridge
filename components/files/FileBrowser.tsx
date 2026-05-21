@@ -57,7 +57,11 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
     if (res.ok) fetchFiles(currentFolderId);
   };
   const handleDownload = (fileId: string) => {
-    window.open(`/api/projects/${projectId}/files/${fileId}`);
+    const a = document.createElement("a");
+    a.href = `/api/projects/${projectId}/files/${fileId}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   const handleRenameFolder = (folderId: string, currentName: string) => {

@@ -54,7 +54,7 @@ export function PostForm({
       if (title || content) localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, content }));
     }, 300);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [title, content]);
+  }, [title, content, DRAFT_KEY]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
