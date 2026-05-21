@@ -137,3 +137,18 @@ export const projectAiConfigs = pgTable("project_ai_configs", {
     .references(() => users.id, { onDelete: "cascade" }),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+export const notifications = pgTable("notifications", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  projectId: uuid("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  type: text("type").notNull(),
+  referenceId: uuid("reference_id").notNull(),
+  referenceType: text("reference_type").notNull(),
+  isRead: boolean("is_read").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
