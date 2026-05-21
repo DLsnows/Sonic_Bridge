@@ -29,12 +29,20 @@ export async function GET(
   const isInline = request.nextUrl.searchParams.has("inline");
   const isAudio = file.mimeType?.startsWith("audio/") ?? false;
   const isVideo = file.mimeType?.startsWith("video/") ?? false;
+  const rangeHeader = request.headers.get("range");
 
   try {
     const blob = await head(file.storageKey);
-    const response = await fetch(blob.downloadUrl);
+    const fetchHeaders: Record<string, string> = {};
+    if (rangeHeader) fetchHeaders.Range = rangeHeader;
+
+    const response = await fetch(blob.downloadUrl, { headers: fetchHeaders });
     if (!response.ok) {
       throw new Error(`Blob fetch failed: HTTP ${response.status}`);
+    }
+
+    if (!response.body) {
+      throw new Error("Blob fetch returned empty body");
     }
 
     const asciiName = file.name.replace(/[^\x20-\x7E]/g, "_").replace(/["\\;,]/g, "").trim() || "download";
@@ -51,6 +59,14 @@ export async function GET(
       "Cache-Control": "private, max-age=300",
       "X-Content-Type-Options": "nosniff",
     };
+
+    if (response.status === 206) {
+      const contentRange = response.headers.get("content-range");
+      if (contentRange) headers["Content-Range"] = contentRange;
+      const cl = response.headers.get("content-length");
+      if (cl) headers["Content-Length"] = cl;
+      return new NextResponse(response.body, { status: 206, headers });
+    }
 
     const contentLength = response.headers.get("content-length");
     if (contentLength) headers["Content-Length"] = contentLength;

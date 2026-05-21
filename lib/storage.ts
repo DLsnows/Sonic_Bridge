@@ -62,11 +62,6 @@ export function getStorageKey(
   return `${projectId}/${folderPath}/${uniqueName}`.replace(/\/+/g, "/");
 }
 
-export async function getFileUrl(storageKey: string): Promise<string> {
-  const blob = await head(storageKey);
-  return blob.downloadUrl;
-}
-
 export async function deleteFile(storageKey: string): Promise<void> {
   try {
     const blob = await head(storageKey);

@@ -47,7 +47,7 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
   const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handlePlayAudio = useCallback(
-    (fileId: string, fileUrl: string) => {
+    (fileId: string, fileUrl: string, mimeType?: string) => {
       if (playingFileIdRef.current === fileId) {
         audioRef.current?.pause();
         audioRef.current = null;
@@ -55,6 +55,16 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
         setPlayingFileId(null);
         setAudioLoading(false);
         return;
+      }
+
+      if (mimeType) {
+        const testAudio = document.createElement("audio");
+        if (testAudio.canPlayType(mimeType) === "") {
+          setAudioError(`Browser does not support ${mimeType} playback`);
+          if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+          errorTimeoutRef.current = setTimeout(() => setAudioError(null), 5000);
+          return;
+        }
       }
 
       if (audioRef.current) {
@@ -186,7 +196,7 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
                       <Button
                         variant={playingFileId === file.id ? "primary" : "ghost"}
                         size="sm"
-                        onClick={() => handlePlayAudio(file.id, `/api/projects/${projectId}/files/${file.id}?inline=1`)}
+                        onClick={() => handlePlayAudio(file.id, `/api/projects/${projectId}/files/${file.id}?inline=1`, file.mimeType)}
                       >
                         {playingFileId === file.id && audioLoading ? "..." : playingFileId === file.id ? "⏸" : "▶"}
                       </Button>
