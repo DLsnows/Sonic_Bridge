@@ -58,24 +58,22 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
   };
   const handleDownload = async (fileId: string, fileName: string) => {
     try {
-      const res = await fetch(`/api/projects/${projectId}/files/${fileId}`);
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({ error: "Download failed" }));
-        alert(data.error || `Download failed (HTTP ${res.status})`);
+      const check = await fetch(`/api/projects/${projectId}/files/${fileId}`, { method: "HEAD" });
+      if (!check.ok) {
+        const data = await check.json().catch(() => ({ error: "Download failed" }));
+        alert(data.error || `Download failed (HTTP ${check.status})`);
         return;
       }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
     } catch {
       alert("Download failed: Network error");
+      return;
     }
+    const a = document.createElement("a");
+    a.href = `/api/projects/${projectId}/files/${fileId}`;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   const handleRenameFolder = (folderId: string, currentName: string) => {
