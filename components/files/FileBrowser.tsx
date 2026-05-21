@@ -57,9 +57,24 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
     if (res.ok) fetchFiles(currentFolderId);
   };
   const handleDownload = async (fileId: string, fileName: string) => {
-    const win = window.open(`/api/projects/${projectId}/files/${fileId}`, "_blank");
-    if (!win) {
-      alert(`Download blocked by popup blocker. Right-click and "Save link as" on the ${fileName} file row.`);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/files/${fileId}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: "Download failed" }));
+        alert(data.error || `Download failed (HTTP ${res.status})`);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("Download failed: Network error");
     }
   };
 
