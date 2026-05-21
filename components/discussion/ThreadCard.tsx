@@ -16,6 +16,7 @@ interface DiscussionPost {
   content: string;
   parentId: string | null;
   isEdited: boolean;
+  isAiGenerated?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -152,6 +153,9 @@ function PostBody({ post }: { post: DiscussionPost }) {
       </div>
       {post.isEdited && (
         <span className="text-[10px] text-[#A0A0B0]/60 italic">(edited)</span>
+      )}
+      {post.isAiGenerated && (
+        <span className="text-[10px] bg-[#FF8C00]/15 text-[#FF8C00] px-1.5 py-0.5 rounded font-mono ml-1">AI</span>
       )}
     </div>
   );
@@ -419,6 +423,17 @@ export function ThreadCard({
                     </span>
                   )}
                   <div className="flex items-center gap-2 mt-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        onSetReplying(
+                          replyingTo === reply.id ? null : reply.id,
+                        )
+                      }
+                    >
+                      {replyingTo === reply.id ? "Cancel" : "Reply"}
+                    </Button>
                     {(reply.userId === currentUserId || isAdmin) && (
                       <>
                         <Button
@@ -454,6 +469,23 @@ export function ThreadCard({
                         </Button>
                       </>
                     )}
+                    {reply.content.length > 20 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        loading={aiFormatting}
+                        onClick={async () => {
+                          setAiFormatting(true);
+                          setAiFormatError(null);
+                          try { await onAiFormat(reply.id); } catch (err) {
+                            setAiFormatError(err instanceof Error ? err.message : "AI format failed");
+                          } finally { setAiFormatting(false); }
+                        }}
+                        className="text-[#FF8C00]/70 hover:text-[#FF8C00]"
+                      >
+                        AI
+                      </Button>
+                    )}
                   </div>
                   {editingId === reply.id && (
                     <div className="mt-2">
@@ -465,6 +497,18 @@ export function ThreadCard({
                           onSetEditing(null);
                         }}
                         onCancel={() => onSetEditing(null)}
+                      />
+                    </div>
+                  )}
+                  {replyingTo === reply.id && (
+                    <div className="mt-2">
+                      <PostForm
+                        mode="reply"
+                        onSubmit={async (data) => {
+                          await onReply(reply.id, data.content);
+                          onSetReplying(null);
+                        }}
+                        onCancel={() => onSetReplying(null)}
                       />
                     </div>
                   )}

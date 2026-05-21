@@ -118,6 +118,7 @@ export const discussionPosts = pgTable("discussion_posts", {
   content: text("content").notNull(),
   parentId: uuid("parent_id"),
   isEdited: boolean("is_edited").default(false),
+  isAiGenerated: boolean("is_ai_generated").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
