@@ -150,10 +150,11 @@ export async function POST(
     .values({
       projectId: post.projectId,
       userId: session.user.id,
-      title: `AI formatted: ${post.title}`,
+      title: `AI formatted: ${post.title || "(reply)"}`,
       content: formattedContent,
-      parentId: post.id,
+      parentId: post.parentId ?? post.id,
       isEdited: false,
+      isAiGenerated: true,
     })
     .returning();
 

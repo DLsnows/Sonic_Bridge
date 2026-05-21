@@ -62,6 +62,7 @@ export async function GET(
       content: discussionPosts.content,
       parentId: discussionPosts.parentId,
       isEdited: discussionPosts.isEdited,
+      isAiGenerated: discussionPosts.isAiGenerated,
       createdAt: discussionPosts.createdAt,
       updatedAt: discussionPosts.updatedAt,
     })
@@ -177,6 +178,7 @@ export async function POST(
       content: discussionPosts.content,
       parentId: discussionPosts.parentId,
       isEdited: discussionPosts.isEdited,
+      isAiGenerated: discussionPosts.isAiGenerated,
       createdAt: discussionPosts.createdAt,
       updatedAt: discussionPosts.updatedAt,
     })

@@ -13,8 +13,11 @@
       "Bash(gh pr *)",
       "Bash(git pull *)",
       "Bash(gh run *)",
+      "Bash(git fetch *)",
+      "Bash(git merge *)",
+      "Bash(npx drizzle-kit *)",
       "Bash(git reset *)",
-      "Bash(npx drizzle-kit *)"
+      "Bash(git stash *)"
     ]
   }
 }

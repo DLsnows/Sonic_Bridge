@@ -16,6 +16,7 @@ interface DiscussionPost {
   content: string;
   parentId: string | null;
   isEdited: boolean;
+  isAiGenerated?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -153,6 +154,9 @@ function PostBody({ post }: { post: DiscussionPost }) {
       {post.isEdited && (
         <span className="text-[10px] text-[#A0A0B0]/60 italic">(edited)</span>
       )}
+      {post.isAiGenerated && (
+        <span className="text-[10px] bg-[#FF8C00]/15 text-[#FF8C00] px-1.5 py-0.5 rounded font-mono ml-1">AI</span>
+      )}
     </div>
   );
 }
@@ -176,7 +180,7 @@ export function ThreadCard({
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deletingReplyId, setDeletingReplyId] = useState<string | null>(null);
-  const [aiFormatting, setAiFormatting] = useState(false);
+  const [formattingId, setFormattingId] = useState<string | null>(null);
   const [aiFormatError, setAiFormatError] = useState<string | null>(null);
   const [avatarFailed, setAvatarFailed] = useState(false);
   const [replyAvatarErrors, setReplyAvatarErrors] = useState<Set<string>>(new Set());
@@ -308,10 +312,10 @@ export function ThreadCard({
               <Button
                 variant="ghost"
                 size="sm"
-                loading={aiFormatting}
+                loading={formattingId === post.id}
                 onClick={async (e) => {
                   e.stopPropagation();
-                  setAiFormatting(true);
+                  setFormattingId(post.id);
                   setAiFormatError(null);
                   try {
                     await onAiFormat(post.id);
@@ -320,7 +324,7 @@ export function ThreadCard({
                       err instanceof Error ? err.message : "AI format failed",
                     );
                   } finally {
-                    setAiFormatting(false);
+                    setFormattingId(null);
                   }
                 }}
                 className="text-[#FF8C00]/70 hover:text-[#FF8C00]"
@@ -336,7 +340,7 @@ export function ThreadCard({
             </div>
           )}
 
-          {aiFormatError && (
+          {aiFormatError && formattingId === null && (
             <div className="p-2 rounded bg-[#FF4444]/10 border border-[#FF4444]/30 text-xs text-[#FF4444] mt-2">
               {aiFormatError.toLowerCase().includes("not configured") ? (
                 isAdmin ? (
@@ -419,6 +423,17 @@ export function ThreadCard({
                     </span>
                   )}
                   <div className="flex items-center gap-2 mt-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        onSetReplying(
+                          replyingTo === reply.id ? null : reply.id,
+                        )
+                      }
+                    >
+                      {replyingTo === reply.id ? "Cancel" : "Reply"}
+                    </Button>
                     {(reply.userId === currentUserId || isAdmin) && (
                       <>
                         <Button
@@ -454,6 +469,28 @@ export function ThreadCard({
                         </Button>
                       </>
                     )}
+                    {reply.content.length > 20 && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          loading={formattingId === reply.id}
+                          onClick={async () => {
+                            setFormattingId(reply.id);
+                            setAiFormatError(null);
+                            try { await onAiFormat(reply.id); } catch (err) {
+                              setAiFormatError(err instanceof Error ? err.message : "AI format failed");
+                            } finally { setFormattingId(null); }
+                          }}
+                          className="text-[#FF8C00]/70 hover:text-[#FF8C00]"
+                        >
+                          AI
+                        </Button>
+                        {aiFormatError && formattingId === reply.id && (
+                          <p className="text-[10px] text-[#FF4444] mt-1">{aiFormatError}</p>
+                        )}
+                      </>
+                    )}
                   </div>
                   {editingId === reply.id && (
                     <div className="mt-2">
@@ -465,6 +502,18 @@ export function ThreadCard({
                           onSetEditing(null);
                         }}
                         onCancel={() => onSetEditing(null)}
+                      />
+                    </div>
+                  )}
+                  {replyingTo === reply.id && (
+                    <div className="mt-2">
+                      <PostForm
+                        mode="reply"
+                        onSubmit={async (data) => {
+                          await onReply(reply.id, data.content);
+                          onSetReplying(null);
+                        }}
+                        onCancel={() => onSetReplying(null)}
                       />
                     </div>
                   )}
