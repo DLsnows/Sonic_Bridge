@@ -82,9 +82,9 @@ export async function POST(
         { status: 400 },
       );
     }
-    if (!file.storageKey.startsWith(`${id}/`)) {
+    if (!file.storageKey.startsWith(`${id}/`) || file.storageKey.includes("..")) {
       return NextResponse.json(
-        { error: `storageKey must be prefixed with project ID` },
+        { error: "Invalid file storage key" },
         { status: 400 },
       );
     }
@@ -109,6 +109,25 @@ export async function POST(
 
   for (const file of fileList) {
     const mimeType = detectMimeType(file.name, file.mimeType);
+
+    // Skip if this storageKey already exists (prevent duplicates on retry)
+    const [existing] = await db
+      .select({ id: files.id })
+      .from(files)
+      .where(and(eq(files.projectId, id), eq(files.storageKey, file.storageKey)))
+      .limit(1);
+
+    if (existing) {
+      results.push({
+        id: existing.id,
+        name: file.name,
+        size: file.size,
+        mimeType,
+        folderId: folderId ?? null,
+        uploadedAt: new Date(),
+      });
+      continue;
+    }
 
     const [record] = await db
       .insert(files)
