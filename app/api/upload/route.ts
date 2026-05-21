@@ -59,7 +59,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "Not a member of this project" }, { status: 403 });
   }
 
-  if (!pathname || (!pathname.startsWith(`${resolvedId}/`) && !pathname.startsWith(`${projectId}/`))) {
+  if (!pathname || (!pathname.startsWith(`${resolvedId}/`) && !pathname.startsWith(`${projectId}/`)) || pathname.includes("..")) {
     return Response.json({ error: "Upload path must be scoped to the project" }, { status: 403 });
   }
 

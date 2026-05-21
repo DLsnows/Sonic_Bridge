@@ -4,6 +4,7 @@ import { files, folders, users } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { authenticate } from "@/lib/api-auth";
 import { getMaxFileSize, detectMimeType } from "@/lib/storage";
+import { resolveProjectId } from "@/lib/project-utils";
 import { createNotifications } from "@/lib/notifications";
 
 export const maxDuration = 300;
@@ -12,9 +13,14 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const { id } = await params;
-  const authResult = await authenticate(request, id);
+  const { id: rawId } = await params;
+  const authResult = await authenticate(request, rawId);
   if (authResult instanceof Response) return authResult;
+
+  const id = await resolveProjectId(rawId);
+  if (!id) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
 
   const folderId = request.nextUrl.searchParams.get("folderId");
 
@@ -46,9 +52,14 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const { id } = await params;
-  const authResult = await authenticate(request, id);
+  const { id: rawId } = await params;
+  const authResult = await authenticate(request, rawId);
   if (authResult instanceof Response) return authResult;
+
+  const id = await resolveProjectId(rawId);
+  if (!id) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
 
   let body: { files: Array<{ name: string; size: number; mimeType: string; storageKey: string; url?: string }>; folderId?: string };
   try {
@@ -112,7 +123,7 @@ export async function POST(
 
     // Skip if this storageKey already exists (prevent duplicates on retry)
     const [existing] = await db
-      .select({ id: files.id })
+      .select({ id: files.id, uploadedAt: files.uploadedAt })
       .from(files)
       .where(and(eq(files.projectId, id), eq(files.storageKey, file.storageKey)))
       .limit(1);
@@ -124,7 +135,7 @@ export async function POST(
         size: file.size,
         mimeType,
         folderId: folderId ?? null,
-        uploadedAt: new Date(),
+        uploadedAt: existing.uploadedAt,
       });
       continue;
     }
