@@ -1,5 +1,3 @@
-ALTER TABLE "discussion_posts" ADD COLUMN "is_ai_generated" boolean DEFAULT false NOT NULL;
-
 CREATE TABLE "notifications" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,

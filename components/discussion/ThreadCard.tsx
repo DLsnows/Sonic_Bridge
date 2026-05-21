@@ -182,6 +182,7 @@ export function ThreadCard({
   const [deletingReplyId, setDeletingReplyId] = useState<string | null>(null);
   const [formattingId, setFormattingId] = useState<string | null>(null);
   const [aiFormatError, setAiFormatError] = useState<string | null>(null);
+  const [errorPostId, setErrorPostId] = useState<string | null>(null);
   const [avatarFailed, setAvatarFailed] = useState(false);
   const [replyAvatarErrors, setReplyAvatarErrors] = useState<Set<string>>(new Set());
   const isOwner = post.userId === currentUserId;
@@ -317,12 +318,14 @@ export function ThreadCard({
                   e.stopPropagation();
                   setFormattingId(post.id);
                   setAiFormatError(null);
+                  setErrorPostId(null);
                   try {
                     await onAiFormat(post.id);
                   } catch (err) {
                     setAiFormatError(
                       err instanceof Error ? err.message : "AI format failed",
                     );
+                    setErrorPostId(post.id);
                   } finally {
                     setFormattingId(null);
                   }
@@ -340,7 +343,7 @@ export function ThreadCard({
             </div>
           )}
 
-          {aiFormatError && formattingId === null && (
+          {aiFormatError && errorPostId === post.id && (
             <div className="p-2 rounded bg-[#FF4444]/10 border border-[#FF4444]/30 text-xs text-[#FF4444] mt-2">
               {aiFormatError.toLowerCase().includes("not configured") ? (
                 isAdmin ? (
@@ -478,15 +481,17 @@ export function ThreadCard({
                           onClick={async () => {
                             setFormattingId(reply.id);
                             setAiFormatError(null);
+                            setErrorPostId(null);
                             try { await onAiFormat(reply.id); } catch (err) {
                               setAiFormatError(err instanceof Error ? err.message : "AI format failed");
+                              setErrorPostId(reply.id);
                             } finally { setFormattingId(null); }
                           }}
                           className="text-[#FF8C00]/70 hover:text-[#FF8C00]"
                         >
                           AI
                         </Button>
-                        {aiFormatError && formattingId === reply.id && (
+                        {aiFormatError && errorPostId === reply.id && (
                           <p className="text-[10px] text-[#FF4444] mt-1">{aiFormatError}</p>
                         )}
                       </>
