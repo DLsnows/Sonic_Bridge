@@ -17,6 +17,7 @@ interface DiscussionPost {
   content: string;
   parentId: string | null;
   isEdited: boolean;
+  isAiGenerated?: boolean;
   createdAt: string;
   updatedAt: string;
 }
