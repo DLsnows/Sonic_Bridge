@@ -97,6 +97,7 @@ export async function getFileBody(
 
   const response = await fetch(blob.downloadUrl, { headers });
   if (!response.ok) {
+    console.error(`Blob fetch failed: HTTP ${response.status} for ${storageKey}`);
     throw new Error(`Failed to fetch blob content: HTTP ${response.status}`);
   }
 

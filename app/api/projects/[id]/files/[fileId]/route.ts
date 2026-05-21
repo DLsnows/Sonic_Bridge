@@ -28,10 +28,20 @@ export async function GET(
   const isAudio = file.mimeType?.startsWith("audio/") ?? false;
   const isVideo = file.mimeType?.startsWith("video/") ?? false;
 
-  const result = await getFileBody(file.storageKey, {
-    range: rangeHeader ?? undefined,
-    mimeType: file.mimeType ?? undefined,
-  });
+  let result;
+  try {
+    result = await getFileBody(file.storageKey, {
+      range: rangeHeader ?? undefined,
+      mimeType: file.mimeType ?? undefined,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error(`Failed to fetch file "${file.name}" (${file.storageKey}):`, message);
+    return NextResponse.json(
+      { error: "Failed to download file. The file may have been moved or deleted." },
+      { status: 502 },
+    );
+  }
 
   const useInline = isInline || ((isAudio || isVideo) && result.isRange);
   const asciiName = file.name.replace(/[^\x20-\x7E]/g, "_").replace(/["\\;,]/g, "").trim() || "download";
