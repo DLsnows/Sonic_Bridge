@@ -113,7 +113,14 @@ export function UploadZone({ projectId, folderId, onComplete, onClose }: UploadZ
             ))}
           </div>
         )}
-        {error && <p className="text-xs text-[#FF4444]">{error}</p>}
+        {error && (
+          <div className="space-y-1">
+            <p className="text-xs text-[#FF4444]">{error}</p>
+            {error.toLowerCase().includes("duration") && (
+              <p className="text-[10px] text-[#A0A0B0]/60">Try uploading a smaller file or splitting large audio files.</p>
+            )}
+          </div>
+        )}
       </div>
     </Modal>
   );
