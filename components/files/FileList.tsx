@@ -188,7 +188,7 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
                         size="sm"
                         onClick={() => handlePlayAudio(file.id, `/api/projects/${projectId}/files/${file.id}?inline=1`)}
                       >
-                        {playingFileId === file.id && audioLoading ? "..." : playingFileId === file.id ? "?" : "?"}
+                        {playingFileId === file.id && audioLoading ? "..." : playingFileId === file.id ? "⏸" : "▶"}
                       </Button>
                     )}
                     <Button variant="ghost" size="sm" onClick={() => onDownload(file.id)}>DL</Button>
