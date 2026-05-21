@@ -56,8 +56,11 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
     const res = await fetch(`/api/projects/${projectId}/files/${fileId}`, { method: "DELETE" });
     if (res.ok) fetchFiles(currentFolderId);
   };
-  const handleDownload = async (fileId: string, _fileName: string) => {
-    window.open(`/api/projects/${projectId}/files/${fileId}`, "_blank");
+  const handleDownload = async (fileId: string, fileName: string) => {
+    const win = window.open(`/api/projects/${projectId}/files/${fileId}`, "_blank");
+    if (!win) {
+      alert(`Download blocked by popup blocker. Right-click and "Save link as" on the ${fileName} file row.`);
+    }
   };
 
   const handleRenameFolder = (folderId: string, currentName: string) => {
