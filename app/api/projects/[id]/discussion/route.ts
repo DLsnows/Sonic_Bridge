@@ -155,15 +155,12 @@ export async function POST(
     .returning();
 
   // Emit notifications (fire-and-forget — don't block the response)
-  const notifyParentId = parentId ?? null;
-  const notifyPostId = post.id;
   createNotifications({
     type: parentId ? "new_reply" : "new_post",
-    referenceId: notifyPostId,
+    referenceId: post.id,
     referenceType: "discussion_post",
     projectId,
     actorUserId: userId,
-    parentUserId: parentId ? (await db.select({ userId: discussionPosts.userId }).from(discussionPosts).where(eq(discussionPosts.id, parentId)).limit(1).then(r => r[0]?.userId)) : undefined,
   }).catch((e) => console.error("Notification creation failed:", e));
 
   const [result] = await db
