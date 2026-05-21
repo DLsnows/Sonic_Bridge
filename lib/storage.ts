@@ -76,8 +76,9 @@ export async function getFileHead(storageKey: string): Promise<{ contentLength: 
   } catch { return null; }
 }
 
-export async function deleteFile(storageKey: string): Promise<void> {
-  await s3.send(new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: storageKey }));
+export async function deleteFile(urlOrKey: string): Promise<void> {
+  const key = urlOrKey.startsWith("http") ? urlOrKey.replace(`${R2_PUBLIC_URL}/`, "") : urlOrKey;
+  await s3.send(new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: key }));
 }
 
 export async function deleteFolderContents(projectId: string, folderPath: string): Promise<void> {
