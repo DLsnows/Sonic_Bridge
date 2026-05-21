@@ -2,6 +2,7 @@ import { create } from "zustand";
 
 export interface Notification {
   id: string;
+  projectId: string;
   type: string;
   referenceId: string;
   referenceType: string;

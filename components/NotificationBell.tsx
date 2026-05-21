@@ -20,14 +20,14 @@ const TYPE_ICONS: Record<string, string> = {
   new_file: "📁",
 };
 
-function jumpUrl(n: { referenceType: string; referenceId: string }): string {
+function jumpUrl(n: { projectId: string; referenceType: string; referenceId: string }): string {
   switch (n.referenceType) {
     case "discussion_post":
-      return `/projects/${n.referenceId}/discussion?post=${n.referenceId}`;
+      return `/projects/${n.projectId}/discussion?post=${n.referenceId}`;
     case "schedule_event":
-      return `/projects/${n.referenceId}/schedule?event=${n.referenceId}`;
+      return `/projects/${n.projectId}/schedule?event=${n.referenceId}`;
     case "file":
-      return `/projects/${n.referenceId}/files?file=${n.referenceId}`;
+      return `/projects/${n.projectId}/files?file=${n.referenceId}`;
     default:
       return "/";
   }

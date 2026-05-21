@@ -14,7 +14,6 @@ export async function createNotifications(params: {
 }) {
   const { type, referenceId, referenceType, projectId, actorUserId, parentUserId } = params;
 
-  // Skip AI-generated content for discussion posts
   if (referenceType === "discussion_post") {
     const [post] = await db
       .select({ isAiGenerated: discussionPosts.isAiGenerated })
@@ -24,7 +23,6 @@ export async function createNotifications(params: {
     if (post?.isAiGenerated) return;
   }
 
-  // Get all project members except the actor
   const members = await db
     .select({ userId: projectMembers.userId })
     .from(projectMembers)
@@ -40,22 +38,20 @@ export async function createNotifications(params: {
   for (const userId of memberIds) {
     await db.insert(notifications).values({
       userId,
+      projectId,
       type,
       referenceId,
       referenceType,
     });
   }
 
-  // For reply_to_user: also notify the specific parent user (if not already a member or is the actor)
-  if (type === "reply_to_user" && parentUserId) {
-    const alreadyNotified = memberIds.includes(parentUserId) || parentUserId === actorUserId;
-    if (!alreadyNotified) {
-      await db.insert(notifications).values({
-        userId: parentUserId,
-        type: "reply_to_user",
-        referenceId,
-        referenceType,
-      });
-    }
+  if (type === "new_reply" && parentUserId && parentUserId !== actorUserId && !memberIds.includes(parentUserId)) {
+    await db.insert(notifications).values({
+      userId: parentUserId,
+      projectId,
+      type: "reply_to_user",
+      referenceId,
+      referenceType,
+    });
   }
 }
