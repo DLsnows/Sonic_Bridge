@@ -132,7 +132,7 @@ export default async function ProjectPage({
         }
         actions={
           isAdmin ? (
-            <Link href={`/projects/${project.customId || project.id}/settings`}>
+            <Link href={`/projects/${project.id}/settings`}>
               <Button variant="secondary" size="sm">
                 Project Settings
               </Button>
@@ -145,7 +145,7 @@ export default async function ProjectPage({
         {/* Navigation Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           {navCards.map((card) => (
-            <Link key={card.href} href={`/projects/${project.customId || project.id}/${card.href}`}>
+            <Link key={card.href} href={`/projects/${project.id}/${card.href}`}>
               <Card hover glow={card.glow} className="h-full group">
                 <div className="flex items-start gap-4">
                   <span className="text-2xl mt-1">{card.icon}</span>

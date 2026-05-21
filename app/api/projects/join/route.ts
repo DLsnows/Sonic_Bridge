@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { projects, projectMembers } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
+import { resolveProjectId } from "@/lib/project-utils";
 
 const joinSchema = z.object({
   projectId: z.string().min(1, "Project ID is required"),
@@ -23,17 +24,12 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { projectId } = parsed.data;
+  const { projectId: projectIdInput } = parsed.data;
 
   const userId = session.user.id as string;
 
-  // Accept either UUID id or custom ID (check format to avoid PG cast errors)
-  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId);
-  const [project] = isUuid
-    ? await db.select().from(projects).where(eq(projects.id, projectId)).limit(1)
-    : await db.select().from(projects).where(eq(projects.customId, projectId)).limit(1);
-
-  if (!project) {
+  const realProjectId = await resolveProjectId(projectIdInput);
+  if (!realProjectId) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
@@ -42,7 +38,7 @@ export async function POST(request: NextRequest) {
     .from(projectMembers)
     .where(
       and(
-        eq(projectMembers.projectId, project.id),
+        eq(projectMembers.projectId, realProjectId),
         eq(projectMembers.userId, userId),
       ),
     )
@@ -53,7 +49,7 @@ export async function POST(request: NextRequest) {
   }
 
   await db.insert(projectMembers).values({
-    projectId: project.id,
+    projectId: realProjectId,
     userId,
     role: "member",
   });

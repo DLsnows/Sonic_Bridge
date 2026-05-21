@@ -48,6 +48,10 @@ export function ProjectStatusBadge({ status, isAdmin, projectId }: {
       });
       if (!res.ok) {
         setCurrentStatus(previousStatus);
+      } else {
+        window.dispatchEvent(new CustomEvent("project-status-changed", {
+          detail: { projectId, newStatus }
+        }));
       }
     } catch {
       setCurrentStatus(previousStatus);
