@@ -47,7 +47,7 @@ export function PostForm({
         });
       }
     } catch {}
-  }, [DRAFT_KEY]);
+  }, [DRAFT_KEY, mode]);
 
   useEffect(() => {
     if (mode === "edit") return;
@@ -56,7 +56,7 @@ export function PostForm({
       if (title || content) localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, content }));
     }, 300);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [title, content, DRAFT_KEY]);
+  }, [title, content, DRAFT_KEY, mode]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
