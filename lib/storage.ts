@@ -70,19 +70,13 @@ export async function uploadFile(projectId: string, folderPath: string, file: Fi
   return { storageKey, publicUrl: `${R2_PUBLIC_URL}/${storageKey}` };
 }
 
-export function getFileUrl(storageKey: string): string {
-  return `${R2_PUBLIC_URL}/${storageKey}`;
-}
-
-export async function getFileHead(storageKey: string): Promise<{ contentLength: number; contentType: string } | null> {
-  try {
-    const result = await getS3().send(new HeadObjectCommand({ Bucket: R2_BUCKET_NAME, Key: storageKey }));
-    return { contentLength: result.ContentLength ?? 0, contentType: result.ContentType ?? "application/octet-stream" };
-  } catch { return null; }
-}
-
 export async function deleteFile(urlOrKey: string): Promise<void> {
-  const key = urlOrKey.startsWith("http") ? urlOrKey.replace(`${R2_PUBLIC_URL}/`, "") : urlOrKey;
+  let key = urlOrKey;
+  if (urlOrKey.startsWith("http")) {
+    try {
+      key = new URL(urlOrKey).pathname.slice(1);
+    } catch { /* not a valid URL */ }
+  }
   await getS3().send(new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: key }));
 }
 

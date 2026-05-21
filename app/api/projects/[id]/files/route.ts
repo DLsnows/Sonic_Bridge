@@ -95,6 +95,14 @@ export async function POST(
       return NextResponse.json({ error: `Failed to store "${file.name}". Please try again.` }, { status: 500 });
     }
 
+    // Skip if this storageKey already exists (prevent duplicates on retry)
+    const [existing] = await db.select({ id: files.id, uploadedAt: files.uploadedAt })
+      .from(files).where(and(eq(files.projectId, projectId), eq(files.storageKey, publicUrl))).limit(1);
+    if (existing) {
+      results.push({ id: existing.id, name: file.name, size: file.size, mimeType, folderId: folderId ?? null, uploadedAt: existing.uploadedAt });
+      continue;
+    }
+
     const [record] = await db.insert(files).values({
       projectId, folderId: folderId ?? null, name: file.name, size: file.size,
       mimeType, storageKey: publicUrl, uploadedBy: authResult.userId,
