@@ -60,8 +60,9 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
     try {
       const check = await fetch(`/api/projects/${projectId}/files/${fileId}`, { method: "HEAD" });
       if (!check.ok) {
-        const data = await check.json().catch(() => ({ error: "Download failed" }));
-        alert(data.error || `Download failed (HTTP ${check.status})`);
+        if (check.status === 404) { alert("File not found"); return; }
+        const data = await check.json().catch(() => null);
+        alert(data?.error || `Download failed (HTTP ${check.status})`);
         return;
       }
     } catch {
