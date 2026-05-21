@@ -65,7 +65,8 @@ export function PostForm({
     if (textarea) {
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
-      const newContent = content.slice(0, start) + citation + content.slice(end);
+      const currentValue = textarea.value;
+      const newContent = currentValue.slice(0, start) + citation + currentValue.slice(end);
       setContent(newContent);
       // Restore cursor position after citation
       setTimeout(() => {
