@@ -75,7 +75,7 @@ export async function uploadFile(projectId: string, folderPath: string, file: Fi
 }
 
 export function normalizeKey(storageKey: string): string {
-  if (storageKey.startsWith("http")) return storageKey;
+  if (storageKey.startsWith("http") || !R2_PUBLIC_URL) return storageKey;
   return `${R2_PUBLIC_URL}/${storageKey}`;
 }
 
