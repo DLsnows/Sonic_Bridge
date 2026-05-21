@@ -45,6 +45,7 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playingFileIdRef = useRef<string | null>(null);
   const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const audioListenersRef = useRef<Record<string, () => void> | null>(null);
 
   const handlePlayAudio = useCallback(
     (fileId: string, fileUrl: string, mimeType?: string) => {
@@ -67,7 +68,16 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
         }
       }
 
+      // Clean up previous audio element and listeners
       if (audioRef.current) {
+        const prevListeners = audioListenersRef.current;
+        if (prevListeners) {
+          audioRef.current.removeEventListener("ended", prevListeners.ended);
+          audioRef.current.removeEventListener("pause", prevListeners.pause);
+          audioRef.current.removeEventListener("error", prevListeners.error);
+          audioRef.current.removeEventListener("canplay", prevListeners.canplay);
+          audioListenersRef.current = null;
+        }
         audioRef.current.pause();
         audioRef.current.src = "";
         audioRef.current = null;
@@ -79,21 +89,19 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
       const audio = new Audio(fileUrl);
       audio.preload = "auto";
 
-      audio.addEventListener("ended", () => {
+      const onEnded = () => {
         playingFileIdRef.current = null;
         setPlayingFileId(null);
         setAudioLoading(false);
-      });
-
-      audio.addEventListener("pause", () => {
+      };
+      const onPause = () => {
         if (playingFileIdRef.current === fileId) {
           playingFileIdRef.current = null;
           setPlayingFileId(null);
           setAudioLoading(false);
         }
-      });
-
-      audio.addEventListener("error", () => {
+      };
+      const onError = () => {
         console.error("Audio playback error:", audio.error);
         setAudioError("Playback failed. The file may be unavailable.");
         playingFileIdRef.current = null;
@@ -101,11 +109,16 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
         setAudioLoading(false);
         if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
         errorTimeoutRef.current = setTimeout(() => setAudioError(null), 5000);
-      });
-
-      audio.addEventListener("canplay", () => {
+      };
+      const onCanPlay = () => {
         setAudioLoading(false);
-      });
+      };
+
+      audio.addEventListener("ended", onEnded);
+      audio.addEventListener("pause", onPause);
+      audio.addEventListener("error", onError);
+      audio.addEventListener("canplay", onCanPlay);
+      audioListenersRef.current = { ended: onEnded, pause: onPause, error: onError, canplay: onCanPlay };
 
       audio.play().catch((err) => {
         console.error("Audio play() rejected:", err);
@@ -128,6 +141,14 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
     return () => {
       if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
       if (audioRef.current) {
+        const listeners = audioListenersRef.current;
+        if (listeners) {
+          audioRef.current.removeEventListener("ended", listeners.ended);
+          audioRef.current.removeEventListener("pause", listeners.pause);
+          audioRef.current.removeEventListener("error", listeners.error);
+          audioRef.current.removeEventListener("canplay", listeners.canplay);
+          audioListenersRef.current = null;
+        }
         audioRef.current.pause();
         audioRef.current.src = "";
         audioRef.current = null;

@@ -79,10 +79,6 @@ export async function POST(request: Request) {
       },
     });
 
-    if (result.type === "blob.generate-client-token") {
-      return Response.json(result);
-    }
-
     return Response.json(result);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Upload failed";
