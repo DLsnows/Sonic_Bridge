@@ -146,16 +146,29 @@ export async function POST(
     title = data.title;
   }
 
-  const [post] = await db
-    .insert(discussionPosts)
-    .values({
-      projectId,
-      userId,
-      title,
-      content: data.content,
-      parentId,
-    })
-    .returning();
+  let post: typeof discussionPosts.$inferSelect;
+  try {
+    const inserted = await db
+      .insert(discussionPosts)
+      .values({
+        projectId,
+        userId,
+        title,
+        content: data.content,
+        parentId,
+      })
+      .returning();
+    if (!inserted || inserted.length === 0) {
+      throw new Error("Insert returned no rows");
+    }
+    post = inserted[0];
+  } catch (e) {
+    console.error("Discussion post insert failed:", e);
+    return NextResponse.json(
+      { error: "Failed to create discussion post. Please try again later." },
+      { status: 500 },
+    );
+  }
 
   // Emit notifications (fire-and-forget — don't block the response)
   createNotifications({

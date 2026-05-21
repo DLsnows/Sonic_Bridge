@@ -72,13 +72,13 @@ const markdownComponents = {
   code: ({ children, className }: { children?: React.ReactNode; className?: string }) => {
     if (className) {
       return (
-        <pre className="bg-[#09090B] border border-[#FF8C00]/10 rounded p-3 overflow-x-auto text-xs text-[#00F0FF] my-2">
+        <pre className="bg-[#09090B] border border-[#FF8C00]/10 rounded p-3 overflow-x-auto text-xs text-[#FF8C00] my-2">
           <code>{children}</code>
         </pre>
       );
     }
     return (
-      <code className="bg-[#09090B] px-1 py-0.5 rounded text-[#00F0FF] text-xs">
+      <code className="bg-[#09090B] px-1 py-0.5 rounded text-[#FF8C00] text-xs">
         {children}
       </code>
     );
