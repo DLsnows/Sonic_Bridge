@@ -27,8 +27,7 @@ export function Sidebar({ username, avatar, projects }: { username?: string; ava
   const pathname = usePathname();
   const collapsed = useSidebarStore((s) => s.collapsed);
   const toggle = useSidebarStore((s) => s.toggle);
-  const [errorAvatar, setErrorAvatar] = useState<string | null>(null);
-  const imgError = errorAvatar === avatar;
+  const [avatarFailed, setAvatarFailed] = useState(false);
 
   return (
     <aside
@@ -101,14 +100,14 @@ export function Sidebar({ username, avatar, projects }: { username?: string; ava
             collapsed ? "gap-0" : "gap-3 flex-1"
           }`}
         >
-          {avatar && !imgError ? (
+          {avatar && !avatarFailed ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={avatar}
+              src={`${avatar}${avatar.includes("?") ? "&" : "?"}name=${encodeURIComponent(username ?? "User")}`}
               alt={username ?? "User"}
               className="w-8 h-8 rounded-full object-cover border border-[#00FF41]/20 shrink-0"
               referrerPolicy="no-referrer"
-              onError={() => setErrorAvatar(avatar ?? null)}
+              onError={() => setAvatarFailed(true)}
             />
           ) : (
             <div className="w-8 h-8 rounded-full bg-[#00FF41]/20 flex items-center justify-center text-xs text-[#00FF41] font-['Share_Tech_Mono',monospace] shrink-0">
