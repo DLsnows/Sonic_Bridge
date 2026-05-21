@@ -56,7 +56,7 @@ export async function GET(
       "Content-Type": file.mimeType || response.headers.get("content-type") || "application/octet-stream",
       "Content-Disposition": disposition,
       "Accept-Ranges": "bytes",
-      "Cache-Control": "private, max-age=300",
+      "Cache-Control": "private, max-age=60",
       "X-Content-Type-Options": "nosniff",
     };
 
