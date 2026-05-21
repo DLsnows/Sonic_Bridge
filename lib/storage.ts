@@ -1,30 +1,30 @@
-import { del, list, head } from "@vercel/blob";
+import { S3Client, PutObjectCommand, DeleteObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { randomBytes } from "crypto";
 
+const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
+const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
+const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
+const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || "sonicbridge-files";
+const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL;
+
+if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
+  throw new Error("Missing R2 environment variables.");
+}
+
+const s3 = new S3Client({
+  region: "auto",
+  endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: { accessKeyId: R2_ACCESS_KEY_ID, secretAccessKey: R2_SECRET_ACCESS_KEY },
+});
+
 const MIME_BY_EXT: Record<string, string> = {
-  mp3: "audio/mpeg",
-  wav: "audio/wav",
-  flac: "audio/flac",
-  m4a: "audio/mp4",
-  ogg: "audio/ogg",
-  wma: "audio/x-ms-wma",
-  aac: "audio/aac",
-  aiff: "audio/aiff",
-  opus: "audio/opus",
-  weba: "audio/webm",
-  mid: "audio/midi",
-  midi: "audio/midi",
-  mp4: "video/mp4",
-  webm: "video/webm",
-  mov: "video/quicktime",
-  avi: "video/x-msvideo",
-  mkv: "video/x-matroska",
-  pdf: "application/pdf",
-  jpg: "image/jpeg",
-  jpeg: "image/jpeg",
-  png: "image/png",
-  gif: "image/gif",
-  webp: "image/webp",
+  mp3: "audio/mpeg", wav: "audio/wav", flac: "audio/flac", m4a: "audio/mp4",
+  ogg: "audio/ogg", wma: "audio/x-ms-wma", aac: "audio/aac", aiff: "audio/aiff",
+  opus: "audio/opus", weba: "audio/webm", mid: "audio/midi", midi: "audio/midi",
+  mp4: "video/mp4", webm: "video/webm", mov: "video/quicktime",
+  avi: "video/x-msvideo", mkv: "video/x-matroska",
+  pdf: "application/pdf", jpg: "image/jpeg", jpeg: "image/jpeg",
+  png: "image/png", gif: "image/gif", webp: "image/webp",
 };
 
 export function detectMimeType(fileName: string, fallback?: string): string {
@@ -33,16 +33,15 @@ export function detectMimeType(fileName: string, fallback?: string): string {
   return MIME_BY_EXT[ext] ?? fallback ?? "application/octet-stream";
 }
 
-// Per-type file size limits
 const AUDIO_EXTENSIONS = ["m4a", "mp3", "wav", "flac", "aac", "ogg", "wma"];
 const ARCHIVE_EXTENSIONS = ["zip", "rar", "7z", "tar", "gz"];
 const VIDEO_EXTENSIONS = ["mov", "mp4", "avi", "mkv", "webm"];
 
 export const SIZE_LIMITS = {
-  audio: 120 * 1024 * 1024,       // 120 MB
-  archive: 2 * 1024 * 1024 * 1024, // 2 GB
-  video: 500 * 1024 * 1024,        // 500 MB
-  other: 100 * 1024 * 1024,        // 100 MB
+  audio: 120 * 1024 * 1024,
+  archive: 2 * 1024 * 1024 * 1024,
+  video: 500 * 1024 * 1024,
+  other: 100 * 1024 * 1024,
 } as const;
 
 export function getMaxFileSize(fileName: string): { limit: number; category: string } {
@@ -53,36 +52,34 @@ export function getMaxFileSize(fileName: string): { limit: number; category: str
   return { limit: SIZE_LIMITS.other, category: "other" };
 }
 
-export function getStorageKey(
-  projectId: string,
-  folderPath: string,
-  filename: string,
-): string {
+export function getStorageKey(projectId: string, folderPath: string, filename: string): string {
   const uniqueName = `${randomBytes(8).toString("hex")}_${filename}`;
   return `${projectId}/${folderPath}/${uniqueName}`.replace(/\/+/g, "/");
 }
 
-export async function deleteFile(storageKey: string): Promise<void> {
-  try {
-    const blob = await head(storageKey);
-    await del(blob.url);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    if (message.toLowerCase().includes("not found")) return;
-    throw err;
-  }
+export async function uploadFile(projectId: string, folderPath: string, file: File): Promise<{ storageKey: string; publicUrl: string }> {
+  const storageKey = getStorageKey(projectId, folderPath, file.name);
+  const contentType = detectMimeType(file.name, file.type);
+  const buffer = Buffer.from(await file.arrayBuffer());
+  await s3.send(new PutObjectCommand({ Bucket: R2_BUCKET_NAME, Key: storageKey, Body: buffer, ContentType: contentType, ContentLength: file.size }));
+  return { storageKey, publicUrl: `${R2_PUBLIC_URL}/${storageKey}` };
 }
 
-export async function deleteFolderContents(
-  projectId: string,
-  folderPath: string,
-): Promise<void> {
-  let cursor: string | undefined;
-  do {
-    const result = await list({ prefix: `${projectId}/${folderPath}/`, cursor });
-    if (result.blobs.length > 0) {
-      await del(result.blobs.map((b) => b.url));
-    }
-    cursor = result.hasMore ? result.cursor : undefined;
-  } while (cursor);
+export async function getFileUrl(storageKey: string): Promise<string> {
+  return `${R2_PUBLIC_URL}/${storageKey}`;
+}
+
+export async function getFileHead(storageKey: string): Promise<{ contentLength: number; contentType: string } | null> {
+  try {
+    const result = await s3.send(new HeadObjectCommand({ Bucket: R2_BUCKET_NAME, Key: storageKey }));
+    return { contentLength: result.ContentLength ?? 0, contentType: result.ContentType ?? "application/octet-stream" };
+  } catch { return null; }
+}
+
+export async function deleteFile(storageKey: string): Promise<void> {
+  await s3.send(new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: storageKey }));
+}
+
+export async function deleteFolderContents(projectId: string, folderPath: string): Promise<void> {
+  console.warn(`Folder delete for ${projectId}/${folderPath} — individual files must be deleted separately.`);
 }

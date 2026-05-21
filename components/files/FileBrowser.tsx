@@ -56,24 +56,8 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
     const res = await fetch(`/api/projects/${projectId}/files/${fileId}`, { method: "DELETE" });
     if (res.ok) fetchFiles(currentFolderId);
   };
-  const handleDownload = async (fileId: string) => {
-    try {
-      const check = await fetch(`/api/projects/${projectId}/files/${fileId}`, { method: "HEAD" });
-      if (!check.ok) {
-        if (check.status === 404) { alert("File not found"); return; }
-        const data = await check.json().catch(() => null);
-        alert(data?.error || `Download failed (HTTP ${check.status})`);
-        return;
-      }
-    } catch {
-      alert("Download failed: Network error");
-      return;
-    }
-    const a = document.createElement("a");
-    a.href = `/api/projects/${projectId}/files/${fileId}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+  const handleDownload = (fileId: string) => {
+    window.open(`/api/projects/${projectId}/files/${fileId}`);
   };
 
   const handleRenameFolder = (folderId: string, currentName: string) => {
@@ -115,7 +99,7 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
             <h3 className="font-['Share_Tech_Mono',monospace] text-sm text-[#00FF41]">
               {currentFolderId ? folders.find((f) => f.id === currentFolderId)?.name ?? "Files" : "Root"}
             </h3>
-            <Button size="sm" onClick={() => setShowUpload(true)}>Upload Files</Button>
+            <Button size="sm" variant="primary" onClick={() => setShowUpload(true)}>Upload Files</Button>
           </div>
           <FileList files={files} loading={loading} projectId={projectId} onDelete={handleDelete} onDownload={handleDownload} />
         </div>

@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { upload } from "@vercel/blob/client";
+import { getMaxFileSize, SIZE_LIMITS } from "@/lib/storage";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
-import { getMaxFileSize, SIZE_LIMITS, getStorageKey } from "@/lib/storage";
 
 interface UploadZoneProps {
   projectId: string;
@@ -16,7 +15,6 @@ interface UploadZoneProps {
 export function UploadZone({ projectId, folderId, onComplete, onClose }: UploadZoneProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState<Record<string, number>>({});
   const [error, setError] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -41,70 +39,22 @@ export function UploadZone({ projectId, folderId, onComplete, onClose }: UploadZ
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const doUpload = async () => {
+  const handleUpload = async () => {
     if (selectedFiles.length === 0) return;
-    setUploading(true);
-    setError("");
-
+    setUploading(true); setError("");
     try {
-      const uploadResults: Array<{ name: string; size: number; mimeType: string; storageKey: string; url: string }> = [];
-
-      for (const file of selectedFiles) {
-        const fileName = file.name;
-        setProgress((prev) => ({ ...prev, [fileName]: 0 }));
-
-        const storageKey = getStorageKey(projectId, "files", fileName);
-
-        const result = await upload(storageKey, file, {
-          access: "private",
-          handleUploadUrl: "/api/upload",
-          multipart: file.size > 5 * 1024 * 1024,
-          onUploadProgress: (event) => {
-            setProgress((prev) => ({ ...prev, [fileName]: event.percentage }));
-          },
-          clientPayload: JSON.stringify({
-            projectId,
-            folderId,
-          }),
-        });
-
-        uploadResults.push({
-          name: fileName,
-          size: file.size,
-          mimeType: file.type,
-          storageKey: result.pathname,
-          url: result.url,
-        });
-
-        setProgress((prev) => ({ ...prev, [fileName]: 100 }));
-      }
-
-      const res = await fetch(`/api/projects/${projectId}/files`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          files: uploadResults,
-          folderId: folderId ?? undefined,
-        }),
-      });
-
-      if (res.ok) {
-        onComplete();
-      } else {
-        let message = "Failed to save file metadata";
-        try {
-          const data = await res.json();
-          message = data.error ?? message;
-        } catch {
-          // Response was not JSON
-        }
+      const formData = new FormData();
+      for (const f of selectedFiles) formData.append("files", f);
+      if (folderId) formData.append("folderId", folderId);
+      const res = await fetch(`/api/projects/${projectId}/files`, { method: "POST", body: formData });
+      if (res.ok) { onComplete(); }
+      else {
+        let message = "Upload failed";
+        try { const data = await res.json(); message = data.error ?? message; } catch {}
         setError(message);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Network error during upload");
-    } finally {
-      setUploading(false);
-    }
+    } catch { setError("Network error — please try again"); }
+    setUploading(false);
   };
 
   return (
@@ -112,7 +62,7 @@ export function UploadZone({ projectId, folderId, onComplete, onClose }: UploadZ
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={doUpload} loading={uploading} disabled={selectedFiles.length === 0}>
+          <Button onClick={handleUpload} loading={uploading} disabled={selectedFiles.length === 0}>
             Upload {selectedFiles.length > 0 && `(${selectedFiles.length})`}
           </Button>
         </>
@@ -143,9 +93,6 @@ export function UploadZone({ projectId, folderId, onComplete, onClose }: UploadZ
                   <span className="text-[#F0F0F0] truncate max-w-[250px]">{file.name}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  {uploading && progress[file.name] !== undefined && (
-                    <span className="text-[#00FF41] font-mono">{Math.round(progress[file.name])}%</span>
-                  )}
                   <span className="text-[#A0A0B0] font-mono">{(file.size / 1024).toFixed(1)} KB</span>
                   {!uploading && (
                     <button className="text-[#FF4444] hover:text-[#FF6666]" onClick={(e) => { e.stopPropagation(); removeFile(i); }}>{'✕'}</button>
