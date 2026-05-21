@@ -47,7 +47,7 @@ export function PostForm({
         });
       }
     } catch {}
-  }, []);
+  }, [DRAFT_KEY]);
 
   useEffect(() => {
     if (mode === "edit") return;
