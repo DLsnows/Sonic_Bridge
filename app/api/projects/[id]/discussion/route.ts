@@ -158,11 +158,14 @@ export async function POST(
         parentId,
       })
       .returning();
+    if (!inserted || inserted.length === 0) {
+      throw new Error("Insert returned no rows");
+    }
     post = inserted[0];
   } catch (e) {
     console.error("Discussion post insert failed:", e);
     return NextResponse.json(
-      { error: "Database error creating post. The discussion_posts table may be missing the is_ai_generated column — ensure migration 0002_funny_galactus has been applied." },
+      { error: "Failed to create discussion post. Please try again later." },
       { status: 500 },
     );
   }
