@@ -48,7 +48,7 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
   const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handlePlayAudio = useCallback(
-    (fileId: string) => {
+    (fileId: string, mimeType: string) => {
       // Toggle: clicking the currently playing file stops playback
       if (playingFileIdRef.current === fileId) {
         audioRef.current?.pause();
@@ -56,6 +56,14 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
         playingFileIdRef.current = null;
         setPlayingFileId(null);
         setAudioLoading(false);
+        return;
+      }
+
+      // Check browser support before attempting playback
+      const testAudio = document.createElement("audio");
+      if (mimeType && testAudio.canPlayType(mimeType) === "") {
+        setAudioError(`Browser does not support ${mimeType} playback`);
+        errorTimeoutRef.current = setTimeout(() => setAudioError(null), 5000);
         return;
       }
 
@@ -75,7 +83,11 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
       setAudioError(null);
       setAudioLoading(true);
 
-      const audio = new Audio(`/api/projects/${projectId}/files/${fileId}?inline=1`);
+      const audio = new Audio();
+      const source = document.createElement("source");
+      source.src = `/api/projects/${projectId}/files/${fileId}?inline=1`;
+      if (mimeType) source.type = mimeType;
+      audio.appendChild(source);
       audio.preload = "auto";
 
       const onEnded = () => {
@@ -214,7 +226,7 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
                       <Button
                         variant={playingFileId === file.id ? "primary" : "ghost"}
                         size="sm"
-                        onClick={() => handlePlayAudio(file.id)}
+                        onClick={() => handlePlayAudio(file.id, file.mimeType)}
                       >
                         {playingFileId === file.id && audioLoading ? "..." : playingFileId === file.id ? "⏸" : "▶"}
                       </Button>

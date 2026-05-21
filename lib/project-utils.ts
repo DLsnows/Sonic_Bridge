@@ -9,8 +9,8 @@ export async function resolveProjectId(id: string): Promise<string | null> {
   if (isUuid) {
     const [byUuid] = await db.select({ id: projects.id }).from(projects).where(eq(projects.id, id)).limit(1);
     if (byUuid) return byUuid.id;
+    return null; // UUID lookalike won't match customId
   }
-  // Try customId for both UUID-like and non-UUID strings
   const [byCustom] = await db.select({ id: projects.id }).from(projects).where(eq(projects.customId, id)).limit(1);
   return byCustom?.id ?? null;
 }

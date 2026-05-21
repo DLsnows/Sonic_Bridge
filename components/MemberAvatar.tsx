@@ -24,7 +24,7 @@ export function MemberAvatar({
   return (
     /* eslint-disable-next-line @next/next/no-img-element */
     <img
-      src={`/api/user/avatar/${encodeURIComponent(userId)}`}
+      src={`/api/user/avatar/${encodeURIComponent(userId)}?name=${encodeURIComponent(username)}`}
       alt={username}
       className={className}
       referrerPolicy="no-referrer"

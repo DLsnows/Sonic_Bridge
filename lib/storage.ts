@@ -9,6 +9,11 @@ const MIME_BY_EXT: Record<string, string> = {
   ogg: "audio/ogg",
   wma: "audio/x-ms-wma",
   aac: "audio/aac",
+  aiff: "audio/aiff",
+  opus: "audio/opus",
+  weba: "audio/webm",
+  mid: "audio/midi",
+  midi: "audio/midi",
   mp4: "video/mp4",
   webm: "video/webm",
   mov: "video/quicktime",
@@ -63,8 +68,7 @@ export async function saveFile(
   file: File,
 ): Promise<{ storageKey: string }> {
   const storageKey = getStorageKey(projectId, folderPath, file.name);
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await put(storageKey, buffer, {
+  await put(storageKey, file, {
     access: "private",
     addRandomSuffix: false,
     contentType: detectMimeType(file.name, file.type),
@@ -97,6 +101,7 @@ export async function getFileBody(
 
   const response = await fetch(blob.downloadUrl, { headers });
   if (!response.ok) {
+    console.error(`Blob fetch failed: HTTP ${response.status} for ${storageKey}`);
     throw new Error(`Failed to fetch blob content: HTTP ${response.status}`);
   }
 

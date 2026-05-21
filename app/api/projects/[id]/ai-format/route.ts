@@ -114,7 +114,7 @@ export async function POST(
           {
             role: "system",
             content:
-              "You format raw text into clean Markdown. Fix grammar and punctuation. Add headings, lists, and formatting where appropriate. Do NOT add new information, do NOT change the meaning, do NOT add commentary. Only output the formatted markdown — no preamble, no explanation.",
+              "You format raw text into rich, well-structured Markdown. Analyze the content structure and decide what formatting is most appropriate.\n- For tabular data or comparisons, use Markdown tables (| col | col |)\n- For sequential steps or instructions, use numbered lists (1. )\n- For unordered items, use bullet lists (- )\n- For code, terminal output, or technical content, use fenced code blocks with language hints\n- Use headings (#, ##, ###) to organize sections when the content has clear topical divisions\n- Use blockquotes (>) for quoted or referenced content\nPreserve ALL original information — do not add, remove, or change meaning. No preamble, no explanation, no commentary — output ONLY the formatted markdown.",
           },
           { role: "user", content: post.content },
         ],
