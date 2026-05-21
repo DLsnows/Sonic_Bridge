@@ -35,15 +35,19 @@ export async function createNotifications(params: {
 
   const memberIds = members.map((m) => m.userId);
 
+  // For new_reply: exclude parent author from generic batch; they get reply_to_user instead
+  const excludeUserId = type === "new_reply" ? parentUserId : null;
   const rows: Array<{
     userId: string; projectId: string; type: string; referenceId: string; referenceType: string
-  }> = memberIds.map((userId) => ({
-    userId,
-    projectId,
-    type,
-    referenceId,
-    referenceType,
-  }));
+  }> = memberIds
+    .filter((userId) => userId !== excludeUserId)
+    .map((userId) => ({
+      userId,
+      projectId,
+      type,
+      referenceId,
+      referenceType,
+    }));
 
   if (type === "new_reply" && parentUserId && parentUserId !== actorUserId) {
     const [isMember] = await db

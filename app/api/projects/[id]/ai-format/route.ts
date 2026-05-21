@@ -152,7 +152,7 @@ export async function POST(
       userId: session.user.id,
       title: `AI formatted: ${post.title || "(reply)"}`,
       content: formattedContent,
-      parentId: post.parentId ?? post.id,
+      parentId: post.id,
       isEdited: false,
       isAiGenerated: true,
     })
