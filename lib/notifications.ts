@@ -45,14 +45,21 @@ export async function createNotifications(params: {
     referenceType,
   }));
 
-  if (type === "new_reply" && parentUserId && parentUserId !== actorUserId && !memberIds.includes(parentUserId)) {
-    rows.push({
-      userId: parentUserId,
-      projectId,
-      type: "reply_to_user",
-      referenceId,
-      referenceType,
-    });
+  if (type === "new_reply" && parentUserId && parentUserId !== actorUserId) {
+    const [isMember] = await db
+      .select({ id: projectMembers.userId })
+      .from(projectMembers)
+      .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, parentUserId)))
+      .limit(1);
+    if (isMember && !memberIds.includes(parentUserId)) {
+      rows.push({
+        userId: parentUserId,
+        projectId,
+        type: "reply_to_user",
+        referenceId,
+        referenceType,
+      });
+    }
   }
 
   if (rows.length > 0) {

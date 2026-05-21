@@ -32,11 +32,12 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   setDropdownOpen: (open) => set({ dropdownOpen: open }),
 
   markRead: async (id) => {
-    await fetch("/api/notifications", {
+    const res = await fetch("/api/notifications", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ notificationId: id }),
     });
+    if (!res.ok) return;
     set((state) => {
       const updated = state.notifications.map((n) =>
         n.id === id ? { ...n, isRead: true } : n,
@@ -46,7 +47,8 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   },
 
   markAllRead: async () => {
-    await fetch("/api/notifications", { method: "PATCH" });
+    const res = await fetch("/api/notifications", { method: "PATCH" });
+    if (!res.ok) return;
     set((state) => ({
       notifications: state.notifications.map((n) => ({ ...n, isRead: true })),
       unreadCount: 0,

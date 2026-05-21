@@ -154,10 +154,10 @@ export async function POST(
     }
   }
 
-  if (results.length > 0) {
+  for (const r of results) {
     createNotifications({
       type: "new_file",
-      referenceId: results[0].id,
+      referenceId: r.id,
       referenceType: "file",
       projectId: id,
       actorUserId: authResult.userId,

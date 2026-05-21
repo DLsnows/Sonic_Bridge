@@ -59,7 +59,7 @@ export function PostForm({
   };
 
   const insertCitation = (fileId: string, fileName: string) => {
-    const safeName = fileName.replace(/[[\]]/g, "\\$&");
+    const safeName = fileName.replace(/[[\]()]/g, "\\$&");
     const citation = `[${safeName}](/projects/${projectId}/files?file=${fileId})`;
     const textarea = textareaRef.current;
     if (textarea) {
