@@ -34,6 +34,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         "Content-Disposition": `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`,
         "Content-Length": response.headers.get("content-length") || String(file.size),
         "Cache-Control": "private, max-age=60",
+        "X-Content-Type-Options": "nosniff",
       },
     });
   } catch (err) {

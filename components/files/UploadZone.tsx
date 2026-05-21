@@ -53,7 +53,7 @@ export function UploadZone({ projectId, folderId, onComplete, onClose }: UploadZ
         try { const data = await res.json(); message = data.error ?? message; } catch {}
         setError(message);
       }
-    } catch { setError("Network error — please try again"); }
+    } catch (err) { console.error("Upload failed:", err); setError("Network error — please try again"); }
     setUploading(false);
   };
 

@@ -75,6 +75,7 @@ export function PostForm({
     setSubmitting(true);
     try {
       await onSubmit({ title: title.trim(), content: content.trim() });
+      if (debounceRef.current) { clearTimeout(debounceRef.current); debounceRef.current = null; }
       localStorage.removeItem(DRAFT_KEY);
       if (mode !== "edit") {
         setTitle("");

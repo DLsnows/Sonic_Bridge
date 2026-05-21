@@ -56,7 +56,18 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
     const res = await fetch(`/api/projects/${projectId}/files/${fileId}`, { method: "DELETE" });
     if (res.ok) fetchFiles(currentFolderId);
   };
-  const handleDownload = (fileId: string, fileName: string) => {
+  const handleDownload = async (fileId: string, fileName: string) => {
+    try {
+      const check = await fetch(`/api/projects/${projectId}/files/${fileId}`, { method: "HEAD" });
+      if (!check.ok) {
+        if (check.status === 404) { alert("File not found"); return; }
+        alert(`Download failed (HTTP ${check.status})`);
+        return;
+      }
+    } catch {
+      alert("Download failed: Network error");
+      return;
+    }
     const a = document.createElement("a");
     a.href = `/api/projects/${projectId}/files/${fileId}`;
     a.download = fileName;
