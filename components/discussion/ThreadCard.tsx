@@ -101,7 +101,7 @@ const markdownComponents = {
     <tbody className="divide-y divide-[#FF8C00]/10">{children}</tbody>
   ),
   tr: ({ children }: { children?: React.ReactNode }) => (
-    <tr className="border-b border-[#FF8C00]/10">{children}</tr>
+    <tr>{children}</tr>
   ),
   th: ({ children }: { children?: React.ReactNode }) => (
     <th className="px-3 py-1.5 text-left text-[#FF8C00] font-['Share_Tech_Mono',monospace] text-xs font-semibold border-r border-[#FF8C00]/10 last:border-r-0">
