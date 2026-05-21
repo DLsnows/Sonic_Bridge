@@ -1,19 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { useSidebarStore } from "@/lib/store/sidebar";
+import { useSidebarStore, type SidebarProject } from "@/lib/store/sidebar";
 import { Button } from "./ui/Button";
 import { projectHref } from "@/lib/project-utils";
-
-interface SidebarProject {
-  id: string;
-  name: string;
-  customId: string | null;
-  status: string;
-}
+import { NotificationBellInline } from "./NotificationBell";
 
 const STATUS_DOT: Record<string, string> = {
   not_started: "bg-[#A0A0B0]",
@@ -23,12 +17,31 @@ const STATUS_DOT: Record<string, string> = {
   archived: "bg-[#FF4444]",
 };
 
-export function Sidebar({ username, avatar, projects }: { username?: string; avatar?: string | null; projects?: SidebarProject[] }) {
+export function Sidebar({ username, projects }: { username?: string; projects?: SidebarProject[] }) {
   const pathname = usePathname();
   const collapsed = useSidebarStore((s) => s.collapsed);
   const toggle = useSidebarStore((s) => s.toggle);
-  const [lastFailedAvatar, setLastFailedAvatar] = useState<string | null>(null);
-  const avatarFailed = lastFailedAvatar === avatar;
+  const storeProjects = useSidebarStore((s) => s.projects);
+  const setProjects = useSidebarStore((s) => s.setProjects);
+  const refreshProjects = useSidebarStore((s) => s.refreshProjects);
+
+  // Initialize store from server props on first render
+  useEffect(() => {
+    if (projects && projects.length > 0 && storeProjects.length === 0) {
+      setProjects(projects);
+    }
+  }, [projects, setProjects, storeProjects.length]);
+
+  // Listen for project status changes
+  useEffect(() => {
+    const handler = () => {
+      refreshProjects();
+    };
+    window.addEventListener("project-status-changed", handler);
+    return () => window.removeEventListener("project-status-changed", handler);
+  }, [refreshProjects]);
+
+  const displayProjects = storeProjects.length > 0 ? storeProjects : (projects ?? []);
 
   return (
     <aside
@@ -72,7 +85,7 @@ export function Sidebar({ username, avatar, projects }: { username?: string; ava
           <span>{"◈"}</span>
           {!collapsed && "Projects"}
         </Link>
-        {projects?.filter((p) => p.status !== "archived").map((project) => {
+        {displayProjects.filter((p) => p.status !== "archived").map((project) => {
           const href = projectHref(project);
           const isActive = pathname.startsWith(href);
           return (
@@ -93,6 +106,11 @@ export function Sidebar({ username, avatar, projects }: { username?: string; ava
         })}
       </nav>
 
+      {/* Notifications */}
+      <div className={`border-t border-[#00FF41]/10 ${collapsed ? "p-2 flex justify-center" : "p-3"}`}>
+        <NotificationBellInline />
+      </div>
+
       {/* User section */}
       <div className={`p-4 border-t border-[#00FF41]/10 flex items-center ${collapsed ? "justify-center" : "gap-3"}`}>
         <Link
@@ -101,20 +119,9 @@ export function Sidebar({ username, avatar, projects }: { username?: string; ava
             collapsed ? "gap-0" : "gap-3 flex-1"
           }`}
         >
-          {avatar && !avatarFailed ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={`${avatar}${avatar.includes("?") ? "&" : "?"}name=${encodeURIComponent(username ?? "User")}`}
-              alt={username ?? "User"}
-              className="w-8 h-8 rounded-full object-cover border border-[#00FF41]/20 shrink-0"
-              referrerPolicy="no-referrer"
-              onError={() => setLastFailedAvatar(avatar)}
-            />
-          ) : (
-            <div className="w-8 h-8 rounded-full bg-[#00FF41]/20 flex items-center justify-center text-xs text-[#00FF41] font-['Share_Tech_Mono',monospace] shrink-0">
-              {(username || "U")[0].toUpperCase()}
-            </div>
-          )}
+          <div className="w-8 h-8 rounded-full bg-[#00FF41]/20 flex items-center justify-center text-xs text-[#00FF41] font-['Share_Tech_Mono',monospace] shrink-0">
+            {(username || "U")[0].toUpperCase()}
+          </div>
           {!collapsed && (
             <div className="flex-1 min-w-0">
               <p className="text-sm text-[#F0F0F0] truncate">{username ?? "User"}</p>

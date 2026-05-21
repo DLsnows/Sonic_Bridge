@@ -8,12 +8,6 @@ import { z } from "zod";
 const createSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
-  customId: z
-    .string()
-    .min(4)
-    .max(32)
-    .regex(/^[a-zA-Z0-9_-]+$/, "Custom ID can only contain letters, numbers, hyphens, and underscores")
-    .optional(),
   status: z.enum(["not_started", "in_progress", "paused", "pending_release", "archived"]).optional(),
 });
 
@@ -33,24 +27,13 @@ export async function POST(request: NextRequest) {
   }
 
   const userId = session.user.id;
-  const { name, description, customId, status } = parsed.data;
+  const { name, description, status } = parsed.data;
 
   try {
     const project = await db.transaction(async (tx) => {
-      if (customId) {
-        const [existing] = await tx
-          .select({ id: projects.id })
-          .from(projects)
-          .where(eq(projects.customId, customId))
-          .limit(1);
-        if (existing) {
-          return { conflict: true as const };
-        }
-      }
-
       const [newProject] = await tx
         .insert(projects)
-        .values({ name, description: description ?? null, customId: customId ?? null, status: status ?? "in_progress", createdBy: userId })
+        .values({ name, description: description ?? null, customId: null, status: status ?? "in_progress", createdBy: userId })
         .returning();
 
       await tx.insert(projectMembers).values({
@@ -71,18 +54,11 @@ export async function POST(request: NextRequest) {
       return newProject;
     });
 
-    if (project && "conflict" in project) {
-      return NextResponse.json(
-        { error: "Custom ID is already taken" },
-        { status: 409 },
-      );
-    }
-
     return NextResponse.json(project, { status: 201 });
   } catch (err) {
     console.error("Failed to create project:", err);
     return NextResponse.json(
-      { error: "Database error — please try again" },
+      { error: "Database error - please try again" },
       { status: 500 },
     );
   }

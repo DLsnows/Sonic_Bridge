@@ -17,7 +17,6 @@ export default async function SettingsPage() {
           userId={user.id}
           username={user.username ?? ''}
           email={user.email ?? ''}
-          avatar={user.image ?? null}
         />
       </div>
     </div>

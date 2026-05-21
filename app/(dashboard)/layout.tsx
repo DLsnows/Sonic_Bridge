@@ -16,7 +16,7 @@ export default async function DashboardLayout({
 
   const userId = session.user.id;
 
-  let userProjects: { id: string; name: string; customId: string | null; status: string }[] = [];
+  let userProjects: { id: string; name: string; status: string }[] = [];
   try {
     const memberships = await db
       .select({ projectId: projectMembers.projectId })
@@ -29,7 +29,6 @@ export default async function DashboardLayout({
         .select({
           id: projects.id,
           name: projects.name,
-          customId: projects.customId,
           status: projects.status,
         })
         .from(projects)
@@ -42,7 +41,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-[#09090B]">
-      <Sidebar username={session.user?.username ?? undefined} avatar={session.user.image ?? null} projects={userProjects} />
+      <Sidebar username={session.user?.username ?? undefined} projects={userProjects} />
       <DashboardLayoutClient>{children}</DashboardLayoutClient>
     </div>
   );
