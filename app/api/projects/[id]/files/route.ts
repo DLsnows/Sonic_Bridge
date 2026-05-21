@@ -30,6 +30,7 @@ export async function GET(
       name: files.name,
       size: files.size,
       mimeType: files.mimeType,
+      storageKey: files.storageKey,
       folderId: files.folderId,
       uploadedBy: files.uploadedBy,
       uploaderName: users.username,
