@@ -168,3 +168,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Superpowers brainstorm files
+.superpowers/
