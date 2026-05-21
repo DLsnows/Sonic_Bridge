@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNotificationStore } from "@/lib/store/notification";
 import { useRouter } from "next/navigation";
 
@@ -137,14 +137,31 @@ export function NotificationBellInline() {
     return () => clearInterval(interval);
   }, [fetchNotifications]);
 
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const bellRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (dropdownRef.current?.contains(target)) return;
+      if (bellRef.current?.contains(target)) return;
+      setDropdownOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [dropdownOpen, setDropdownOpen]);
+
   return (
     <div className="relative">
-      <NotificationBellButton
-        unreadCount={unreadCount}
-        onClick={() => setDropdownOpen(!dropdownOpen)}
-      />
+      <span ref={bellRef}>
+        <NotificationBellButton
+          unreadCount={unreadCount}
+          onClick={() => setDropdownOpen(!dropdownOpen)}
+        />
+      </span>
       {dropdownOpen && (
-        <div className="mt-2">
+        <div ref={dropdownRef} className="mt-2">
           <NotificationDropdown onClose={() => setDropdownOpen(false)} />
         </div>
       )}
