@@ -132,15 +132,13 @@ const markdownComponents = {
     <h6 className="text-[10px] text-[#FF8C00] font-['Share_Tech_Mono',monospace] mt-2 mb-1">{children}</h6>
   ),
   ul: ({ children }: { children?: React.ReactNode }) => (
-    <ul className="list-none pl-5 my-2 space-y-1">{children}</ul>
+    <ul className="list-disc pl-5 my-2 space-y-1 text-[#D0D0D0] text-sm [&>li]:pl-1">{children}</ul>
   ),
   ol: ({ children }: { children?: React.ReactNode }) => (
-    <ol className="list-none pl-5 my-2 space-y-1">{children}</ol>
+    <ol className="list-decimal pl-5 my-2 space-y-1 text-[#D0D0D0] text-sm [&>li]:pl-1">{children}</ol>
   ),
   li: ({ children }: { children?: React.ReactNode }) => (
-    <li className="text-[#D0D0D0] text-sm relative before:content-['\25B8'] before:text-[#00FF41] before:absolute before:left-[-1.25rem] before:top-0">
-      {children}
-    </li>
+    <li>{children}</li>
   ),
 };
 
