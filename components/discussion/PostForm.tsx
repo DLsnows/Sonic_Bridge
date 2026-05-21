@@ -35,6 +35,7 @@ export function PostForm({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    if (mode === "edit") return;
     try {
       const saved = localStorage.getItem(DRAFT_KEY);
       if (saved) {

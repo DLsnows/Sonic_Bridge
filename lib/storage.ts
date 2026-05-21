@@ -65,8 +65,7 @@ export function getStorageKey(projectId: string, folderPath: string, filename: s
 export async function uploadFile(projectId: string, folderPath: string, file: File): Promise<{ storageKey: string; publicUrl: string }> {
   const storageKey = getStorageKey(projectId, folderPath, file.name);
   const contentType = detectMimeType(file.name, file.type);
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await getS3().send(new PutObjectCommand({ Bucket: R2_BUCKET_NAME, Key: storageKey, Body: buffer, ContentType: contentType, ContentLength: file.size }));
+  await getS3().send(new PutObjectCommand({ Bucket: R2_BUCKET_NAME, Key: storageKey, Body: file.stream(), ContentType: contentType, ContentLength: file.size }));
   return { storageKey, publicUrl: `${R2_PUBLIC_URL}/${storageKey}` };
 }
 
