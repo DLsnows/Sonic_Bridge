@@ -66,10 +66,13 @@ export function DiscussionBoard({
   const [availableFiles, setAvailableFiles] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
-    fetch(`/api/projects/${projectId}/files`)
+    if (!/^[a-zA-Z0-9_-]+$/.test(projectId)) return;
+    const controller = new AbortController();
+    fetch(`/api/projects/${projectId}/files`, { signal: controller.signal })
       .then((r) => r.ok ? r.json() : null)
       .then((d) => { if (d?.files) setAvailableFiles(d.files.map((f: { id: string; name: string }) => ({ id: f.id, name: f.name }))); })
-      .catch(() => {});
+      .catch((err) => { if (err.name !== "AbortError") console.error(err); });
+    return () => controller.abort();
   }, [projectId]);
 
   const threads = useMemo(
