@@ -7,15 +7,20 @@ const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
 const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || "sonicbridge-files";
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL;
 
-if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
-  throw new Error("Missing R2 environment variables.");
+let _s3: S3Client | null = null;
+function getS3(): S3Client {
+  if (!_s3) {
+    if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
+      throw new Error("Missing R2 environment variables.");
+    }
+    _s3 = new S3Client({
+      region: "auto",
+      endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+      credentials: { accessKeyId: R2_ACCESS_KEY_ID, secretAccessKey: R2_SECRET_ACCESS_KEY },
+    });
+  }
+  return _s3;
 }
-
-const s3 = new S3Client({
-  region: "auto",
-  endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-  credentials: { accessKeyId: R2_ACCESS_KEY_ID, secretAccessKey: R2_SECRET_ACCESS_KEY },
-});
 
 const MIME_BY_EXT: Record<string, string> = {
   mp3: "audio/mpeg", wav: "audio/wav", flac: "audio/flac", m4a: "audio/mp4",
@@ -61,7 +66,7 @@ export async function uploadFile(projectId: string, folderPath: string, file: Fi
   const storageKey = getStorageKey(projectId, folderPath, file.name);
   const contentType = detectMimeType(file.name, file.type);
   const buffer = Buffer.from(await file.arrayBuffer());
-  await s3.send(new PutObjectCommand({ Bucket: R2_BUCKET_NAME, Key: storageKey, Body: buffer, ContentType: contentType, ContentLength: file.size }));
+  await getS3().send(new PutObjectCommand({ Bucket: R2_BUCKET_NAME, Key: storageKey, Body: buffer, ContentType: contentType, ContentLength: file.size }));
   return { storageKey, publicUrl: `${R2_PUBLIC_URL}/${storageKey}` };
 }
 
@@ -71,14 +76,14 @@ export async function getFileUrl(storageKey: string): Promise<string> {
 
 export async function getFileHead(storageKey: string): Promise<{ contentLength: number; contentType: string } | null> {
   try {
-    const result = await s3.send(new HeadObjectCommand({ Bucket: R2_BUCKET_NAME, Key: storageKey }));
+    const result = await getS3().send(new HeadObjectCommand({ Bucket: R2_BUCKET_NAME, Key: storageKey }));
     return { contentLength: result.ContentLength ?? 0, contentType: result.ContentType ?? "application/octet-stream" };
   } catch { return null; }
 }
 
 export async function deleteFile(urlOrKey: string): Promise<void> {
   const key = urlOrKey.startsWith("http") ? urlOrKey.replace(`${R2_PUBLIC_URL}/`, "") : urlOrKey;
-  await s3.send(new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: key }));
+  await getS3().send(new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: key }));
 }
 
 export async function deleteFolderContents(projectId: string, folderPath: string): Promise<void> {

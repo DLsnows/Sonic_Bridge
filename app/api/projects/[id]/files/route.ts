@@ -53,8 +53,10 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const { id } = await params;
-  const authResult = await authenticate(request, id);
+  const { id: rawId } = await params;
+  const projectId = await resolveProjectId(rawId);
+  if (!projectId) return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  const authResult = await authenticate(request, rawId);
   if (authResult instanceof Response) return authResult;
 
   let formData: FormData;
@@ -66,9 +68,9 @@ export async function POST(
 
   let folderPath = "files";
   if (folderId) {
-    const [folder] = await db.select().from(folders).where(and(eq(folders.id, folderId), eq(folders.projectId, id))).limit(1);
+    const [folder] = await db.select().from(folders).where(and(eq(folders.id, folderId), eq(folders.projectId, projectId))).limit(1);
     if (!folder) return NextResponse.json({ error: "Folder not found" }, { status: 404 });
-    folderPath = folder.name;
+    folderPath = folder.name.replace(/\.\.|\//g, "_");
   }
 
   for (const file of uploadedFiles) {
@@ -85,7 +87,7 @@ export async function POST(
     const mimeType = detectMimeType(file.name, file.type);
     let publicUrl: string;
     try {
-      const result = await uploadFile(id, folderPath, file);
+      const result = await uploadFile(projectId, folderPath, file);
       publicUrl = result.publicUrl;
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error";
@@ -94,7 +96,7 @@ export async function POST(
     }
 
     const [record] = await db.insert(files).values({
-      projectId: id, folderId: folderId ?? null, name: file.name, size: file.size,
+      projectId, folderId: folderId ?? null, name: file.name, size: file.size,
       mimeType, storageKey: publicUrl, uploadedBy: authResult.userId,
     }).returning({ id: files.id, uploadedAt: files.uploadedAt });
 
@@ -102,7 +104,7 @@ export async function POST(
   }
 
   for (const r of results) {
-    createNotifications({ type: "new_file", referenceId: r.id, referenceType: "file", projectId: id, actorUserId: authResult.userId }).catch((e) => console.error("Notification creation failed:", e));
+    createNotifications({ type: "new_file", referenceId: r.id, referenceType: "file", projectId, actorUserId: authResult.userId }).catch((e) => console.error("Notification creation failed:", e));
   }
 
   return NextResponse.json({ files: results }, { status: 201 });
