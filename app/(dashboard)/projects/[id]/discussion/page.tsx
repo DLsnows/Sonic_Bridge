@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { discussionPosts, projectMembers, projects, users } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
+import { resolveProjectId } from "@/lib/project-utils";
 import { DiscussionBoard } from "@/components/discussion";
 
 export default async function DiscussionPage({
@@ -13,7 +14,10 @@ export default async function DiscussionPage({
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const { id: projectId } = await params;
+  const { id } = await params;
+  const projectId = await resolveProjectId(id);
+  if (!projectId) redirect("/projects");
+
   const userId = session.user.id;
 
   const [membership] = await db

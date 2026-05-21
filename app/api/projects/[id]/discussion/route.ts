@@ -146,16 +146,26 @@ export async function POST(
     title = data.title;
   }
 
-  const [post] = await db
-    .insert(discussionPosts)
-    .values({
-      projectId,
-      userId,
-      title,
-      content: data.content,
-      parentId,
-    })
-    .returning();
+  let post: typeof discussionPosts.$inferSelect;
+  try {
+    const inserted = await db
+      .insert(discussionPosts)
+      .values({
+        projectId,
+        userId,
+        title,
+        content: data.content,
+        parentId,
+      })
+      .returning();
+    post = inserted[0];
+  } catch (e) {
+    console.error("Discussion post insert failed:", e);
+    return NextResponse.json(
+      { error: "Database error creating post. The discussion_posts table may be missing the is_ai_generated column — ensure migration 0002_funny_galactus has been applied." },
+      { status: 500 },
+    );
+  }
 
   // Emit notifications (fire-and-forget — don't block the response)
   createNotifications({
