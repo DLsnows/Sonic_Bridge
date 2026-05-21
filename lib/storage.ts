@@ -1,4 +1,4 @@
-import { put, del, list, head } from "@vercel/blob";
+import { del, list, head } from "@vercel/blob";
 import { randomBytes } from "crypto";
 
 const MIME_BY_EXT: Record<string, string> = {
@@ -60,20 +60,6 @@ export function getStorageKey(
 ): string {
   const uniqueName = `${randomBytes(8).toString("hex")}_${filename}`;
   return `${projectId}/${folderPath}/${uniqueName}`.replace(/\/+/g, "/");
-}
-
-export async function saveFile(
-  projectId: string,
-  folderPath: string,
-  file: File,
-): Promise<{ storageKey: string }> {
-  const storageKey = getStorageKey(projectId, folderPath, file.name);
-  await put(storageKey, file, {
-    access: "private",
-    addRandomSuffix: false,
-    contentType: detectMimeType(file.name, file.type),
-  });
-  return { storageKey };
 }
 
 export async function getFileUrl(storageKey: string): Promise<string> {

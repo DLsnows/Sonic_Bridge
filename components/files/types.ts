@@ -13,6 +13,7 @@ export interface FileItem {
   size: number;
   mimeType: string;
   folderId: string | null;
+  url?: string | null;
   uploadedBy: string;
   uploaderName: string;
   uploadedAt: string;

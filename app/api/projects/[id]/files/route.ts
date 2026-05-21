@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { files, folders, users } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { authenticate } from "@/lib/api-auth";
-import { saveFile, getMaxFileSize, detectMimeType } from "@/lib/storage";
+import { getMaxFileSize, detectMimeType } from "@/lib/storage";
 import { createNotifications } from "@/lib/notifications";
 
 export const maxDuration = 300;
@@ -50,21 +50,19 @@ export async function POST(
   const authResult = await authenticate(request, id);
   if (authResult instanceof Response) return authResult;
 
-  let formData: FormData;
+  let body: { files: Array<{ name: string; size: number; mimeType: string; storageKey: string; url?: string }>; folderId?: string };
   try {
-    formData = await request.formData();
+    body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const uploadedFiles = formData.getAll("files") as File[];
-  const folderId = formData.get("folderId") as string | null;
+  const { files: fileList, folderId } = body;
 
-  if (uploadedFiles.length === 0) {
+  if (!fileList || fileList.length === 0) {
     return NextResponse.json({ error: "No files provided" }, { status: 400 });
   }
 
-  let folderPath = "";
   if (folderId) {
     const [folder] = await db
       .select()
@@ -75,25 +73,15 @@ export async function POST(
     if (!folder) {
       return NextResponse.json({ error: "Folder not found" }, { status: 404 });
     }
-
-    const allFolders = await db
-      .select()
-      .from(folders)
-      .where(eq(folders.projectId, id));
-
-    const pathParts: string[] = [folder.name];
-    let current = folder;
-    while (current.parentId) {
-      const parent = allFolders.find((f) => f.id === current.parentId);
-      if (!parent) break;
-      pathParts.unshift(parent.name);
-      current = parent;
-    }
-    folderPath = pathParts.join("/");
   }
 
-  // Validate all files upfront to prevent partial uploads
-  for (const file of uploadedFiles) {
+  for (const file of fileList) {
+    if (!file.name || !file.storageKey) {
+      return NextResponse.json(
+        { error: "Each file must have name and storageKey" },
+        { status: 400 },
+      );
+    }
     const { limit, category } = getMaxFileSize(file.name);
     if (file.size > limit) {
       const limitStr = limit >= 1073741824 ? `${(limit / 1073741824).toFixed(0)}GB` : `${(limit / 1048576).toFixed(0)}MB`;
@@ -113,21 +101,8 @@ export async function POST(
     uploadedAt: Date;
   }> = [];
 
-  for (const file of uploadedFiles) {
-    const mimeType = detectMimeType(file.name, file.type);
-
-    let storageKey: string;
-    try {
-      const result = await saveFile(id, folderPath, file);
-      storageKey = result.storageKey;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
-      console.error(`Failed to store "${file.name}":`, message, err);
-      return NextResponse.json(
-        { error: `Failed to store "${file.name}": ${message}` },
-        { status: 500 },
-      );
-    }
+  for (const file of fileList) {
+    const mimeType = detectMimeType(file.name, file.mimeType);
 
     const [record] = await db
       .insert(files)
@@ -137,7 +112,8 @@ export async function POST(
         name: file.name,
         size: file.size,
         mimeType,
-        storageKey,
+        storageKey: file.storageKey,
+        url: file.url ?? null,
         uploadedBy: authResult.userId,
       })
       .returning();
