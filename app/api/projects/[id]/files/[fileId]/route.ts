@@ -3,7 +3,8 @@ import { db } from "@/lib/db";
 import { files } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { authenticate } from "@/lib/api-auth";
-import { deleteFile, getFileBody } from "@/lib/storage";
+import { deleteFile } from "@/lib/storage";
+import { head } from "@vercel/blob";
 
 export const maxDuration = 300;
 
@@ -26,16 +27,51 @@ export async function GET(
   }
 
   const isInline = request.nextUrl.searchParams.has("inline");
-  const rangeHeader = request.headers.get("range");
   const isAudio = file.mimeType?.startsWith("audio/") ?? false;
   const isVideo = file.mimeType?.startsWith("video/") ?? false;
+  const rangeHeader = request.headers.get("range");
 
-  let result;
   try {
-    result = await getFileBody(file.storageKey, {
-      range: rangeHeader ?? undefined,
-      mimeType: file.mimeType ?? undefined,
-    });
+    const blob = await head(file.storageKey);
+    const fetchHeaders: Record<string, string> = {};
+    if (rangeHeader) fetchHeaders.Range = rangeHeader;
+
+    const response = await fetch(blob.downloadUrl, { headers: fetchHeaders });
+    if (!response.ok) {
+      throw new Error(`Blob fetch failed: HTTP ${response.status}`);
+    }
+
+    if (!response.body) {
+      throw new Error("Blob fetch returned empty body");
+    }
+
+    const asciiName = file.name.replace(/[^\x20-\x7E]/g, "_").replace(/["\\;,]/g, "").trim() || "download";
+    const encodedName = encodeURIComponent(file.name).replace(/'/g, "%27");
+    const useInline = isInline || ((isAudio || isVideo) && rangeHeader);
+    const disposition = useInline
+      ? `inline; filename="${asciiName}"; filename*=UTF-8''${encodedName}`
+      : `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`;
+
+    const headers: Record<string, string> = {
+      "Content-Type": file.mimeType || response.headers.get("content-type") || "application/octet-stream",
+      "Content-Disposition": disposition,
+      "Accept-Ranges": "bytes",
+      "Cache-Control": "private, max-age=60",
+      "X-Content-Type-Options": "nosniff",
+    };
+
+    if (response.status === 206) {
+      const contentRange = response.headers.get("content-range");
+      if (contentRange) headers["Content-Range"] = contentRange;
+      const cl = response.headers.get("content-length");
+      if (cl) headers["Content-Length"] = cl;
+      return new NextResponse(response.body, { status: 206, headers });
+    }
+
+    const contentLength = response.headers.get("content-length");
+    if (contentLength) headers["Content-Length"] = contentLength;
+
+    return new NextResponse(response.body, { headers });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error(`Failed to fetch file "${file.name}" (${file.storageKey}):`, message);
@@ -44,30 +80,6 @@ export async function GET(
       { status: 502 },
     );
   }
-
-  const useInline = isInline || ((isAudio || isVideo) && result.isRange);
-  const asciiName = file.name.replace(/[^\x20-\x7E]/g, "_").replace(/["\\;,]/g, "").trim() || "download";
-  const encodedName = encodeURIComponent(file.name).replace(/'/g, "%27");
-  const disposition = useInline
-    ? `inline; filename="${asciiName}"; filename*=UTF-8''${encodedName}`
-    : `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`;
-
-  const headers: Record<string, string> = {
-    "Content-Type": file.mimeType || result.contentType,
-    "Content-Disposition": disposition,
-    "Accept-Ranges": "bytes",
-    "Cache-Control": "private, max-age=60",
-    "X-Content-Type-Options": "nosniff",
-  };
-
-  if (result.isRange) {
-    headers["Content-Range"] = `bytes ${result.rangeStart}-${result.rangeEnd}/${result.size}`;
-    headers["Content-Length"] = String(result.contentLength);
-    return new NextResponse(result.body, { status: 206, headers });
-  }
-
-  headers["Content-Length"] = String(result.contentLength);
-  return new NextResponse(result.body, { headers });
 }
 
 export async function HEAD(

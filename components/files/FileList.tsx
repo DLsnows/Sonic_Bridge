@@ -10,7 +10,7 @@ interface FileListProps {
   loading: boolean;
   projectId: string;
   onDelete: (fileId: string) => void;
-  onDownload: (fileId: string, fileName: string) => void;
+  onDownload: (fileId: string) => void;
 }
 
 function formatSize(bytes: number): string {
@@ -44,12 +44,11 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
   const [audioError, setAudioError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playingFileIdRef = useRef<string | null>(null);
-  const audioListenersRef = useRef<Record<string, () => void> | null>(null);
   const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const audioListenersRef = useRef<Record<string, () => void> | null>(null);
 
   const handlePlayAudio = useCallback(
-    (fileId: string, mimeType: string) => {
-      // Toggle: clicking the currently playing file stops playback
+    (fileId: string, fileUrl: string, mimeType?: string) => {
       if (playingFileIdRef.current === fileId) {
         audioRef.current?.pause();
         audioRef.current = null;
@@ -59,35 +58,35 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
         return;
       }
 
-      // Check browser support before attempting playback
-      const testAudio = document.createElement("audio");
-      if (mimeType && testAudio.canPlayType(mimeType) === "") {
-        setAudioError(`Browser does not support ${mimeType} playback`);
-        errorTimeoutRef.current = setTimeout(() => setAudioError(null), 5000);
-        return;
+      if (mimeType) {
+        const testAudio = document.createElement("audio");
+        if (testAudio.canPlayType(mimeType) === "") {
+          setAudioError(`Browser does not support ${mimeType} playback`);
+          if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+          errorTimeoutRef.current = setTimeout(() => setAudioError(null), 5000);
+          return;
+        }
       }
 
-      // Clean up previous audio element
+      // Clean up previous audio element and listeners
       if (audioRef.current) {
+        const prevListeners = audioListenersRef.current;
+        if (prevListeners) {
+          audioRef.current.removeEventListener("ended", prevListeners.ended);
+          audioRef.current.removeEventListener("pause", prevListeners.pause);
+          audioRef.current.removeEventListener("error", prevListeners.error);
+          audioRef.current.removeEventListener("canplay", prevListeners.canplay);
+          audioListenersRef.current = null;
+        }
         audioRef.current.pause();
         audioRef.current.src = "";
         audioRef.current = null;
       }
 
-      // Clear any lingering error timeout
-      if (errorTimeoutRef.current) {
-        clearTimeout(errorTimeoutRef.current);
-        errorTimeoutRef.current = null;
-      }
-
       setAudioError(null);
       setAudioLoading(true);
 
-      const audio = new Audio();
-      const source = document.createElement("source");
-      source.src = `/api/projects/${projectId}/files/${fileId}?inline=1`;
-      if (mimeType) source.type = mimeType;
-      audio.appendChild(source);
+      const audio = new Audio(fileUrl);
       audio.preload = "auto";
 
       const onEnded = () => {
@@ -95,7 +94,6 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
         setPlayingFileId(null);
         setAudioLoading(false);
       };
-
       const onPause = () => {
         if (playingFileIdRef.current === fileId) {
           playingFileIdRef.current = null;
@@ -103,20 +101,15 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
           setAudioLoading(false);
         }
       };
-
       const onError = () => {
-        const errMsg = audio.error
-          ? `MEDIA_${audio.error.code}: ${audio.error.message}`
-          : "MEDIA_ELEMENT_ERROR: Format error";
-        console.error("Audio playback error:", errMsg);
-        setAudioError(errMsg);
+        console.error("Audio playback error:", audio.error);
+        setAudioError("Playback failed. The file may be unavailable.");
         playingFileIdRef.current = null;
         setPlayingFileId(null);
         setAudioLoading(false);
-        // Auto-clear error after 5 seconds
+        if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
         errorTimeoutRef.current = setTimeout(() => setAudioError(null), 5000);
       };
-
       const onCanPlay = () => {
         setAudioLoading(false);
       };
@@ -125,30 +118,28 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
       audio.addEventListener("pause", onPause);
       audio.addEventListener("error", onError);
       audio.addEventListener("canplay", onCanPlay);
-
       audioListenersRef.current = { ended: onEnded, pause: onPause, error: onError, canplay: onCanPlay };
 
       audio.play().catch((err) => {
         console.error("Audio play() rejected:", err);
+        setAudioError("Playback failed. The file may be unavailable.");
         setAudioLoading(false);
         playingFileIdRef.current = null;
         setPlayingFileId(null);
+        if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+        errorTimeoutRef.current = setTimeout(() => setAudioError(null), 5000);
       });
 
       audioRef.current = audio;
       playingFileIdRef.current = fileId;
       setPlayingFileId(fileId);
     },
-    [projectId],
+    [],
   );
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (errorTimeoutRef.current) {
-        clearTimeout(errorTimeoutRef.current);
-        errorTimeoutRef.current = null;
-      }
+      if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
       if (audioRef.current) {
         const listeners = audioListenersRef.current;
         if (listeners) {
@@ -178,7 +169,7 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
   if (files.length === 0) {
     return (
       <div className="text-center py-16">
-        <div className="text-4xl mb-3">◫</div>
+        <div className="text-4xl mb-3">?</div>
         <p className="text-[#A0A0B0] text-sm">
           No files in this folder. Upload files to get started.
         </p>
@@ -226,12 +217,12 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
                       <Button
                         variant={playingFileId === file.id ? "primary" : "ghost"}
                         size="sm"
-                        onClick={() => handlePlayAudio(file.id, file.mimeType)}
+                        onClick={() => handlePlayAudio(file.id, `/api/projects/${projectId}/files/${file.id}?inline=1`, file.mimeType)}
                       >
                         {playingFileId === file.id && audioLoading ? "..." : playingFileId === file.id ? "⏸" : "▶"}
                       </Button>
                     )}
-                    <Button variant="ghost" size="sm" onClick={() => onDownload(file.id, file.name)}>DL</Button>
+                    <Button variant="ghost" size="sm" onClick={() => onDownload(file.id)}>DL</Button>
                     <Button variant="danger" size="sm" onClick={() => setDeleteTarget({ id: file.id, name: file.name })}>DEL</Button>
                   </div>
                 </td>
