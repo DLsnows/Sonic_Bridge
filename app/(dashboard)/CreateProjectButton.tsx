@@ -12,17 +12,13 @@ export function CreateProjectButton() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [customId, setCustomId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [customIdError, setCustomIdError] = useState("");
 
   const resetForm = () => {
     setName("");
     setDescription("");
-    setCustomId("");
     setError("");
-    setCustomIdError("");
     setLoading(false);
   };
 
@@ -37,11 +33,9 @@ export function CreateProjectButton() {
       return;
     }
     setError("");
-    setCustomIdError("");
     setLoading(true);
 
     const body: Record<string, string> = { name: name.trim(), description: description.trim() };
-    if (customId.trim()) body.customId = customId.trim();
 
     try {
       const res = await fetch("/api/projects", {
@@ -53,18 +47,16 @@ export function CreateProjectButton() {
       if (res.ok) {
         const data = await res.json();
         setOpen(false);
+        window.dispatchEvent(new CustomEvent("project-created"));
         router.push(projectHref(data));
         router.refresh();
       } else {
         let data: { error?: string; details?: { fieldErrors?: Record<string, string[]> } } = {};
         try { data = await res.json(); } catch { /* non-JSON response */ }
         setError(data.error ?? "Failed to create project");
-        if (data.details?.fieldErrors?.customId) {
-          setCustomIdError(data.details.fieldErrors.customId.join(" "));
-        }
       }
     } catch {
-      setError("Network error — please check your connection and try again");
+      setError("Network error - please check your connection and try again");
     }
     setLoading(false);
   };
@@ -97,16 +89,6 @@ export function CreateProjectButton() {
             placeholder="My Album Project"
             required
           />
-          <Input
-            label="Custom ID (optional)"
-            value={customId}
-            onChange={(e) => setCustomId(e.target.value)}
-            placeholder="my-band (letters, numbers, hyphens, underscores)"
-            error={customIdError}
-          />
-          <p className="text-[10px] text-[#A0A0B0] -mt-2">
-            4-32 chars, alphanumeric, hyphens, underscores. Leave blank for auto-generated UUID.
-          </p>
           <Input
             label="Description (optional)"
             value={description}
