@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useRef } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
@@ -8,6 +8,8 @@ interface PostFormProps {
   mode: "thread" | "reply" | "edit";
   initialTitle?: string;
   initialContent?: string;
+  availableFiles?: { id: string; name: string }[];
+  projectId?: string;
   onSubmit: (data: { title: string; content: string }) => Promise<void>;
   onCancel?: () => void;
 }
@@ -16,6 +18,8 @@ export function PostForm({
   mode,
   initialTitle = "",
   initialContent = "",
+  availableFiles,
+  projectId,
   onSubmit,
   onCancel,
 }: PostFormProps) {
@@ -23,6 +27,8 @@ export function PostForm({
   const [content, setContent] = useState(initialContent);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [showFilePicker, setShowFilePicker] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -52,6 +58,27 @@ export function PostForm({
     }
   };
 
+  const insertCitation = (fileId: string, fileName: string) => {
+    const safeName = fileName.replace(/[[\]()]/g, "\\$&");
+    const citation = `[${safeName}](/projects/${projectId}/files?file=${fileId})`;
+    const textarea = textareaRef.current;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const currentValue = textarea.value;
+      const newContent = currentValue.slice(0, start) + citation + currentValue.slice(end);
+      setContent(newContent);
+      // Restore cursor position after citation
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + citation.length, start + citation.length);
+      }, 0);
+    } else {
+      setContent((prev) => prev + " " + citation);
+    }
+    setShowFilePicker(false);
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       {mode === "thread" && (
@@ -66,6 +93,7 @@ export function PostForm({
 
       <div className="flex flex-col gap-1.5">
         <textarea
+          ref={textareaRef}
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder={
@@ -83,9 +111,36 @@ export function PostForm({
             focus:outline-none focus:border-[#FF8C00]/50 focus:shadow-[0_0_15px_rgba(0,255,65,0.1)]
             hover:border-white/20"
         />
-        <p className="text-xs text-[#A0A0B0]/60">
-          Styling with Markdown is supported -- **bold**, *italic*, `code`, [links](url)
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-[#A0A0B0]/60">
+            Styling with Markdown is supported -- **bold**, *italic*, `code`, [links](url)
+          </p>
+          {availableFiles && availableFiles.length > 0 && projectId && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowFilePicker(!showFilePicker)}
+                className="text-[10px] text-[#FF8C00]/70 hover:text-[#FF8C00] font-mono transition-colors"
+              >
+                {showFilePicker ? "Close" : "+ Cite File"}
+              </button>
+              {showFilePicker && (
+                <div className="absolute bottom-6 right-0 bg-[#0A0A0F] border border-white/10 rounded-lg shadow-lg z-50 w-56 max-h-40 overflow-y-auto">
+                  {availableFiles.map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => insertCitation(f.id, f.name)}
+                      className="w-full text-left px-3 py-1.5 text-xs text-[#D0D0D0] hover:bg-white/5 truncate"
+                    >
+                      {f.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {error && <p className="text-xs text-[#FF4444]">{error}</p>}
