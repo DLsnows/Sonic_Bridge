@@ -113,7 +113,14 @@ export function UploadZone({ projectId, folderId, onComplete, onClose }: UploadZ
             ))}
           </div>
         )}
-        {error && <p className="text-xs text-[#FF4444]">{error}</p>}
+        {error && (
+          <div className="space-y-1">
+            <p className="text-xs text-[#FF4444]">{error}</p>
+            {(error.toLowerCase().includes("timeout") || error.toLowerCase().includes("duration")) && (
+              <p className="text-[10px] text-[#FFB800]">The file may be too large for upload. Try a smaller file or a compressed format.</p>
+            )}
+          </div>
+        )}
       </div>
     </Modal>
   );

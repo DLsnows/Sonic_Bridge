@@ -55,6 +55,7 @@ export async function GET(
     "Content-Disposition": disposition,
     "Accept-Ranges": "bytes",
     "Cache-Control": "private, max-age=60",
+    "X-Content-Type-Options": "nosniff",
   };
 
   if (result.isRange) {
