@@ -340,7 +340,7 @@ export function ThreadCard({
             </div>
           )}
 
-          {aiFormatError && (
+          {aiFormatError && formattingId === null && (
             <div className="p-2 rounded bg-[#FF4444]/10 border border-[#FF4444]/30 text-xs text-[#FF4444] mt-2">
               {aiFormatError.toLowerCase().includes("not configured") ? (
                 isAdmin ? (
