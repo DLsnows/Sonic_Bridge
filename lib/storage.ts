@@ -5,13 +5,17 @@ const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
 const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
 const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
 const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || "sonicbridge-files";
-const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL;
+const rawUrl = process.env.R2_PUBLIC_URL;
+const R2_PUBLIC_URL = rawUrl ? rawUrl.replace(/\/+$/, "") : undefined;
 
 let _s3: S3Client | null = null;
 function getS3(): S3Client {
   if (!_s3) {
     if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_PUBLIC_URL) {
-      throw new Error("Missing R2 environment variables (R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_PUBLIC_URL).");
+      throw new Error("Missing R2 environment variables.");
+    }
+    try { new URL(R2_PUBLIC_URL); } catch {
+      throw new Error("R2_PUBLIC_URL is not a valid URL.");
     }
     _s3 = new S3Client({
       region: "auto",
