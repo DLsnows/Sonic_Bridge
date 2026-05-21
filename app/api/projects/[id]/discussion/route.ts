@@ -117,13 +117,14 @@ export async function POST(
 
   let title: string;
   let parentId: string | null = null;
+  let parentUserId: string | null = null;
 
   if (data.hasParent) {
     title = "";
     parentId = data.parentId;
 
     const [parent] = await db
-      .select({ id: discussionPosts.id })
+      .select({ id: discussionPosts.id, userId: discussionPosts.userId })
       .from(discussionPosts)
       .where(
         and(
@@ -139,6 +140,7 @@ export async function POST(
         { status: 404 },
       );
     }
+    parentUserId = parent.userId;
   } else {
     title = data.title;
   }
@@ -161,6 +163,7 @@ export async function POST(
     referenceType: "discussion_post",
     projectId,
     actorUserId: userId,
+    parentUserId: parentUserId ?? undefined,
   }).catch((e) => console.error("Notification creation failed:", e));
 
   const [result] = await db

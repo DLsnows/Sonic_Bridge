@@ -154,13 +154,15 @@ export async function POST(
     }
   }
 
-  createNotifications({
-    type: "new_file",
-    referenceId: results[0]?.id ?? id,
-    referenceType: "file",
-    projectId: id,
-    actorUserId: authResult.userId,
-  }).catch((e) => console.error("Notification creation failed:", e));
+  if (results.length > 0) {
+    createNotifications({
+      type: "new_file",
+      referenceId: results[0].id,
+      referenceType: "file",
+      projectId: id,
+      actorUserId: authResult.userId,
+    }).catch((e) => console.error("Notification creation failed:", e));
+  }
 
   return NextResponse.json({ files: results }, { status: 201 });
 }

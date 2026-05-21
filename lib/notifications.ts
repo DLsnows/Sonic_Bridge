@@ -35,23 +35,27 @@ export async function createNotifications(params: {
 
   const memberIds = members.map((m) => m.userId);
 
-  for (const userId of memberIds) {
-    await db.insert(notifications).values({
-      userId,
-      projectId,
-      type,
-      referenceId,
-      referenceType,
-    });
-  }
+  const rows: Array<{
+    userId: string; projectId: string; type: string; referenceId: string; referenceType: string
+  }> = memberIds.map((userId) => ({
+    userId,
+    projectId,
+    type,
+    referenceId,
+    referenceType,
+  }));
 
   if (type === "new_reply" && parentUserId && parentUserId !== actorUserId && !memberIds.includes(parentUserId)) {
-    await db.insert(notifications).values({
+    rows.push({
       userId: parentUserId,
       projectId,
       type: "reply_to_user",
       referenceId,
       referenceType,
     });
+  }
+
+  if (rows.length > 0) {
+    await db.insert(notifications).values(rows);
   }
 }
