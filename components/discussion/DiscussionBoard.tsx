@@ -263,6 +263,8 @@ export function DiscussionBoard({
         open={showNewThread}
         onClose={() => setShowNewThread(false)}
         title="New Thread"
+        titleClass="text-[#FF8C00]"
+        closeOnOverlayClick={false}
       >
         <PostForm
           mode="thread"
