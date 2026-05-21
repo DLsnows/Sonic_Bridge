@@ -8,7 +8,6 @@ import { Modal } from "@/components/ui/Modal";
 interface FileListProps {
   files: FileItem[];
   loading: boolean;
-  projectId: string;
   onDelete: (fileId: string) => void;
   onDownload: (fileId: string, fileName: string) => void;
 }
@@ -37,7 +36,7 @@ const iconColors: Record<string, string> = {
   FILE: "text-[#A0A0B0]",
 };
 
-export function FileList({ files, loading, projectId, onDelete, onDownload }: FileListProps) {
+export function FileList({ files, loading, onDelete, onDownload }: FileListProps) {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [playingFileId, setPlayingFileId] = useState<string | null>(null);
   const [audioLoading, setAudioLoading] = useState(false);

@@ -117,7 +117,7 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
             </h3>
             <Button size="sm" variant="primary" onClick={() => setShowUpload(true)}>Upload Files</Button>
           </div>
-          <FileList files={files} loading={loading} projectId={projectId} onDelete={handleDelete} onDownload={handleDownload} />
+          <FileList files={files} loading={loading} onDelete={handleDelete} onDownload={handleDownload} />
         </div>
       </main>
       {showUpload && <UploadZone projectId={projectId} folderId={currentFolderId} onComplete={handleUploadComplete} onClose={() => setShowUpload(false)} />}
