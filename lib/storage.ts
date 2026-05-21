@@ -86,7 +86,15 @@ export async function deleteFile(urlOrKey: string): Promise<void> {
       key = new URL(urlOrKey).pathname.slice(1);
     } catch { /* not a valid URL */ }
   }
-  await getS3().send(new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: key }));
+  try {
+    await getS3().send(new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: key }));
+  } catch (err: any) {
+    const code = err?.Code || err?.name || "";
+    if (code === "NoSuchKey" || code === "NotFound" || err?.$metadata?.httpStatusCode === 404) {
+      return; // already deleted, not an error
+    }
+    throw err;
+  }
 }
 
 export async function deleteFolderContents(projectId: string, folderPath: string): Promise<void> {
