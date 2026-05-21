@@ -51,7 +51,7 @@ export async function createNotifications(params: {
       .from(projectMembers)
       .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, parentUserId)))
       .limit(1);
-    if (isMember && !memberIds.includes(parentUserId)) {
+    if (isMember) {
       rows.push({
         userId: parentUserId,
         projectId,
