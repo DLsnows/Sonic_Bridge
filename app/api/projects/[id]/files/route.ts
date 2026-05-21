@@ -113,7 +113,6 @@ export async function POST(
         size: file.size,
         mimeType,
         storageKey: file.storageKey,
-        url: file.url ?? null,
         uploadedBy: authResult.userId,
       })
       .returning();
