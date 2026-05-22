@@ -161,7 +161,7 @@ export function NotificationBellInline() {
         />
       </span>
       {dropdownOpen && (
-        <div ref={dropdownRef} className="mt-2">
+        <div ref={dropdownRef} className="absolute right-0 mt-2 z-50 min-w-[280px]">
           <NotificationDropdown onClose={() => setDropdownOpen(false)} />
         </div>
       )}
