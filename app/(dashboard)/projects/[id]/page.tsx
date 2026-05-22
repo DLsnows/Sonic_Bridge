@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { MemberAvatar } from "@/components/MemberAvatar";
 import { resolveProjectId } from "@/lib/project-utils";
 import { ProjectStatusBadge } from "@/components/ProjectStatusBadge";
+import { CreativeSpaceStatus } from "@/components/CreativeSpaceStatus";
 
 const navCards = [
   {
@@ -181,12 +182,16 @@ export default async function ProjectPage({
                 ) : (
                   <div className="space-y-1.5">
                     {upcomingEvents.map((evt) => (
-                      <div key={evt.id} className="flex items-center justify-between text-xs">
+                      <Link
+                        key={evt.id}
+                        href={`/projects/${project.id}/schedule?event=${evt.id}`}
+                        className="flex items-center justify-between text-xs hover:bg-white/[0.03] rounded px-1 py-0.5 -mx-1 transition-colors"
+                      >
                         <span className="text-[#F0F0F0] truncate max-w-[180px]">{evt.title}</span>
                         <span className="text-[#A0A0B0] font-mono text-[10px] shrink-0 ml-2">
                           {evt.startTime.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                         </span>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 )}
@@ -202,12 +207,16 @@ export default async function ProjectPage({
                 ) : (
                   <div className="space-y-1.5">
                     {recentFiles.map((f) => (
-                      <div key={f.id} className="flex items-center justify-between text-xs">
+                      <Link
+                        key={f.id}
+                        href={`/projects/${project.id}/files?file=${f.id}`}
+                        className="flex items-center justify-between text-xs hover:bg-white/[0.03] rounded px-1 py-0.5 -mx-1 transition-colors"
+                      >
                         <span className="text-[#F0F0F0] truncate max-w-[180px]">{f.name}</span>
                         <span className="text-[#A0A0B0] font-mono text-[10px] shrink-0 ml-2">
                           {(f.size / 1024).toFixed(0)} KB
                         </span>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 )}
@@ -223,15 +232,27 @@ export default async function ProjectPage({
                 ) : (
                   <div className="space-y-1.5">
                     {recentThreads.map((post) => (
-                      <div key={post.id} className="flex items-center justify-between text-xs">
+                      <Link
+                        key={post.id}
+                        href={`/projects/${project.id}/discussion?post=${post.id}`}
+                        className="flex items-center justify-between text-xs hover:bg-white/[0.03] rounded px-1 py-0.5 -mx-1 transition-colors"
+                      >
                         <span className="text-[#F0F0F0] truncate max-w-[180px]">{post.title}</span>
                         <span className="text-[#A0A0B0] text-[10px] shrink-0 ml-2">
                           {post.username}
                         </span>
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* Creative Space */}
+              <div>
+                <h4 className="font-['Share_Tech_Mono',monospace] text-[10px] text-[#00F0FF] uppercase tracking-wider mb-2">
+                  Creative Space
+                </h4>
+                <CreativeSpaceStatus projectId={project.id} />
               </div>
             </div>
           </GlassPanel>
