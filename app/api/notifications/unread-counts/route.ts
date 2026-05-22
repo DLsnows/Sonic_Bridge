@@ -10,7 +10,6 @@ import {
   projectViews,
 } from "@/lib/db/schema";
 import { eq, and, isNull, gte, inArray, ne, gt, count } from "drizzle-orm";
-import { upsertProjectView } from "@/lib/project-views";
 
 export async function GET() {
   const session = await auth();
