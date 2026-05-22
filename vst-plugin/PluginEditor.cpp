@@ -201,9 +201,10 @@ void SonicBridgeAudioProcessorEditor::resized() {
 }
 
 void SonicBridgeAudioProcessorEditor::timerCallback() {
-  // Guard against calls during teardown — the processor reference
-  // may be invalid if the editor outlives the processor.
-  if (&mProcessor == nullptr) return;
+  // Teardown safety: the destructor calls stopTimer() before any member
+  // cleanup, guaranteeing this callback never fires during destruction.
+  // The try-catch blocks in updateStatus()/updateMeters() provide an
+  // additional safety net for edge cases during host shutdown.
 
   updateStatus();
   updateMeters();
