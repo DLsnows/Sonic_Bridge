@@ -34,8 +34,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const asciiName = file.name.replace(/[^\x20-\x7E]/g, "_").replace(/["\\;,]/g, "").trim() || "download";
     const encodedName = encodeURIComponent(file.name).replace(/'/g, "%27");
-    const useInline = isInline || (!!rangeHeader && !!(file.mimeType?.startsWith("audio/")));
-
+    const isAudio = file.mimeType?.startsWith("audio/") ?? false;
+    const isVideo = file.mimeType?.startsWith("video/") ?? false;
+    const useInline = isInline || (!!rangeHeader && (isAudio || isVideo));
     const headers: Record<string, string> = {
       "Content-Type": file.mimeType || response.headers.get("content-type") || "application/octet-stream",
       "Content-Disposition": `${useInline ? "inline" : "attachment"}; filename="${asciiName}"; filename*=UTF-8''${encodedName}`,
