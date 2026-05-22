@@ -36,6 +36,7 @@ interface ThreadCardProps {
   onAiFormat: (postId: string) => Promise<void>;
   onSetReplying: (id: string | null) => void;
   onSetEditing: (id: string | null) => void;
+  repliesMap: Map<string, DiscussionPost[]>;
 }
 
 function timeAgo(dateStr: string): string {
@@ -83,6 +84,7 @@ export function ThreadCard({
   onAiFormat,
   onSetReplying,
   onSetEditing,
+  repliesMap,
 }: ThreadCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -402,6 +404,46 @@ export function ThreadCard({
                         }}
                         onCancel={() => onSetReplying(null)}
                       />
+                    </div>
+                  )}
+                  {repliesMap.get(reply.id) && repliesMap.get(reply.id)!.length > 0 && (
+                    <div className="mt-2 ml-6 pl-3 border-l border-[#FF8C00]/5 space-y-2">
+                      {repliesMap.get(reply.id)!.map((nested) => (
+                        <div key={nested.id} className="animate-fade-in">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="w-4 h-4 rounded-full bg-[#FF8C00]/10 border border-[#FF8C00]/20 flex items-center justify-center text-[8px] text-[#FF8C00] font-['Share_Tech_Mono',monospace] shrink-0">
+                              {nested.username.charAt(0).toUpperCase()}
+                            </span>
+                            <span className="text-[10px] text-[#F0F0F0] font-medium">
+                              {nested.username}
+                            </span>
+                            <span className="text-[9px] text-[#A0A0B0]/60">
+                              {timeAgo(nested.createdAt)}
+                            </span>
+                          </div>
+                          <PostBody post={nested} />
+                          <div className="flex items-center gap-1 mt-1">
+                            {(nested.userId === currentUserId || isAdmin) && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                loading={deletingReplyId === nested.id}
+                                onClick={async () => {
+                                  if (!confirm("Delete this reply?")) return;
+                                  setDeletingReplyId(nested.id);
+                                  setDeleteError(null);
+                                  try { await onDelete(nested.id); } catch {
+                                    setDeleteError("Failed to delete reply");
+                                  } finally { setDeletingReplyId(null); }
+                                }}
+                                className="hover:text-[#FF4444] text-[10px]"
+                              >
+                                Del
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
