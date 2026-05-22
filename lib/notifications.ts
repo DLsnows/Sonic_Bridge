@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { notifications, projectMembers, discussionPosts } from "@/lib/db/schema";
-import { eq, and, ne, isNull, inArray } from "drizzle-orm";
+import { eq, and, ne, inArray } from "drizzle-orm";
 
 /**
  * Creates targeted reply_to_user notifications for all thread participants.
@@ -23,28 +23,10 @@ export async function createReplyNotifications(params: {
     .limit(1);
   if (!post || post.isAiGenerated) return;
 
-  // Gather all distinct participants in this thread:
-  // the root ancestor, the direct parent, and everyone who has already replied.
-  const participants = await db
-    .selectDistinct({ userId: discussionPosts.userId })
-    .from(discussionPosts)
-    .where(
-      and(
-        eq(discussionPosts.projectId, projectId),
-        ne(discussionPosts.isAiGenerated, true),
-      ),
-    );
-
-  // Walk to root to find the thread ancestor
-  const ancestorIds = await findThreadAncestorIds(parentId, projectId);
-
-  // Combine: direct participants + ancestors
-  const allUserIds = new Set<string>();
-  for (const p of participants) allUserIds.add(p.userId);
-  for (const id of ancestorIds) allUserIds.add(id);
-  allUserIds.delete(actorUserId);
-
-  if (allUserIds.size === 0) return;
+  // Walk up to find the thread root, then walk down to find all participants
+  const participantIds = await findThreadParticipantIds(parentId, projectId);
+  participantIds.delete(actorUserId);
+  if (participantIds.size === 0) return;
 
   // Verify each user is still a project member
   const memberRows = await db
@@ -53,7 +35,7 @@ export async function createReplyNotifications(params: {
     .where(
       and(
         eq(projectMembers.projectId, projectId),
-        inArray(projectMembers.userId, [...allUserIds]),
+        inArray(projectMembers.userId, [...participantIds]),
       ),
     );
   const validUserIds = new Set(memberRows.map((r) => r.userId));
@@ -71,14 +53,17 @@ export async function createReplyNotifications(params: {
   }
 }
 
-/** Walk parent chain to root to find all ancestors in a thread. */
-async function findThreadAncestorIds(
+/** Walk up to root, then walk down all branches to collect every participant in the thread. */
+async function findThreadParticipantIds(
   parentId: string,
   projectId: string,
-): Promise<string[]> {
-  const ids: string[] = [];
-  let current: string | null = parentId;
+): Promise<Set<string>> {
+  const userIds = new Set<string>();
+  const allPostIds = new Set<string>();
   const visited = new Set<string>();
+
+  // Phase 1: walk up to root, collecting all post IDs and userIds along the path
+  let current: string | null = parentId;
   while (current && !visited.has(current)) {
     visited.add(current);
     const [row] = await db
@@ -95,8 +80,40 @@ async function findThreadAncestorIds(
       )
       .limit(1);
     if (!row) break;
-    ids.push(row.userId);
+    allPostIds.add(current);
+    userIds.add(row.userId);
     current = row.parentId;
   }
-  return ids;
+
+  // Phase 2: walk down from all collected post IDs to find all descendants
+  // (handles multi-branch threads where siblings also replied)
+  const frontier = [...allPostIds];
+  let depth = 0;
+  while (frontier.length > 0 && depth < 20) {
+    depth++;
+    const children = await db
+      .select({
+        id: discussionPosts.id,
+        userId: discussionPosts.userId,
+      })
+      .from(discussionPosts)
+      .where(
+        and(
+          eq(discussionPosts.projectId, projectId),
+          inArray(discussionPosts.parentId, frontier),
+          ne(discussionPosts.isAiGenerated, true),
+        ),
+      );
+
+    frontier.length = 0;
+    for (const child of children) {
+      if (!allPostIds.has(child.id)) {
+        allPostIds.add(child.id);
+        userIds.add(child.userId);
+        frontier.push(child.id);
+      }
+    }
+  }
+
+  return userIds;
 }

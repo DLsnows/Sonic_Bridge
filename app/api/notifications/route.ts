@@ -69,26 +69,32 @@ export async function GET() {
     .orderBy(desc(notifications.createdAt))
     .limit(50);
 
-  // For targeted reply notifications, fetch title + actor from the discussion post
-  for (const n of targetedNotifs) {
-    let title: string | undefined;
-    let actorName: string | undefined;
-    if (n.referenceType === "discussion_post") {
-      const [post] = await db
-        .select({
-          title: discussionPosts.title,
-          content: discussionPosts.content,
-          username: users.username,
-        })
-        .from(discussionPosts)
-        .innerJoin(users, eq(discussionPosts.userId, users.id))
-        .where(eq(discussionPosts.id, n.referenceId))
-        .limit(1);
-      if (post) {
-        title = post.title || post.content?.slice(0, 80);
-        actorName = post.username ?? undefined;
-      }
+  // For targeted reply notifications, batch fetch title + actor from discussion posts
+  const discPostIds = targetedNotifs
+    .filter((n) => n.referenceType === "discussion_post")
+    .map((n) => n.referenceId);
+  const postMetaMap = new Map<string, { title: string; actorName: string }>();
+  if (discPostIds.length > 0) {
+    const postMetas = await db
+      .select({
+        id: discussionPosts.id,
+        title: discussionPosts.title,
+        content: discussionPosts.content,
+        username: users.username,
+      })
+      .from(discussionPosts)
+      .innerJoin(users, eq(discussionPosts.userId, users.id))
+      .where(inArray(discussionPosts.id, discPostIds));
+    for (const p of postMetas) {
+      postMetaMap.set(p.id, {
+        title: p.title || p.content?.slice(0, 80) || "",
+        actorName: p.username ?? "Unknown",
+      });
     }
+  }
+
+  for (const n of targetedNotifs) {
+    const meta = postMetaMap.get(n.referenceId);
     addItem({
       id: n.id,
       projectId: n.projectId,
@@ -97,8 +103,8 @@ export async function GET() {
       referenceType: n.referenceType,
       isRead: n.isRead,
       createdAt: n.createdAt.toISOString(),
-      title,
-      actorName,
+      title: meta?.title,
+      actorName: meta?.actorName,
     });
   }
 
