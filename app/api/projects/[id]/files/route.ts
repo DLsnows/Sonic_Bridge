@@ -86,9 +86,10 @@ export async function POST(
 
   for (const file of uploadedFiles) {
     const mimeType = detectMimeType(file.name, file.type);
+    let storageKey: string;
     try {
       const result = await uploadFile(projectId, folderPath, file);
-      const storageKey = result.storageKey;
+      storageKey = result.storageKey;
     } catch (err) {
       console.error(`Failed to upload "${file.name}" to R2:`, err instanceof Error ? err.message : err);
       return NextResponse.json({ error: `Failed to store "${file.name}". Please try again.` }, { status: 500 });
