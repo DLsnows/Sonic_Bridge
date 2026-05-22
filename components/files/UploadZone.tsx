@@ -41,20 +41,63 @@ export function UploadZone({ projectId, folderId, onComplete, onClose }: UploadZ
 
   const handleUpload = async () => {
     if (selectedFiles.length === 0) return;
-    setUploading(true); setError("");
-    try {
-      const formData = new FormData();
-      for (const f of selectedFiles) formData.append("files", f);
-      if (folderId) formData.append("folderId", folderId);
-      const res = await fetch(`/api/projects/${projectId}/files`, { method: "POST", body: formData });
-      if (res.ok) { onComplete(); }
-      else {
-        let message = "Upload failed";
-        try { const data = await res.json(); message = data.error ?? message; } catch {}
-        setError(message);
+    setUploading(true);
+    setError("");
+
+    for (let i = 0; i < selectedFiles.length; i++) {
+      const file = selectedFiles[i];
+      try {
+        // Step 1: Get presigned URL
+        const urlParams = new URLSearchParams({ name: file.name, type: file.type });
+        if (folderId) urlParams.set("folderId", folderId);
+        const presignedRes = await fetch(
+          `/api/projects/${projectId}/files/upload-url?${urlParams}`,
+        );
+        if (!presignedRes.ok) {
+          const errData = await presignedRes.json().catch(() => ({}));
+          throw new Error(errData.error ?? "Failed to get upload URL");
+        }
+        const { uploadUrl, storageKey } = await presignedRes.json();
+
+        // Step 2: Upload directly to R2
+        const r2Res = await fetch(uploadUrl, {
+          method: "PUT",
+          body: file,
+          headers: { "Content-Type": file.type || "application/octet-stream" },
+        });
+        if (!r2Res.ok) {
+          throw new Error(`Upload to storage failed (${r2Res.status})`);
+        }
+
+        // Step 3: Register file in DB
+        const dbRes = await fetch(`/api/projects/${projectId}/files`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            storageKey,
+            name: file.name,
+            size: file.size,
+            mimeType: file.type || "application/octet-stream",
+            folderId: folderId ?? null,
+          }),
+        });
+        if (!dbRes.ok) {
+          const errData = await dbRes.json().catch(() => ({}));
+          throw new Error(errData.error ?? "Failed to register file");
+        }
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? `${file.name}: ${err.message}`
+            : `${file.name}: Upload failed`,
+        );
+        setUploading(false);
+        return;
       }
-    } catch (err) { console.error("Upload failed:", err); setError("Network error — please try again"); }
+    }
+
     setUploading(false);
+    onComplete();
   };
 
   return (
