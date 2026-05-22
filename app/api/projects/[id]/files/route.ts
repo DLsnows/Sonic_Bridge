@@ -4,7 +4,6 @@ import { db } from "@/lib/db";
 import { files, folders, users } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { authenticate } from "@/lib/api-auth";
-import { uploadFile, getMaxFileSize, detectMimeType } from "@/lib/storage";
 import { resolveProjectId } from "@/lib/project-utils";
 
 export const maxDuration = 300;
