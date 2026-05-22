@@ -132,13 +132,18 @@ export function NotificationBellInline({ collapsed }: { collapsed: boolean }) {
     dropdownOpen,
     setDropdownOpen,
     fetchNotifications,
+    fetchUnreadCounts,
   } = useNotificationStore();
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
+    fetchUnreadCounts();
+    const interval = setInterval(() => {
+      fetchNotifications();
+      fetchUnreadCounts();
+    }, 30000);
     return () => clearInterval(interval);
-  }, [fetchNotifications]);
+  }, [fetchNotifications, fetchUnreadCounts]);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const bellRef = useRef<HTMLSpanElement>(null);

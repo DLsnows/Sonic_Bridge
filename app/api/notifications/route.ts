@@ -7,9 +7,10 @@ import {
   files,
   scheduleEvents,
   projectMembers,
+  projectViews,
   users,
 } from "@/lib/db/schema";
-import { eq, desc, and, isNull, gte, inArray, asc, ne } from "drizzle-orm";
+import { eq, desc, and, isNull, gte, inArray, asc, ne, or, gt } from "drizzle-orm";
 
 interface ActivityItem {
   id: string;
@@ -128,7 +129,6 @@ export async function GET() {
         inArray(discussionPosts.projectId, projectIds),
         isNull(discussionPosts.parentId),
         ne(discussionPosts.isAiGenerated, true),
-        ne(discussionPosts.userId, userId),
       ),
     )
     .orderBy(desc(discussionPosts.createdAt))
@@ -159,12 +159,7 @@ export async function GET() {
     })
     .from(files)
     .innerJoin(users, eq(files.uploadedBy, users.id))
-    .where(
-      and(
-        inArray(files.projectId, projectIds),
-        ne(files.uploadedBy, userId),
-      ),
-    )
+    .where(inArray(files.projectId, projectIds))
     .orderBy(desc(files.uploadedAt))
     .limit(15);
 
@@ -198,7 +193,6 @@ export async function GET() {
       and(
         inArray(scheduleEvents.projectId, projectIds),
         gte(scheduleEvents.startTime, new Date()),
-        ne(scheduleEvents.createdBy, userId),
       ),
     )
     .orderBy(asc(scheduleEvents.startTime))

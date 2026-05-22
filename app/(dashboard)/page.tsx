@@ -12,6 +12,7 @@ import { JoinProjectButton } from "./JoinProjectButton";
 import { projectHref } from "@/lib/project-utils";
 import { ProjectStatusBadge } from "@/components/ProjectStatusBadge";
 import { InactiveProjectsSection } from "@/components/InactiveProjectsSection";
+import { ProjectCardWrapper } from "@/components/ProjectUnreadBadge";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -100,7 +101,7 @@ export default async function DashboardPage() {
               {projectList
                 .filter((p) => p.status !== "archived" && p.status !== "paused")
                 .map((project) => (
-                  <Link key={project.id} href={projectHref(project)}>
+                  <ProjectCardWrapper key={project.id} projectId={project.id} href={projectHref(project)}>
                     <Card hover glow="green" className="h-full">
                       <h3 className="font-['Share_Tech_Mono',monospace] text-[#F0F0F0] text-lg mb-1">
                         {project.name}
@@ -119,7 +120,7 @@ export default async function DashboardPage() {
                         </span>
                       </div>
                     </Card>
-                  </Link>
+                  </ProjectCardWrapper>
                 ))}
             </div>
           </>
