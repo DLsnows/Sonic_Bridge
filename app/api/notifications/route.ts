@@ -7,10 +7,9 @@ import {
   files,
   scheduleEvents,
   projectMembers,
-  projectViews,
   users,
 } from "@/lib/db/schema";
-import { eq, desc, and, isNull, gte, inArray, asc, ne, or, gt } from "drizzle-orm";
+import { eq, desc, and, isNull, gte, inArray, asc, ne } from "drizzle-orm";
 
 interface ActivityItem {
   id: string;

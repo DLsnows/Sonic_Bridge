@@ -112,7 +112,7 @@ export function Sidebar({ username, projects }: { username?: string; projects?: 
               {!collapsed && <span className="truncate">{project.name}</span>}
               {badge > 0 && (
                 <span className={`absolute rounded-full bg-[#FF4444] text-white text-[9px] font-bold flex items-center justify-center
-                  ${collapsed ? "-top-0.5 -right-0.5 w-4 h-4" : "ml-auto w-4 h-4"}`}>
+                  ${collapsed ? "-top-0.5 -right-0.5 w-4 h-4" : "right-1 top-1/2 -translate-y-1/2 w-4 h-4"}`}>
                   {badge > 9 ? "9+" : badge}
                 </span>
               )}

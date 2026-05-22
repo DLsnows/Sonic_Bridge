@@ -1,17 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
 import { useNotificationStore } from "@/lib/store/notification";
 
 export function ProjectUnreadBadge({ projectId }: { projectId: string }) {
   const unreadByProject = useNotificationStore((s) => s.unreadByProject);
-  const fetchUnreadCounts = useNotificationStore((s) => s.fetchUnreadCounts);
-  const recordProjectView = useNotificationStore((s) => s.recordProjectView);
-
-  useEffect(() => {
-    fetchUnreadCounts();
-  }, [fetchUnreadCounts]);
 
   const badge = unreadByProject[projectId] ?? 0;
   if (badge === 0) return null;
