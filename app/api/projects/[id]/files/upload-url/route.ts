@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticate } from "@/lib/api-auth";
 import { resolveProjectId } from "@/lib/project-utils";
-import { createPresignedUploadUrl } from "@/lib/storage";
+import { createPresignedUploadUrl, getMaxFileSize, detectMimeType } from "@/lib/storage";
 import { db } from "@/lib/db";
 import { folders } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -21,6 +21,23 @@ export async function GET(
   const type = request.nextUrl.searchParams.get("type") ?? "application/octet-stream";
   const folderId = request.nextUrl.searchParams.get("folderId");
 
+  const sizeStr = request.nextUrl.searchParams.get("size");
+  if (name && sizeStr) {
+    const size = parseInt(sizeStr, 10);
+    if (!isNaN(size)) {
+      const { limit, category } = getMaxFileSize(name);
+      if (size > limit) {
+        const limitStr = limit >= 1073741824
+          ? `${(limit / 1073741824).toFixed(0)}GB`
+          : `${(limit / 1048576).toFixed(0)}MB`;
+        return NextResponse.json(
+          { error: `File "${name}" exceeds ${limitStr} limit for ${category} files` },
+          { status: 413 }
+        );
+      }
+    }
+  }
+
   if (!name) return NextResponse.json({ error: "Missing file name" }, { status: 400 });
 
   let folderPath = "files";
@@ -35,8 +52,9 @@ export async function GET(
   }
 
   try {
+    const contentType = detectMimeType(name, type);
     const { uploadUrl, publicUrl, storageKey } = await createPresignedUploadUrl(
-      projectId, folderPath, name, type,
+      projectId, folderPath, name, contentType,
     );
     return NextResponse.json({ uploadUrl, publicUrl, storageKey });
   } catch (err) {

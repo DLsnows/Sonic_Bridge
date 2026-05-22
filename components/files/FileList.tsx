@@ -61,6 +61,11 @@ export function FileList({ files, loading, projectId, onDelete, onDownload, onOp
 
   const handlePlayAudio = useCallback(
     (fileId: string, fileUrl: string, mimeType?: string) => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
+
       if (playingFileIdRef.current === fileId) {
         audioRef.current?.pause();
         audioRef.current = null;

@@ -48,7 +48,7 @@ export function UploadZone({ projectId, folderId, onComplete, onClose }: UploadZ
       const file = selectedFiles[i];
       try {
         // Step 1: Get presigned URL
-        const urlParams = new URLSearchParams({ name: file.name, type: file.type });
+        const urlParams = new URLSearchParams({ name: file.name, type: file.type, size: String(file.size) });
         if (folderId) urlParams.set("folderId", folderId);
         const presignedRes = await fetch(
           `/api/projects/${projectId}/files/upload-url?${urlParams}`,
