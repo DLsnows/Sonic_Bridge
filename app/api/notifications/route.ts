@@ -65,7 +65,12 @@ export async function GET() {
       createdAt: notifications.createdAt,
     })
     .from(notifications)
-    .where(eq(notifications.userId, userId))
+    .where(
+      and(
+        eq(notifications.userId, userId),
+        inArray(notifications.projectId, projectIds),
+      ),
+    )
     .orderBy(desc(notifications.createdAt))
     .limit(50);
 
@@ -79,7 +84,6 @@ export async function GET() {
       .select({
         id: discussionPosts.id,
         title: discussionPosts.title,
-        content: discussionPosts.content,
         username: users.username,
       })
       .from(discussionPosts)
@@ -87,7 +91,7 @@ export async function GET() {
       .where(inArray(discussionPosts.id, discPostIds));
     for (const p of postMetas) {
       postMetaMap.set(p.id, {
-        title: p.title || p.content?.slice(0, 80) || "",
+        title: p.title || "",
         actorName: p.username ?? "Unknown",
       });
     }

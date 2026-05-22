@@ -90,6 +90,8 @@ async function findThreadParticipantIds(
 
   // Phase 2: walk down from all collected post IDs to find all descendants
   // (handles multi-branch threads where siblings also replied)
+  if (allPostIds.size === 0) return userIds;
+
   const frontier = [...allPostIds];
   let depth = 0;
   while (frontier.length > 0 && depth < 100) {
