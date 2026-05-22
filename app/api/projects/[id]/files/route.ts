@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { files, folders, users } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
 import { authenticate } from "@/lib/api-auth";
-import { uploadFile, getMaxFileSize, detectMimeType } from "@/lib/storage";
+import { db } from "@/lib/db";
 import { resolveProjectId } from "@/lib/project-utils";
 import { createNotifications } from "@/lib/notifications";
+import { eq, and } from "drizzle-orm";
+import { files, folders, users } from "@/lib/db/schema";
+import { getMaxFileSize } from "@/lib/storage";
 
 export const maxDuration = 300;
 
@@ -60,21 +60,20 @@ export async function POST(
   const projectId = await resolveProjectId(rawId);
   if (!projectId) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
-  let formData: FormData;
-  try { formData = await request.formData(); } catch { return NextResponse.json({ error: "Invalid form data" }, { status: 400 }); }
+  let body: { files?: Array<{ name: string; size: number; mimeType: string; storageKey: string }>; folderId?: string | null };
+  try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid request body" }, { status: 400 }); }
 
-  const uploadedFiles = formData.getAll("files") as File[];
-  const folderId = formData.get("folderId") as string | null;
-  if (uploadedFiles.length === 0) return NextResponse.json({ error: "No files provided" }, { status: 400 });
-
-  let folderPath = "files";
-  if (folderId) {
-    const [folder] = await db.select().from(folders).where(and(eq(folders.id, folderId), eq(folders.projectId, projectId))).limit(1);
-    if (!folder) return NextResponse.json({ error: "Folder not found" }, { status: 404 });
-    folderPath = folder.name.replace(/\.\.|\//g, "_");
-  }
+  const uploadedFiles = body.files;
+  const folderId = body.folderId ?? null;
+  if (!uploadedFiles || uploadedFiles.length === 0) return NextResponse.json({ error: "No files provided" }, { status: 400 });
 
   for (const file of uploadedFiles) {
+    if (!file.name || !file.storageKey) {
+      return NextResponse.json({ error: "Each file must have name and storageKey" }, { status: 400 });
+    }
+    if (file.storageKey.includes("..") || !file.storageKey.startsWith(`${projectId}/`)) {
+      return NextResponse.json({ error: "Invalid file storage key" }, { status: 400 });
+    }
     const { limit, category } = getMaxFileSize(file.name);
     if (file.size > limit) {
       const limitStr = limit >= 1073741824 ? `${(limit / 1073741824).toFixed(0)}GB` : `${(limit / 1048576).toFixed(0)}MB`;
@@ -82,25 +81,20 @@ export async function POST(
     }
   }
 
+  if (folderId) {
+    const [folder] = await db.select().from(folders).where(and(eq(folders.id, folderId), eq(folders.projectId, projectId))).limit(1);
+    if (!folder) return NextResponse.json({ error: "Folder not found" }, { status: 404 });
+  }
+
   const results: Array<{ id: string; name: string; size: number; mimeType: string; folderId: string | null; uploadedAt: Date }> = [];
 
   for (const file of uploadedFiles) {
-    const mimeType = detectMimeType(file.name, file.type);
-    let storageKey: string;
-    try {
-      const result = await uploadFile(projectId, folderPath, file);
-      storageKey = result.storageKey;
-    } catch (err) {
-      console.error(`Failed to upload "${file.name}" to R2:`, err instanceof Error ? err.message : err);
-      return NextResponse.json({ error: `Failed to store "${file.name}". Please try again.` }, { status: 500 });
-    }
-
     const [record] = await db.insert(files).values({
       projectId, folderId: folderId ?? null, name: file.name, size: file.size,
-      mimeType, storageKey, uploadedBy: authResult.userId,
+      mimeType: file.mimeType, storageKey: file.storageKey, uploadedBy: authResult.userId,
     }).returning({ id: files.id, uploadedAt: files.uploadedAt });
 
-    if (record) results.push({ id: record.id, name: file.name, size: file.size, mimeType, folderId: folderId ?? null, uploadedAt: record.uploadedAt });
+    if (record) results.push({ id: record.id, name: file.name, size: file.size, mimeType: file.mimeType, folderId: folderId ?? null, uploadedAt: record.uploadedAt });
   }
 
   for (const r of results) {
