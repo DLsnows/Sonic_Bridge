@@ -1,4 +1,5 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { randomBytes } from "crypto";
 
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
@@ -65,6 +66,22 @@ export function getStorageKey(projectId: string, folderPath: string, filename: s
   const safeFilename = filename.replace(/\.\.|[/\\]/g, "_").replace(/^_+/, "");
   const uniqueName = `${randomBytes(8).toString("hex")}_${safeFilename}`;
   return `${projectId}/${folderPath}/${uniqueName}`.replace(/\/+/g, "/");
+}
+
+export async function createPresignedUploadUrl(
+  projectId: string,
+  folderPath: string,
+  filename: string,
+  contentType: string,
+): Promise<{ uploadUrl: string; publicUrl: string; storageKey: string }> {
+  const storageKey = getStorageKey(projectId, folderPath, filename);
+  const command = new PutObjectCommand({
+    Bucket: R2_BUCKET_NAME,
+    Key: storageKey,
+    ContentType: contentType,
+  });
+  const uploadUrl = await getSignedUrl(getS3(), command, { expiresIn: 300 });
+  return { uploadUrl, publicUrl: `${R2_PUBLIC_URL}/${storageKey}`, storageKey };
 }
 
 export async function uploadFile(projectId: string, folderPath: string, file: File): Promise<{ storageKey: string; publicUrl: string }> {
