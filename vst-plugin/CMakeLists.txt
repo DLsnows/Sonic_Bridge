@@ -93,6 +93,11 @@ target_link_libraries(SonicBridgeVST PRIVATE
   ixwebsocket::ixwebsocket
 )
 
+# mbedtls (bundled with ixwebsocket) requires bcrypt for BCryptGenRandom on Windows
+if(WIN32)
+  target_link_libraries(SonicBridgeVST PRIVATE bcrypt)
+endif()
+
 # --- Compiler Options ---
 if(MSVC)
   target_compile_options(SonicBridgeVST PRIVATE /W4 /utf-8)
