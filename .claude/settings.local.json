@@ -17,7 +17,9 @@
       "Bash(git merge *)",
       "Bash(npx drizzle-kit *)",
       "Bash(git reset *)",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "mcp__Neon__run_sql",
+      "Bash(npm install *)"
     ]
   }
 }
