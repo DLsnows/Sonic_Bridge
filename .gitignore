@@ -171,3 +171,5 @@ next-env.d.ts
 
 # Superpowers brainstorm files
 .superpowers/
+pluginval/
+pluginval.zip
