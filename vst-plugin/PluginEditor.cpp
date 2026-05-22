@@ -201,44 +201,56 @@ void SonicBridgeAudioProcessorEditor::resized() {
 }
 
 void SonicBridgeAudioProcessorEditor::timerCallback() {
+  // Guard against calls during teardown — the processor reference
+  // may be invalid if the editor outlives the processor.
+  if (&mProcessor == nullptr) return;
+
   updateStatus();
   updateMeters();
 }
 
 void SonicBridgeAudioProcessorEditor::updateStatus() {
-  auto& server = mProcessor.getBridgeServer();
-  if (!server.isRunning()) {
-    mStatusLabel.setText("Offline", juce::dontSendNotification);
-    mStatusLabel.setColour(juce::Label::textColourId,
-                           juce::Colour(0xffa0a0b0));
-  } else if (server.getClientCount() > 0) {
-    mStatusLabel.setText("Connected", juce::dontSendNotification);
-    mStatusLabel.setColour(juce::Label::textColourId,
-                           juce::Colour(0xff00ff41));
-  } else {
-    mStatusLabel.setText("Waiting...", juce::dontSendNotification);
-    mStatusLabel.setColour(juce::Label::textColourId,
-                           juce::Colour(0xffffb800));
+  try {
+    auto& server = mProcessor.getBridgeServer();
+    if (!server.isRunning()) {
+      mStatusLabel.setText("Offline", juce::dontSendNotification);
+      mStatusLabel.setColour(juce::Label::textColourId,
+                             juce::Colour(0xffa0a0b0));
+    } else if (server.getClientCount() > 0) {
+      mStatusLabel.setText("Connected", juce::dontSendNotification);
+      mStatusLabel.setColour(juce::Label::textColourId,
+                             juce::Colour(0xff00ff41));
+    } else {
+      mStatusLabel.setText("Waiting...", juce::dontSendNotification);
+      mStatusLabel.setColour(juce::Label::textColourId,
+                             juce::Colour(0xffffb800));
+    }
+
+    mClientCountLabel.setText(
+      "Clients: " + juce::String(server.getClientCount()),
+      juce::dontSendNotification
+    );
+
+    mStartStopButton.setButtonText(
+      server.isRunning() ? "Stop Bridge" : "Start Bridge"
+    );
+
+    repaint();
+  } catch (...) {
+    // Silently ignore — editor is being torn down
   }
-
-  mClientCountLabel.setText(
-    "Clients: " + juce::String(server.getClientCount()),
-    juce::dontSendNotification
-  );
-
-  mStartStopButton.setButtonText(
-    server.isRunning() ? "Stop Bridge" : "Start Bridge"
-  );
-
-  repaint();
 }
 
 void SonicBridgeAudioProcessorEditor::updateMeters() {
-  auto levels = mProcessor.getMeter().getLevels();
-  mLeftMeter.level = dBToLinear(levels.left);
-  mRightMeter.level = dBToLinear(levels.right);
-  mLeftMeter.repaint();
-  mRightMeter.repaint();
+  try {
+    auto levels = mProcessor.getMeter().getLevels();
+    mLeftMeter.level = dBToLinear(levels.left);
+    mRightMeter.level = dBToLinear(levels.right);
+    mLeftMeter.repaint();
+    mRightMeter.repaint();
+  } catch (...) {
+    // Silently ignore — editor is being torn down
+  }
 }
 
 } // namespace SonicBridge
