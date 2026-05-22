@@ -66,7 +66,7 @@ export function AudioMixer() {
     remoteParticipants.filter((p) => p.audioTrackPublications.size > 0).length > 0;
 
   return (
-    <div className="fixed right-4 top-[20%] z-40 w-72 bg-[#0A0A0F]/95 backdrop-blur-xl border border-[#00F0FF]/15 rounded-xl shadow-[0_0_30px_rgba(0,240,255,0.08)]">
+    <div className="fixed left-1/2 -translate-x-1/2 top-[20%] z-40 w-72 bg-[#0A0A0F]/95 backdrop-blur-xl border border-[#00F0FF]/15 rounded-xl shadow-[0_0_30px_rgba(0,240,255,0.08)]">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-[#00F0FF]/10">
         <h3 className="font-['Share_Tech_Mono',monospace] text-xs text-[#00F0FF] uppercase tracking-wider">
