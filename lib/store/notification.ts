@@ -71,7 +71,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     // Also sync DB-backed items (reply_to_user) via API
     try {
       await fetch("/api/notifications", { method: "PATCH" });
-    } catch { /* best-effort */ }
+    } catch (e) { console.error("markAllRead PATCH failed:", e); }
   },
 
   fetchNotifications: async () => {

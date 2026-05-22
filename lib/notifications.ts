@@ -70,6 +70,7 @@ async function findThreadParticipantIds(
       .select({
         userId: discussionPosts.userId,
         parentId: discussionPosts.parentId,
+        isAiGenerated: discussionPosts.isAiGenerated,
       })
       .from(discussionPosts)
       .where(
@@ -81,7 +82,9 @@ async function findThreadParticipantIds(
       .limit(1);
     if (!row) break;
     allPostIds.add(current);
-    userIds.add(row.userId);
+    if (!row.isAiGenerated) {
+      userIds.add(row.userId);
+    }
     current = row.parentId;
   }
 
@@ -89,7 +92,7 @@ async function findThreadParticipantIds(
   // (handles multi-branch threads where siblings also replied)
   const frontier = [...allPostIds];
   let depth = 0;
-  while (frontier.length > 0 && depth < 20) {
+  while (frontier.length > 0 && depth < 100) {
     depth++;
     const children = await db
       .select({
@@ -113,6 +116,10 @@ async function findThreadParticipantIds(
         frontier.push(child.id);
       }
     }
+  }
+
+  if (depth >= 100) {
+    console.warn("findThreadParticipantIds: depth cap reached for project", projectId);
   }
 
   return userIds;
