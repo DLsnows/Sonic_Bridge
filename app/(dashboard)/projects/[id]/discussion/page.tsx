@@ -50,6 +50,7 @@ export default async function DiscussionPage({
       content: discussionPosts.content,
       parentId: discussionPosts.parentId,
       isEdited: discussionPosts.isEdited,
+      isAiGenerated: discussionPosts.isAiGenerated,
       createdAt: discussionPosts.createdAt,
       updatedAt: discussionPosts.updatedAt,
     })

@@ -161,7 +161,7 @@ export function NotificationBellInline({ collapsed }: { collapsed: boolean }) {
         />
       </span>
       {dropdownOpen && (
-        <div ref={dropdownRef} className="absolute right-0 mt-2 z-50 min-w-[280px]">
+        <div ref={dropdownRef} className="absolute left-0 bottom-full mb-2 z-50 min-w-[280px]">
           <NotificationDropdown onClose={() => setDropdownOpen(false)} />
         </div>
       )}
