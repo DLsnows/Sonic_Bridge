@@ -66,6 +66,9 @@ export function FileList({ files, loading, projectId, onDelete, onDownload, onOp
         animationRef.current = null;
       }
 
+      setAudioCurrentTime(0);
+      setAudioDuration(0);
+
       if (playingFileIdRef.current === fileId) {
         audioRef.current?.pause();
         audioRef.current = null;

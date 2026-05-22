@@ -92,6 +92,7 @@ export function UploadZone({ projectId, folderId, onComplete, onClose }: UploadZ
             : `${file.name}: Upload failed`,
         );
         setUploading(false);
+        onComplete();
         return;
       }
     }

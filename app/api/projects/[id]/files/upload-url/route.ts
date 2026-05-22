@@ -20,25 +20,24 @@ export async function GET(
   const name = request.nextUrl.searchParams.get("name");
   const type = request.nextUrl.searchParams.get("type") ?? "application/octet-stream";
   const folderId = request.nextUrl.searchParams.get("folderId");
-
   const sizeStr = request.nextUrl.searchParams.get("size");
-  if (name && sizeStr) {
-    const size = parseInt(sizeStr, 10);
-    if (!isNaN(size)) {
-      const { limit, category } = getMaxFileSize(name);
-      if (size > limit) {
-        const limitStr = limit >= 1073741824
-          ? `${(limit / 1073741824).toFixed(0)}GB`
-          : `${(limit / 1048576).toFixed(0)}MB`;
-        return NextResponse.json(
-          { error: `File "${name}" exceeds ${limitStr} limit for ${category} files` },
-          { status: 413 }
-        );
-      }
-    }
-  }
 
   if (!name) return NextResponse.json({ error: "Missing file name" }, { status: 400 });
+
+  if (!sizeStr) return NextResponse.json({ error: "Missing file size" }, { status: 400 });
+  const size = parseInt(sizeStr, 10);
+  if (isNaN(size) || size <= 0) return NextResponse.json({ error: "Invalid file size" }, { status: 400 });
+
+  const { limit, category } = getMaxFileSize(name);
+  if (size > limit) {
+    const limitStr = limit >= 1073741824
+      ? `${(limit / 1073741824).toFixed(0)}GB`
+      : `${(limit / 1048576).toFixed(0)}MB`;
+    return NextResponse.json(
+      { error: `File "${name}" exceeds ${limitStr} limit for ${category} files` },
+      { status: 413 }
+    );
+  }
 
   let folderPath = "files";
   if (folderId) {

@@ -82,6 +82,10 @@ export async function POST(
 
   const { storageKey, name, size, mimeType, folderId } = parsed.data;
 
+  if (storageKey.includes("..") || !storageKey.startsWith(`${projectId}/`)) {
+    return NextResponse.json({ error: "Invalid storage key" }, { status: 400 });
+  }
+
   if (folderId) {
     const [folder] = await db
       .select()
