@@ -42,9 +42,8 @@ export async function GET(
   }
 
   try {
-    const host = livekitUrl.replace(/^wss?:\/\//, "https://").replace(/:\d+/, (m) => m);
-    const port = new URL(livekitUrl.replace(/^wss?:\/\//, "https://")).port || "443";
-    const client = new RoomServiceClient(`${host}:${port}`, apiKey, apiSecret);
+    const livekitHost = livekitUrl.replace(/^wss?:\/\//, "https://");
+    const client = new RoomServiceClient(livekitHost, apiKey, apiSecret);
     const participants = await client.listParticipants(`project-${projectId}`);
     return NextResponse.json({ participantCount: participants.length });
   } catch {

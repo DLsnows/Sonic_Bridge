@@ -12,14 +12,14 @@ export function CreativeSpaceStatus({ projectId }: { projectId: string }) {
       .then((d) => {
         if (!ignore && d) setCount(d.participantCount ?? 0);
       })
-      .catch(() => {});
+      .catch(() => { if (!ignore) setCount(0); });
     const interval = setInterval(() => {
       fetch(`/api/projects/${projectId}/space/status`)
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
           if (!ignore && d) setCount(d.participantCount ?? 0);
         })
-        .catch(() => {});
+        .catch(() => { if (!ignore) setCount(0); });
     }, 30000);
     return () => { ignore = true; clearInterval(interval); };
   }, [projectId]);
