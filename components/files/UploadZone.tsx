@@ -126,7 +126,7 @@ export function UploadZone({ projectId, folderId, onComplete, onClose }: UploadZ
           }`}
           onClick={() => inputRef.current?.click()}
         >
-          <input ref={inputRef} type="file" multiple className="hidden" onChange={(e) => addFiles(e.target.files)} />
+          <input ref={inputRef} type="file" multiple className="hidden" onChange={(e) => { addFiles(e.target.files); if (inputRef.current) inputRef.current.value = ""; }} />
           <p className="text-sm text-[#A0A0B0]">Drag files here or <span className="text-[#00FF41]">click to browse</span></p>
           <p className="text-[10px] text-[#A0A0B0]/60 mt-1">Audio ≤120MB · Video ≤500MB · Archive ≤2GB · Other ≤100MB</p>
         </div>

@@ -83,11 +83,12 @@ export async function createPresignedPost(
   contentType: string,
 ): Promise<{ url: string; fields: Record<string, string>; storageKey: string }> {
   const storageKey = getStorageKey(projectId, folderPath, filename);
+  const { limit } = getMaxFileSize(filename);
   const { url, fields } = await s3CreatePresignedPost(getS3(), {
     Bucket: R2_BUCKET_NAME,
     Key: storageKey,
     Conditions: [
-      ["content-length-range", 0, SIZE_LIMITS.other],
+      ["content-length-range", 0, limit],
       ["eq", "$Content-Type", contentType],
     ],
     Expires: 300,

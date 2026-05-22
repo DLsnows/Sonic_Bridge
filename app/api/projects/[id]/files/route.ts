@@ -5,6 +5,7 @@ import { resolveProjectId } from "@/lib/project-utils";
 import { createNotifications } from "@/lib/notifications";
 import { eq, and } from "drizzle-orm";
 import { files, folders, users } from "@/lib/db/schema";
+import { getMaxFileSize } from "@/lib/storage";
 
 export const maxDuration = 300;
 
@@ -65,6 +66,20 @@ export async function POST(
   const uploadedFiles = body.files;
   const folderId = body.folderId ?? null;
   if (!uploadedFiles || uploadedFiles.length === 0) return NextResponse.json({ error: "No files provided" }, { status: 400 });
+
+  for (const file of uploadedFiles) {
+    if (!file.name || !file.storageKey) {
+      return NextResponse.json({ error: "Each file must have name and storageKey" }, { status: 400 });
+    }
+    if (file.storageKey.includes("..")) {
+      return NextResponse.json({ error: "Invalid file storage key" }, { status: 400 });
+    }
+    const { limit, category } = getMaxFileSize(file.name);
+    if (file.size > limit) {
+      const limitStr = limit >= 1073741824 ? `${(limit / 1073741824).toFixed(0)}GB` : `${(limit / 1048576).toFixed(0)}MB`;
+      return NextResponse.json({ error: `File "${file.name}" exceeds ${limitStr} limit for ${category} files` }, { status: 413 });
+    }
+  }
 
   if (folderId) {
     const [folder] = await db.select().from(folders).where(and(eq(folders.id, folderId), eq(folders.projectId, projectId))).limit(1);
