@@ -71,7 +71,7 @@ export async function POST(
     if (!file.name || !file.storageKey) {
       return NextResponse.json({ error: "Each file must have name and storageKey" }, { status: 400 });
     }
-    if (file.storageKey.includes("..")) {
+    if (file.storageKey.includes("..") || !file.storageKey.startsWith(`${projectId}/`)) {
       return NextResponse.json({ error: "Invalid file storage key" }, { status: 400 });
     }
     const { limit, category } = getMaxFileSize(file.name);
