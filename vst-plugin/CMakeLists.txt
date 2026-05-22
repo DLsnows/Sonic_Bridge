@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.22)
 
 # Static CRT must be set BEFORE project() — ensures /MT over /MD
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(SonicBridgeVST VERSION 1.0.0)
 
