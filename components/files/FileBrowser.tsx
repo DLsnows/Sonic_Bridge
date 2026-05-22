@@ -6,6 +6,7 @@ import { FileList } from "./FileList";
 import { UploadZone } from "./UploadZone";
 import { BreadcrumbNav } from "./BreadcrumbNav";
 import { CreateFolderModal } from "./CreateFolderModal";
+import { AudioPlayerModal } from "./AudioPlayerModal";
 import { Button } from "@/components/ui/Button";
 import type { Folder, FileItem } from "./types";
 
@@ -22,6 +23,7 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
   const [loading, setLoading] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
   const [showCreateFolder, setShowCreateFolder] = useState(false);
+  const [playerFile, setPlayerFile] = useState<FileItem | null>(null);
 
   const fetchFiles = useCallback(async (folderId: string | null) => {
     setLoading(true);
@@ -117,11 +119,18 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
             </h3>
             <Button size="sm" variant="primary" onClick={() => setShowUpload(true)}>Upload Files</Button>
           </div>
-          <FileList files={files} loading={loading} projectId={projectId} onDelete={handleDelete} onDownload={handleDownload} />
+          <FileList files={files} loading={loading} projectId={projectId} onDelete={handleDelete} onDownload={handleDownload} onOpenPlayer={(file) => setPlayerFile(file)} />
         </div>
       </main>
       {showUpload && <UploadZone projectId={projectId} folderId={currentFolderId} onComplete={handleUploadComplete} onClose={() => setShowUpload(false)} />}
       {showCreateFolder && <CreateFolderModal projectId={projectId} folders={folders} currentFolderId={currentFolderId} onCreated={handleFolderCreated} onClose={() => setShowCreateFolder(false)} />}
+      {playerFile && (
+        <AudioPlayerModal
+          file={playerFile}
+          projectId={projectId}
+          onClose={() => setPlayerFile(null)}
+        />
+      )}
     </div>
   );
 }
