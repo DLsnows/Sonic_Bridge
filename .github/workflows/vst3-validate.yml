@@ -47,4 +47,9 @@ jobs:
       - name: Validate VST3
         run: |
           $vst3Path = Get-ChildItem -Path vst-plugin/build -Recurse -Filter "*.vst3" -Directory | Select-Object -First 1
+          if (-not $vst3Path) {
+            Write-Error "No VST3 bundle found under vst-plugin/build — build may have failed or target name changed."
+            exit 1
+          }
+          Write-Host "Validating: $vst3Path"
           ./pluginval/pluginval.exe --strictness-level 5 "$vst3Path"

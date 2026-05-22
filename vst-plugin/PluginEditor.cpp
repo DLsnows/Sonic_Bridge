@@ -238,7 +238,9 @@ void SonicBridgeAudioProcessorEditor::updateStatus() {
 
     repaint();
   } catch (...) {
-    // Silently ignore — editor is being torn down
+    // In debug builds, surface the exception for investigation.
+    // In release builds, silently ignore — editor is being torn down.
+    jassertfalse;
   }
 }
 
@@ -250,7 +252,7 @@ void SonicBridgeAudioProcessorEditor::updateMeters() {
     mLeftMeter.repaint();
     mRightMeter.repaint();
   } catch (...) {
-    // Silently ignore — editor is being torn down
+    jassertfalse;
   }
 }
 
