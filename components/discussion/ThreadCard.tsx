@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import ReactMarkdown from "react-markdown";
+import MDEditor from "@uiw/react-md-editor";
+import "@uiw/react-md-editor/markdown-editor.css";
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/Button";
 import { PostForm } from "./PostForm";
@@ -37,19 +38,6 @@ interface ThreadCardProps {
   onSetEditing: (id: string | null) => void;
 }
 
-function stripMarkdown(md: string): string {
-  return md
-    .replace(/#{1,6}\s/g, "")
-    .replace(/\*\*(.+?)\*\*/g, "$1")
-    .replace(/\*(.+?)\*/g, "$1")
-    .replace(/`{1,3}[^`]*`{1,3}/g, "")
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-    .replace(/[>|-]\s/g, "")
-    .replace(/\n/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 function timeAgo(dateStr: string): string {
   try {
     return formatDistanceToNow(new Date(dateStr), { addSuffix: true });
@@ -58,104 +46,24 @@ function timeAgo(dateStr: string): string {
   }
 }
 
-const markdownComponents = {
-  a: ({ href, children }: { href?: string; children?: React.ReactNode }) => (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-[#FF8C00] hover:underline"
-    >
-      {children}
-    </a>
-  ),
-  code: ({ children, className }: { children?: React.ReactNode; className?: string }) => {
-    if (className) {
-      return (
-        <pre className="bg-[#09090B] border border-[#FF8C00]/10 rounded p-3 overflow-x-auto text-xs text-[#FF8C00] my-2">
-          <code>{children}</code>
-        </pre>
-      );
-    }
-    return (
-      <code className="bg-[#09090B] px-1 py-0.5 rounded text-[#FF8C00] text-xs">
-        {children}
-      </code>
-    );
-  },
-  blockquote: ({ children }: { children?: React.ReactNode }) => (
-    <blockquote className="border-l-2 border-[#FF8C00]/20 pl-3 italic text-[#A0A0B0] my-2">
-      {children}
-    </blockquote>
-  ),
-  table: ({ children }: { children?: React.ReactNode }) => (
-    <div className="overflow-x-auto my-3">
-      <table className="w-full border-collapse text-sm">
-        {children}
-      </table>
-    </div>
-  ),
-  thead: ({ children }: { children?: React.ReactNode }) => (
-    <thead className="bg-[#FF8C00]/10">{children}</thead>
-  ),
-  tbody: ({ children }: { children?: React.ReactNode }) => (
-    <tbody className="divide-y divide-[#FF8C00]/10">{children}</tbody>
-  ),
-  tr: ({ children }: { children?: React.ReactNode }) => (
-    <tr>{children}</tr>
-  ),
-  th: ({ children }: { children?: React.ReactNode }) => (
-    <th className="px-3 py-1.5 text-left text-[#FF8C00] font-['Share_Tech_Mono',monospace] text-xs font-semibold border-r border-[#FF8C00]/10 last:border-r-0">
-      {children}
-    </th>
-  ),
-  td: ({ children }: { children?: React.ReactNode }) => (
-    <td className="px-3 py-1.5 text-[#D0D0D0] text-xs border-r border-[#FF8C00]/10 last:border-r-0">
-      {children}
-    </td>
-  ),
-  h1: ({ children }: { children?: React.ReactNode }) => (
-    <h1 className="text-xl text-[#FF8C00] font-['Share_Tech_Mono',monospace] mt-4 mb-2">{children}</h1>
-  ),
-  h2: ({ children }: { children?: React.ReactNode }) => (
-    <h2 className="text-lg text-[#FF8C00] font-['Share_Tech_Mono',monospace] mt-3 mb-2">{children}</h2>
-  ),
-  h3: ({ children }: { children?: React.ReactNode }) => (
-    <h3 className="text-base text-[#FF8C00] font-['Share_Tech_Mono',monospace] mt-3 mb-1.5">{children}</h3>
-  ),
-  h4: ({ children }: { children?: React.ReactNode }) => (
-    <h4 className="text-sm text-[#FF8C00] font-['Share_Tech_Mono',monospace] mt-2 mb-1">{children}</h4>
-  ),
-  h5: ({ children }: { children?: React.ReactNode }) => (
-    <h5 className="text-xs text-[#FF8C00] font-['Share_Tech_Mono',monospace] mt-2 mb-1">{children}</h5>
-  ),
-  h6: ({ children }: { children?: React.ReactNode }) => (
-    <h6 className="text-[10px] text-[#FF8C00] font-['Share_Tech_Mono',monospace] mt-2 mb-1">{children}</h6>
-  ),
-  ul: ({ children }: { children?: React.ReactNode }) => (
-    <ul className="list-disc pl-5 my-2 space-y-1 text-[#D0D0D0] text-sm [&>li]:pl-1">{children}</ul>
-  ),
-  ol: ({ children }: { children?: React.ReactNode }) => (
-    <ol className="list-decimal pl-5 my-2 space-y-1 text-[#D0D0D0] text-sm [&>li]:pl-1">{children}</ol>
-  ),
-  li: ({ children }: { children?: React.ReactNode }) => (
-    <li>{children}</li>
-  ),
-};
-
 function PostBody({ post }: { post: DiscussionPost }) {
   return (
-    <div className="space-y-3">
-      <div className="prose prose-invert prose-sm max-w-none text-[#D0D0D0]">
-        <ReactMarkdown components={markdownComponents}>
-          {post.content}
-        </ReactMarkdown>
-      </div>
+    <div data-color-mode="dark" className="space-y-3">
+      <MDEditor.Markdown
+        source={post.content}
+        style={{
+          background: "transparent",
+          color: "#D0D0D0",
+          fontSize: "14px",
+        }}
+      />
       {post.isEdited && (
         <span className="text-[10px] text-[#A0A0B0]/60 italic">(edited)</span>
       )}
       {post.isAiGenerated && (
-        <span className="text-[10px] bg-[#FF8C00]/15 text-[#FF8C00] px-1.5 py-0.5 rounded font-mono ml-1">AI</span>
+        <span className="inline-block text-[10px] bg-[#FF8C00]/15 text-[#FF8C00] px-1.5 py-0.5 rounded font-mono ml-1">
+          AI
+        </span>
       )}
     </div>
   );
@@ -201,7 +109,7 @@ export function ThreadCard({
     }
   };
 
-  const preview = stripMarkdown(post.content).slice(0, 200);
+  const preview = post.content.replace(/[#*`\[\]>\-|\n]/g, " ").replace(/\s+/g, " ").trim().slice(0, 200);
 
   return (
     <div className="glass-panel animate-fade-in">
@@ -295,7 +203,7 @@ export function ThreadCard({
                 Delete
               </Button>
             )}
-            {post.content.length > 20 && (
+            {post.content.length > 20 && !post.isAiGenerated && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -446,7 +354,7 @@ export function ThreadCard({
                         </Button>
                       </>
                     )}
-                    {reply.content.length > 20 && (
+                    {reply.content.length > 20 && !reply.isAiGenerated && (
                       <>
                         <Button
                           variant="ghost"
