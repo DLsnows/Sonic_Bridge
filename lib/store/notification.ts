@@ -64,6 +64,8 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   },
 
   markAllRead: async () => {
+    const current = get();
+    const projectIds = Object.keys(current.unreadByProject);
     set((state) => ({
       notifications: state.notifications.map((n) => ({ ...n, isRead: true })),
       unreadCount: 0,
@@ -71,6 +73,13 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     }));
     try {
       await fetch("/api/notifications", { method: "PATCH" });
+      if (projectIds.length > 0) {
+        await fetch("/api/notifications/view", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ projectIds }),
+        });
+      }
     } catch (e) { console.error("markAllRead PATCH failed:", e); }
   },
 
