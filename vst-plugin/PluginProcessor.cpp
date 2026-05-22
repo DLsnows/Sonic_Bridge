@@ -58,10 +58,10 @@ void SonicBridgeAudioProcessor::prepareToPlay(double sampleRate,
   // Initialize Opus encoder (20ms frames)
   mEncoder.initialize(static_cast<int>(sampleRate), 2, mOpusBitrate.load());
 
-  // Start the WebSocket bridge server
-  if (!mBridgeServer.isRunning()) {
-    mBridgeServer.start(9420);
-  }
+  // Note: WebSocket server is started via the editor's "Start Bridge" button
+  // (message thread), NOT here on the audio thread. Starting a network server
+  // on the realtime audio thread can block for hundreds of milliseconds,
+  // causing host watchdog timeouts and UI-open crashes.
 
   // Allocate work buffer for interleaving
   mWorkBuffer.setSize(2, samplesPerBlock, false, true, false);

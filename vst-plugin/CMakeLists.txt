@@ -1,4 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
+
+# Static CRT must be set BEFORE project() — ensures /MT over /MD
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -22,14 +25,16 @@ juce_add_plugin(SonicBridgeVST
   FORMATS             VST3
   PRODUCT_NAME        "SonicBridge VST"
 
-  # VST3 category: kFxAnalyzer (for metering/analysis plugins)
-  VST3_CATEGORIES     "Fx|Analyzer"
+  # "Fx" is added automatically by JUCE for VST3 audio effects.
+  # Only specify sub-categories here to avoid duplicate "Fx" in moduleinfo.json.
+  VST3_CATEGORIES     "Analyzer"
 
   # Bundle identifier
   BUNDLE_ID           "com.sonicbridge.vst"
 )
 
-# --- Dependencies ---
+# --- Dependencies (all static via x64-windows-static triplet) ---
+
 # libopus (via vcpkg or system)
 find_package(Opus CONFIG QUIET)
 if(NOT Opus_FOUND)
@@ -46,11 +51,8 @@ if(NOT Opus_FOUND)
   endif()
 endif()
 
-# ixwebsocket
+# ixwebsocket (static, bundles mbedtls for TLS — no separate OpenSSL needed)
 find_package(ixwebsocket CONFIG REQUIRED)
-
-# OpenSSL (required by ixwebsocket)
-find_package(OpenSSL REQUIRED)
 
 # --- Source Files ---
 target_sources(SonicBridgeVST PRIVATE
@@ -89,11 +91,9 @@ target_link_libraries(SonicBridgeVST PRIVATE
   juce::juce_audio_plugin_client
   ${OPUS_TARGET}
   ixwebsocket::ixwebsocket
-  OpenSSL::SSL
-  OpenSSL::Crypto
 )
 
-# ixwebsocket + mbedtls requires bcrypt on Windows
+# mbedtls (bundled with ixwebsocket) requires bcrypt for BCryptGenRandom on Windows
 if(WIN32)
   target_link_libraries(SonicBridgeVST PRIVATE bcrypt)
 endif()
@@ -110,47 +110,7 @@ target_compile_definitions(SonicBridgeVST PRIVATE JUCE_VST3_CAN_REPLACE_VST2=0)
 
 # --- Platform-Specific ---
 if(WIN32)
-  # Windows: VST3 is the default
-  message(STATUS "Building SonicBridge VST3 for Windows")
+  message(STATUS "Building SonicBridge VST3 for Windows (static)")
 elseif(APPLE)
   message(STATUS "Building SonicBridge VST3 for macOS")
-  # Optional: add AU format
-  # set_target_properties(SonicBridgeVST PROPERTIES JUCE_FORMATS "VST3;AU")
-endif()
-
-# --- Post-Build: copy dependency DLLs alongside VST3 ---
-if(WIN32)
-  set(VCPKG_INSTALLED "" CACHE PATH
-      "Path to vcpkg installed directory for x64-windows triplet. Auto-detected when using vcpkg toolchain.")
-  if(NOT VCPKG_INSTALLED)
-    if(DEFINED CMAKE_TOOLCHAIN_FILE AND CMAKE_TOOLCHAIN_FILE MATCHES "vcpkg")
-      get_filename_component(_vcpkg_scripts "${CMAKE_TOOLCHAIN_FILE}" DIRECTORY)
-      get_filename_component(_vcpkg_root "${_vcpkg_scripts}/../.." ABSOLUTE)
-      if(EXISTS "${_vcpkg_root}/installed/${VCPKG_TARGET_TRIPLET}")
-        set(VCPKG_INSTALLED "${_vcpkg_root}/installed/${VCPKG_TARGET_TRIPLET}")
-      endif()
-    elseif(DEFINED ENV{VCPKG_ROOT})
-      set(VCPKG_INSTALLED "$ENV{VCPKG_ROOT}/installed/${VCPKG_TARGET_TRIPLET}")
-    endif()
-  endif()
-  if(VCPKG_INSTALLED AND EXISTS "${VCPKG_INSTALLED}")
-    message(STATUS "vcpkg installed dir: ${VCPKG_INSTALLED}")
-    add_custom_command(TARGET SonicBridgeVST POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${VCPKG_INSTALLED}/bin/opus.dll"
-        "$<TARGET_FILE_DIR:SonicBridgeVST>/opus.dll"
-      COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${VCPKG_INSTALLED}/bin/z.dll"
-        "$<TARGET_FILE_DIR:SonicBridgeVST>/z.dll"
-      COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${VCPKG_INSTALLED}/bin/libcrypto-3-x64.dll"
-        "$<TARGET_FILE_DIR:SonicBridgeVST>/libcrypto-3-x64.dll"
-      COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${VCPKG_INSTALLED}/bin/libssl-3-x64.dll"
-        "$<TARGET_FILE_DIR:SonicBridgeVST>/libssl-3-x64.dll"
-      COMMENT "Copying dependency DLLs to VST3 bundle"
-    )
-  else()
-    message(WARNING "vcpkg installed dir not found. Set -DVCPKG_INSTALLED=... to enable DLL copy.")
-  endif()
 endif()

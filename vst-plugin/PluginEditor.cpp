@@ -201,6 +201,9 @@ void SonicBridgeAudioProcessorEditor::resized() {
 }
 
 void SonicBridgeAudioProcessorEditor::timerCallback() {
+  // stopTimer() in the destructor guarantees this callback never fires
+  // during teardown — both run synchronously on the JUCE message thread.
+
   updateStatus();
   updateMeters();
 }
