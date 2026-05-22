@@ -114,9 +114,9 @@ export function ThreadCard({
   };
 
   const preview = post.content
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
     .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
     .replace(/[#*`>|\n]/g, " ")
-    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 200);
