@@ -5,7 +5,6 @@ import { scheduleEvents, projectMembers, users } from "@/lib/db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { z } from "zod";
 import { resolveProjectId } from "@/lib/project-utils";
-import { createNotifications } from "@/lib/notifications";
 
 const dateParamSchema = z.string().refine((s) => !isNaN(Date.parse(s)), "Invalid date");
 
@@ -154,14 +153,6 @@ export async function POST(
       createdBy: userId,
     })
     .returning();
-
-  createNotifications({
-    type: "new_event",
-    referenceId: event.id,
-    referenceType: "schedule_event",
-    projectId,
-    actorUserId: userId,
-  }).catch((e) => console.error("Notification creation failed:", e));
 
   return NextResponse.json({ event }, { status: 201 });
 }

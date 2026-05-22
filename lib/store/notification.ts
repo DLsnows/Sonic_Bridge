@@ -8,6 +8,8 @@ export interface Notification {
   referenceType: string;
   isRead: boolean;
   createdAt: string;
+  title?: string;
+  actorName?: string;
 }
 
 interface NotificationState {
@@ -32,6 +34,20 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   setDropdownOpen: (open) => set({ dropdownOpen: open }),
 
   markRead: async (id) => {
+    // Find the notification to check if it's from the notifications table
+    const notif = get().notifications.find((n) => n.id === id);
+    // Source-table items (new_post, new_file, new_event) have no DB row —
+    // just update local state. Only reply_to_user items need an API call.
+    if (notif && notif.type !== "reply_to_user") {
+      set((state) => {
+        const updated = state.notifications.map((n) =>
+          n.id === id ? { ...n, isRead: true } : n,
+        );
+        return { notifications: updated, unreadCount: updated.filter((n) => !n.isRead).length };
+      });
+      return;
+    }
+
     const res = await fetch("/api/notifications", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -47,12 +63,15 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   },
 
   markAllRead: async () => {
-    const res = await fetch("/api/notifications", { method: "PATCH" });
-    if (!res.ok) return;
+    // Update local state immediately for all items
     set((state) => ({
       notifications: state.notifications.map((n) => ({ ...n, isRead: true })),
       unreadCount: 0,
     }));
+    // Also sync DB-backed items (reply_to_user) via API
+    try {
+      await fetch("/api/notifications", { method: "PATCH" });
+    } catch (e) { console.error("markAllRead PATCH failed:", e); }
   },
 
   fetchNotifications: async () => {
