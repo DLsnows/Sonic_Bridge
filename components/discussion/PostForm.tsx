@@ -3,6 +3,8 @@
 import { useState, FormEvent, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import MDEditor from "@uiw/react-md-editor";
+import "@uiw/react-md-editor/markdown-editor.css";
 
 interface PostFormProps {
   mode: "thread" | "reply" | "edit";
@@ -28,7 +30,6 @@ export function PostForm({
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showFilePicker, setShowFilePicker] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const DRAFT_KEY = `discussion-draft-${projectId}`;
   const [draftRestored, setDraftRestored] = useState(false);
@@ -91,21 +92,7 @@ export function PostForm({
   const insertCitation = (fileId: string, fileName: string) => {
     const safeName = fileName.replace(/[[\]()]/g, "\\$&");
     const citation = `[${safeName}](/projects/${projectId}/files?file=${fileId})`;
-    const textarea = textareaRef.current;
-    if (textarea) {
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const currentValue = textarea.value;
-      const newContent = currentValue.slice(0, start) + citation + currentValue.slice(end);
-      setContent(newContent);
-      // Restore cursor position after citation
-      setTimeout(() => {
-        textarea.focus();
-        textarea.setSelectionRange(start + citation.length, start + citation.length);
-      }, 0);
-    } else {
-      setContent((prev) => prev + " " + citation);
-    }
+    setContent((prev) => prev + " " + citation);
     setShowFilePicker(false);
   };
 
@@ -122,54 +109,48 @@ export function PostForm({
       )}
 
       <div className="flex flex-col gap-1.5">
-        <textarea
-          ref={textareaRef}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder={
-            mode === "reply"
-              ? "Write a reply..."
-              : mode === "edit"
-                ? "Edit your post..."
-                : "Share your thoughts... (Markdown supported)"
-          }
-          rows={mode === "thread" ? 5 : 4}
-          maxLength={10000}
-          className="w-full px-3 py-2 bg-[#0F0F13] border border-white/10 rounded-lg text-sm text-[#F0F0F0]
-            placeholder:text-[#A0A0B0]/50 font-['Fira_Code',monospace]
-            transition-all duration-200 resize-y min-h-[80px]
-            focus:outline-none focus:border-[#FF8C00]/50 focus:shadow-[0_0_15px_rgba(255,140,0,0.1)]
-            hover:border-white/20"
-        />
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-[#A0A0B0]/60">
-            Styling with Markdown is supported -- **bold**, *italic*, `code`, [links](url)
-          </p>
-          {availableFiles && availableFiles.length > 0 && projectId && (
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setShowFilePicker(!showFilePicker)}
-                className="text-[10px] text-[#FF8C00]/70 hover:text-[#FF8C00] font-mono transition-colors"
-              >
-                {showFilePicker ? "Close" : "+ Cite File"}
-              </button>
-              {showFilePicker && (
-                <div className="absolute bottom-6 right-0 bg-[#0A0A0F] border border-white/10 rounded-lg shadow-lg z-50 w-56 max-h-40 overflow-y-auto">
-                  {availableFiles.map((f) => (
-                    <button
-                      key={f.id}
-                      type="button"
-                      onClick={() => insertCitation(f.id, f.name)}
-                      className="w-full text-left px-3 py-1.5 text-xs text-[#D0D0D0] hover:bg-white/5 truncate"
-                    >
-                      {f.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+        {availableFiles && availableFiles.length > 0 && projectId && (
+          <div className="relative self-end">
+            <button
+              type="button"
+              onClick={() => setShowFilePicker(!showFilePicker)}
+              className="text-[10px] text-[#FF8C00]/70 hover:text-[#FF8C00] font-mono transition-colors"
+            >
+              {showFilePicker ? "Close" : "+ Cite File"}
+            </button>
+            {showFilePicker && (
+              <div className="absolute top-6 right-0 bg-[#0A0A0F] border border-white/10 rounded-lg shadow-lg z-50 w-56 max-h-40 overflow-y-auto">
+                {availableFiles.map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => insertCitation(f.id, f.name)}
+                    className="w-full text-left px-3 py-1.5 text-xs text-[#D0D0D0] hover:bg-white/5 truncate"
+                  >
+                    {f.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        <div data-color-mode="dark">
+          <MDEditor
+            value={content}
+            onChange={(val) => setContent(val ?? "")}
+            preview={mode === "edit" ? "edit" : "live"}
+            height={mode === "thread" ? 250 : 200}
+            visibleDragbar={false}
+            textareaProps={{
+              placeholder:
+                mode === "reply"
+                  ? "Write a reply..."
+                  : mode === "edit"
+                    ? "Edit your post..."
+                    : "Share your thoughts... (Markdown supported)",
+              maxLength: 10000,
+            }}
+          />
         </div>
       </div>
 
