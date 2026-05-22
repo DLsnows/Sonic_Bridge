@@ -99,10 +99,13 @@ export function NotificationDropdown({
             >
               <span className="text-xs mt-0.5">{TYPE_ICONS[n.type] || "•"}</span>
               <div className="flex-1 min-w-0">
-                <p className="text-[11px] text-[#D0D0D0]">
-                  {TYPE_LABELS[n.type] || n.type}
+                <p className="text-[11px] text-[#D0D0D0] truncate">
+                  {n.title || TYPE_LABELS[n.type] || n.type}
                 </p>
                 <p className="text-[10px] text-[#A0A0B0]/60 mt-0.5">
+                  {n.actorName ? `${n.actorName} · ` : ""}
+                  {TYPE_LABELS[n.type] || n.type}
+                  {" · "}
                   {new Date(n.createdAt).toLocaleString()}
                 </p>
               </div>

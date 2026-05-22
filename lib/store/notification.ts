@@ -8,6 +8,8 @@ export interface Notification {
   referenceType: string;
   isRead: boolean;
   createdAt: string;
+  title?: string;
+  actorName?: string;
 }
 
 interface NotificationState {

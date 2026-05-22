@@ -4,8 +4,8 @@ import { db } from "@/lib/db";
 import { files, folders, users } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { authenticate } from "@/lib/api-auth";
+import { uploadFile, getMaxFileSize, detectMimeType } from "@/lib/storage";
 import { resolveProjectId } from "@/lib/project-utils";
-import { createNotifications } from "@/lib/notifications";
 
 export const maxDuration = 300;
 
@@ -107,16 +107,6 @@ export async function POST(
       uploadedBy: authResult.userId,
     })
     .returning({ id: files.id, uploadedAt: files.uploadedAt });
-
-  if (record) {
-    createNotifications({
-      type: "new_file",
-      referenceId: record.id,
-      referenceType: "file",
-      projectId,
-      actorUserId: authResult.userId,
-    }).catch((e) => console.error("Notification creation failed:", e));
-  }
 
   return NextResponse.json({ file: { id: record?.id, name, size, mimeType, folderId: folderId ?? null, uploadedAt: record?.uploadedAt } }, { status: 201 });
 }
