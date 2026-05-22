@@ -86,10 +86,9 @@ export async function POST(
 
   for (const file of uploadedFiles) {
     const mimeType = detectMimeType(file.name, file.type);
-    let publicUrl: string;
     try {
       const result = await uploadFile(projectId, folderPath, file);
-      publicUrl = result.publicUrl;
+      const storageKey = result.storageKey;
     } catch (err) {
       console.error(`Failed to upload "${file.name}" to R2:`, err instanceof Error ? err.message : err);
       return NextResponse.json({ error: `Failed to store "${file.name}". Please try again.` }, { status: 500 });
@@ -97,7 +96,7 @@ export async function POST(
 
     const [record] = await db.insert(files).values({
       projectId, folderId: folderId ?? null, name: file.name, size: file.size,
-      mimeType, storageKey: publicUrl, uploadedBy: authResult.userId,
+      mimeType, storageKey, uploadedBy: authResult.userId,
     }).returning({ id: files.id, uploadedAt: files.uploadedAt });
 
     if (record) results.push({ id: record.id, name: file.name, size: file.size, mimeType, folderId: folderId ?? null, uploadedAt: record.uploadedAt });

@@ -62,7 +62,8 @@ export function getMaxFileSize(fileName: string): { limit: number; category: str
 }
 
 export function getStorageKey(projectId: string, folderPath: string, filename: string): string {
-  const uniqueName = `${randomBytes(8).toString("hex")}_${filename}`;
+  const safeFilename = filename.replace(/\.\.|[/\\]/g, "_").replace(/^_+/, "");
+  const uniqueName = `${randomBytes(8).toString("hex")}_${safeFilename}`;
   return `${projectId}/${folderPath}/${uniqueName}`.replace(/\/+/g, "/");
 }
 
