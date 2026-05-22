@@ -201,3 +201,23 @@ body {
   font-family: 'Fira Code', monospace;
   transition: all 0.2s ease;
 }
+
+/* MDEditor dark theme overrides */
+[data-color-mode="dark"] {
+  --color-canvas-default: #0F0F13;
+  --color-border-default: rgba(255, 140, 0, 0.1);
+}
+.w-md-editor {
+  background-color: #0F0F13;
+}
+.w-md-editor-toolbar {
+  background-color: #0A0A0F;
+  border-bottom: 1px solid rgba(255, 140, 0, 0.1);
+}
+.w-md-editor-preview {
+  background-color: transparent;
+}
+.w-md-editor-text-pre > code,
+.w-md-editor-text-input {
+  color: #D0D0D0;
+}

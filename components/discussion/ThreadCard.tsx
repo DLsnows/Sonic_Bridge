@@ -304,11 +304,6 @@ export function ThreadCard({
                     </span>
                   </div>
                   <PostBody post={reply} />
-                  {reply.isEdited && (
-                    <span className="text-[10px] text-[#A0A0B0]/60 italic">
-                      (edited)
-                    </span>
-                  )}
                   <div className="flex items-center gap-2 mt-2">
                     <Button
                       variant="ghost"
