@@ -201,59 +201,47 @@ void SonicBridgeAudioProcessorEditor::resized() {
 }
 
 void SonicBridgeAudioProcessorEditor::timerCallback() {
-  // Teardown safety: the destructor calls stopTimer() before any member
-  // cleanup, guaranteeing this callback never fires during destruction.
-  // The try-catch blocks in updateStatus()/updateMeters() provide an
-  // additional safety net for edge cases during host shutdown.
+  // stopTimer() in the destructor guarantees this callback never fires
+  // during teardown — both run synchronously on the JUCE message thread.
 
   updateStatus();
   updateMeters();
 }
 
 void SonicBridgeAudioProcessorEditor::updateStatus() {
-  try {
-    auto& server = mProcessor.getBridgeServer();
-    if (!server.isRunning()) {
-      mStatusLabel.setText("Offline", juce::dontSendNotification);
-      mStatusLabel.setColour(juce::Label::textColourId,
-                             juce::Colour(0xffa0a0b0));
-    } else if (server.getClientCount() > 0) {
-      mStatusLabel.setText("Connected", juce::dontSendNotification);
-      mStatusLabel.setColour(juce::Label::textColourId,
-                             juce::Colour(0xff00ff41));
-    } else {
-      mStatusLabel.setText("Waiting...", juce::dontSendNotification);
-      mStatusLabel.setColour(juce::Label::textColourId,
-                             juce::Colour(0xffffb800));
-    }
-
-    mClientCountLabel.setText(
-      "Clients: " + juce::String(server.getClientCount()),
-      juce::dontSendNotification
-    );
-
-    mStartStopButton.setButtonText(
-      server.isRunning() ? "Stop Bridge" : "Start Bridge"
-    );
-
-    repaint();
-  } catch (...) {
-    // In debug builds, surface the exception for investigation.
-    // In release builds, silently ignore — editor is being torn down.
-    jassertfalse;
+  auto& server = mProcessor.getBridgeServer();
+  if (!server.isRunning()) {
+    mStatusLabel.setText("Offline", juce::dontSendNotification);
+    mStatusLabel.setColour(juce::Label::textColourId,
+                           juce::Colour(0xffa0a0b0));
+  } else if (server.getClientCount() > 0) {
+    mStatusLabel.setText("Connected", juce::dontSendNotification);
+    mStatusLabel.setColour(juce::Label::textColourId,
+                           juce::Colour(0xff00ff41));
+  } else {
+    mStatusLabel.setText("Waiting...", juce::dontSendNotification);
+    mStatusLabel.setColour(juce::Label::textColourId,
+                           juce::Colour(0xffffb800));
   }
+
+  mClientCountLabel.setText(
+    "Clients: " + juce::String(server.getClientCount()),
+    juce::dontSendNotification
+  );
+
+  mStartStopButton.setButtonText(
+    server.isRunning() ? "Stop Bridge" : "Start Bridge"
+  );
+
+  repaint();
 }
 
 void SonicBridgeAudioProcessorEditor::updateMeters() {
-  try {
-    auto levels = mProcessor.getMeter().getLevels();
-    mLeftMeter.level = dBToLinear(levels.left);
-    mRightMeter.level = dBToLinear(levels.right);
-    mLeftMeter.repaint();
-    mRightMeter.repaint();
-  } catch (...) {
-    jassertfalse;
-  }
+  auto levels = mProcessor.getMeter().getLevels();
+  mLeftMeter.level = dBToLinear(levels.left);
+  mRightMeter.level = dBToLinear(levels.right);
+  mLeftMeter.repaint();
+  mRightMeter.repaint();
 }
 
 } // namespace SonicBridge
