@@ -123,7 +123,7 @@ export function NotificationDropdown({
   );
 }
 
-export function NotificationBellInline() {
+export function NotificationBellInline({ collapsed }: { collapsed: boolean }) {
   const {
     unreadCount,
     dropdownOpen,

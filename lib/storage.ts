@@ -1,4 +1,5 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { createPresignedPost as s3CreatePresignedPost } from "@aws-sdk/s3-presigned-post";
 import { randomBytes } from "crypto";
 
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
@@ -73,6 +74,26 @@ export async function uploadFile(projectId: string, folderPath: string, file: Fi
   const buffer = Buffer.from(await file.arrayBuffer());
   await getS3().send(new PutObjectCommand({ Bucket: R2_BUCKET_NAME, Key: storageKey, Body: buffer, ContentType: contentType, ContentLength: buffer.length }));
   return { storageKey, publicUrl: `${R2_PUBLIC_URL}/${storageKey}` };
+}
+
+export async function createPresignedPost(
+  projectId: string,
+  folderPath: string,
+  filename: string,
+  contentType: string,
+): Promise<{ url: string; fields: Record<string, string>; storageKey: string }> {
+  const storageKey = getStorageKey(projectId, folderPath, filename);
+  const { limit } = getMaxFileSize(filename);
+  const { url, fields } = await s3CreatePresignedPost(getS3(), {
+    Bucket: R2_BUCKET_NAME,
+    Key: storageKey,
+    Conditions: [
+      ["content-length-range", 0, limit],
+      ["eq", "$Content-Type", contentType],
+    ],
+    Expires: 300,
+  });
+  return { url, fields, storageKey };
 }
 
 export function normalizeKey(storageKey: string): string {

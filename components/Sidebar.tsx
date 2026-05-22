@@ -65,7 +65,7 @@ export function Sidebar({ username, projects }: { username?: string; projects?: 
         </Link>
         <button
           onClick={toggle}
-          className={`text-[#A0A0B0] hover:text-[#F0F0F0] transition-colors text-sm ${
+          className={`z-10 relative text-[#A0A0B0] hover:text-[#F0F0F0] transition-colors text-sm ${
             collapsed ? "mx-auto" : "ml-auto"
           }`}
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -112,7 +112,7 @@ export function Sidebar({ username, projects }: { username?: string; projects?: 
 
       {/* Notifications */}
       <div className={`border-t border-[#00FF41]/10 ${collapsed ? "p-2 flex justify-center" : "p-3"}`}>
-        <NotificationBellInline />
+        <NotificationBellInline collapsed={collapsed} />
       </div>
 
       {/* User section */}
