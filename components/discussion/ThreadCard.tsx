@@ -3,6 +3,7 @@
 import { useState } from "react";
 import MDEditor from "@uiw/react-md-editor";
 import "@uiw/react-md-editor/markdown-editor.css";
+import rehypeSanitize from "rehype-sanitize";
 import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/Button";
 import { PostForm } from "./PostForm";
@@ -52,6 +53,7 @@ function PostBody({ post }: { post: DiscussionPost }) {
     <div data-color-mode="dark" className="space-y-3">
       <MDEditor.Markdown
         source={post.content}
+        rehypePlugins={[rehypeSanitize]}
         style={{
           background: "transparent",
           color: "#D0D0D0",
@@ -111,7 +113,13 @@ export function ThreadCard({
     }
   };
 
-  const preview = post.content.replace(/[#*`\[\]>\-|\n]/g, " ").replace(/\s+/g, " ").trim().slice(0, 200);
+  const preview = post.content
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/[#*`>|\n]/g, " ")
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 200);
 
   return (
     <div className="glass-panel animate-fade-in">
