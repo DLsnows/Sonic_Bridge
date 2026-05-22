@@ -10,9 +10,11 @@ interface ModalProps {
   title: string;
   children: ReactNode;
   footer?: ReactNode;
+  titleClass?: string;
+  closeOnOverlayClick?: boolean;
 }
 
-export function Modal({ open, onClose, title, children, footer }: ModalProps) {
+export function Modal({ open, onClose, title, children, footer, titleClass, closeOnOverlayClick }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -32,11 +34,11 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
     <div
       ref={overlayRef}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-fade-in overflow-y-auto"
-      onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
+      onClick={(e) => { if (closeOnOverlayClick !== false && e.target === overlayRef.current) onClose(); }}
     >
-      <div className="glass-panel w-full max-w-lg mx-4 shadow-[0_0_60px_rgba(0,240,255,0.1)] animate-slide-up max-h-[85vh] overflow-y-auto">
+      <div className="glass-panel w-full max-w-lg mx-4 shadow-[0_0_60px_rgba(255,140,0,0.1)] animate-slide-up max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b border-white/10">
-          <h2 className="text-lg font-['Share_Tech_Mono',monospace] neon-text-cyan">
+          <h2 className={`text-lg font-['Share_Tech_Mono',monospace] ${titleClass ?? "neon-text-cyan"}`}>
             {title}
           </h2>
           <Button variant="ghost" size="sm" onClick={onClose} aria-label="Close">

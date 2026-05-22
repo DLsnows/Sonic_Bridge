@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent, useRef } from "react";
+import { useState, FormEvent, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 
@@ -30,6 +30,34 @@ export function PostForm({
   const [showFilePicker, setShowFilePicker] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const DRAFT_KEY = `discussion-draft-${projectId}`;
+  const [draftRestored, setDraftRestored] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (mode === "edit") return;
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      if (saved) {
+        const draft = JSON.parse(saved);
+        requestAnimationFrame(() => {
+          if (draft.title) setTitle(draft.title);
+          if (draft.content) setContent(draft.content);
+          setDraftRestored(true);
+        });
+      }
+    } catch {}
+  }, [DRAFT_KEY, mode]);
+
+  useEffect(() => {
+    if (mode === "edit") return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      if (title || content) localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, content }));
+    }, 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [title, content, DRAFT_KEY, mode]);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
@@ -47,6 +75,8 @@ export function PostForm({
     setSubmitting(true);
     try {
       await onSubmit({ title: title.trim(), content: content.trim() });
+      if (debounceRef.current) { clearTimeout(debounceRef.current); debounceRef.current = null; }
+      localStorage.removeItem(DRAFT_KEY);
       if (mode !== "edit") {
         setTitle("");
         setContent("");
@@ -142,6 +172,8 @@ export function PostForm({
           )}
         </div>
       </div>
+
+      {draftRestored && <p className="text-[10px] text-[#FF8C00]/70 mb-2">Draft restored</p>}
 
       {error && <p className="text-xs text-[#FF4444]">{error}</p>}
 

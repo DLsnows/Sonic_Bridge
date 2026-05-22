@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { files, folders, users } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { authenticate } from "@/lib/api-auth";
-import { getMaxFileSize, detectMimeType } from "@/lib/storage";
+import { uploadFile, getMaxFileSize, detectMimeType } from "@/lib/storage";
 import { resolveProjectId } from "@/lib/project-utils";
 import { createNotifications } from "@/lib/notifications";
 
@@ -30,6 +30,7 @@ export async function GET(
       name: files.name,
       size: files.size,
       mimeType: files.mimeType,
+      storageKey: files.storageKey,
       folderId: files.folderId,
       uploadedBy: files.uploadedBy,
       uploaderName: users.username,
@@ -56,123 +57,54 @@ export async function POST(
   const authResult = await authenticate(request, rawId);
   if (authResult instanceof Response) return authResult;
 
-  const id = await resolveProjectId(rawId);
-  if (!id) {
-    return NextResponse.json({ error: "Project not found" }, { status: 404 });
-  }
+  const projectId = await resolveProjectId(rawId);
+  if (!projectId) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
-  let body: { files: Array<{ name: string; size: number; mimeType: string; storageKey: string; url?: string }>; folderId?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
+  let formData: FormData;
+  try { formData = await request.formData(); } catch { return NextResponse.json({ error: "Invalid form data" }, { status: 400 }); }
 
-  const { files: fileList, folderId } = body;
+  const uploadedFiles = formData.getAll("files") as File[];
+  const folderId = formData.get("folderId") as string | null;
+  if (uploadedFiles.length === 0) return NextResponse.json({ error: "No files provided" }, { status: 400 });
 
-  if (!fileList || fileList.length === 0) {
-    return NextResponse.json({ error: "No files provided" }, { status: 400 });
-  }
-
+  let folderPath = "files";
   if (folderId) {
-    const [folder] = await db
-      .select()
-      .from(folders)
-      .where(and(eq(folders.id, folderId), eq(folders.projectId, id)))
-      .limit(1);
-
-    if (!folder) {
-      return NextResponse.json({ error: "Folder not found" }, { status: 404 });
-    }
+    const [folder] = await db.select().from(folders).where(and(eq(folders.id, folderId), eq(folders.projectId, projectId))).limit(1);
+    if (!folder) return NextResponse.json({ error: "Folder not found" }, { status: 404 });
+    folderPath = folder.name.replace(/\.\.|\//g, "_");
   }
 
-  for (const file of fileList) {
-    if (!file.name || !file.storageKey) {
-      return NextResponse.json(
-        { error: "Each file must have name and storageKey" },
-        { status: 400 },
-      );
-    }
-    if (!file.storageKey.startsWith(`${id}/`) || file.storageKey.includes("..")) {
-      return NextResponse.json(
-        { error: "Invalid file storage key" },
-        { status: 400 },
-      );
-    }
+  for (const file of uploadedFiles) {
     const { limit, category } = getMaxFileSize(file.name);
     if (file.size > limit) {
       const limitStr = limit >= 1073741824 ? `${(limit / 1073741824).toFixed(0)}GB` : `${(limit / 1048576).toFixed(0)}MB`;
-      return NextResponse.json(
-        { error: `File "${file.name}" exceeds ${limitStr} limit for ${category} files` },
-        { status: 413 },
-      );
+      return NextResponse.json({ error: `File "${file.name}" exceeds ${limitStr} limit for ${category} files` }, { status: 413 });
     }
   }
 
-  const results: Array<{
-    id: string;
-    name: string;
-    size: number;
-    mimeType: string;
-    folderId: string | null;
-    uploadedAt: Date;
-  }> = [];
+  const results: Array<{ id: string; name: string; size: number; mimeType: string; folderId: string | null; uploadedAt: Date }> = [];
 
-  for (const file of fileList) {
-    const mimeType = detectMimeType(file.name, file.mimeType);
-
-    // Skip if this storageKey already exists (prevent duplicates on retry)
-    const [existing] = await db
-      .select({ id: files.id, uploadedAt: files.uploadedAt })
-      .from(files)
-      .where(and(eq(files.projectId, id), eq(files.storageKey, file.storageKey)))
-      .limit(1);
-
-    if (existing) {
-      results.push({
-        id: existing.id,
-        name: file.name,
-        size: file.size,
-        mimeType,
-        folderId: folderId ?? null,
-        uploadedAt: existing.uploadedAt,
-      });
-      continue;
+  for (const file of uploadedFiles) {
+    const mimeType = detectMimeType(file.name, file.type);
+    let storageKey: string;
+    try {
+      const result = await uploadFile(projectId, folderPath, file);
+      storageKey = result.storageKey;
+    } catch (err) {
+      console.error(`Failed to upload "${file.name}" to R2:`, err instanceof Error ? err.message : err);
+      return NextResponse.json({ error: `Failed to store "${file.name}". Please try again.` }, { status: 500 });
     }
 
-    const [record] = await db
-      .insert(files)
-      .values({
-        projectId: id,
-        folderId: folderId ?? null,
-        name: file.name,
-        size: file.size,
-        mimeType,
-        storageKey: file.storageKey,
-        uploadedBy: authResult.userId,
-      })
-      .returning();
+    const [record] = await db.insert(files).values({
+      projectId, folderId: folderId ?? null, name: file.name, size: file.size,
+      mimeType, storageKey, uploadedBy: authResult.userId,
+    }).returning({ id: files.id, uploadedAt: files.uploadedAt });
 
-    if (record) {
-      results.push({
-        id: record.id,
-        name: record.name,
-        size: record.size,
-        mimeType: record.mimeType,
-        folderId: record.folderId,
-        uploadedAt: record.uploadedAt,
-      });
-    }
+    if (record) results.push({ id: record.id, name: file.name, size: file.size, mimeType, folderId: folderId ?? null, uploadedAt: record.uploadedAt });
   }
 
   for (const r of results) {
-    createNotifications({
-      type: "new_file",
-      referenceId: r.id,
-      referenceType: "file",
-      projectId: id,
-      actorUserId: authResult.userId,
-    }).catch((e) => console.error("Notification creation failed:", e));
+    createNotifications({ type: "new_file", referenceId: r.id, referenceType: "file", projectId, actorUserId: authResult.userId }).catch((e) => console.error("Notification creation failed:", e));
   }
 
   return NextResponse.json({ files: results }, { status: 201 });

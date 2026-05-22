@@ -10,7 +10,7 @@ interface FileListProps {
   loading: boolean;
   projectId: string;
   onDelete: (fileId: string) => void;
-  onDownload: (fileId: string) => void;
+  onDownload: (fileId: string, fileName: string) => void;
 }
 
 function formatSize(bytes: number): string {
@@ -222,7 +222,7 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
                         {playingFileId === file.id && audioLoading ? "..." : playingFileId === file.id ? "⏸" : "▶"}
                       </Button>
                     )}
-                    <Button variant="ghost" size="sm" onClick={() => onDownload(file.id)}>DL</Button>
+                    <Button variant="ghost" size="sm" onClick={() => onDownload(file.id, file.name)}>DL</Button>
                     <Button variant="danger" size="sm" onClick={() => setDeleteTarget({ id: file.id, name: file.name })}>DEL</Button>
                   </div>
                 </td>
