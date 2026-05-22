@@ -15,6 +15,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Clone JUCE (shallow)
+        run: |
+          git clone --depth 1 --branch 8.0.8 https://github.com/juce-framework/JUCE.git "${{ github.workspace }}/JUCE"
+
       - name: Setup vcpkg
         run: |
           echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> $env:GITHUB_ENV
