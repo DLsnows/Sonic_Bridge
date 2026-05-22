@@ -50,40 +50,68 @@ export function UploadZone({ projectId, folderId, onComplete, onClose }: UploadZ
         // Step 1: Get presigned URL
         const urlParams = new URLSearchParams({ name: file.name, type: file.type, size: String(file.size) });
         if (folderId) urlParams.set("folderId", folderId);
-        const presignedRes = await fetch(
-          `/api/projects/${projectId}/files/upload-url?${urlParams}`,
-        );
+
+        let presignedRes: Response;
+        try {
+          presignedRes = await fetch(
+            `/api/projects/${projectId}/files/upload-url?${urlParams}`,
+          );
+        } catch {
+          throw new Error("Network error — server unreachable. Check your connection.");
+        }
+
         if (!presignedRes.ok) {
           const errData = await presignedRes.json().catch(() => ({}));
-          throw new Error(errData.error ?? "Failed to get upload URL");
+          if (presignedRes.status === 413) {
+            throw new Error(errData.error ?? "File too large — exceeds size limit.");
+          }
+          if (presignedRes.status === 401 || presignedRes.status === 403) {
+            throw new Error("Login expired — please refresh the page and try again.");
+          }
+          throw new Error(errData.error ?? `Server error (${presignedRes.status}) — cannot prepare upload.`);
         }
         const { uploadUrl, storageKey } = await presignedRes.json();
 
         // Step 2: Upload directly to R2
-        const r2Res = await fetch(uploadUrl, {
-          method: "PUT",
-          body: file,
-          headers: { "Content-Type": file.type || "application/octet-stream" },
-        });
+        let r2Res: Response;
+        try {
+          r2Res = await fetch(uploadUrl, {
+            method: "PUT",
+            body: file,
+            headers: { "Content-Type": file.type || "application/octet-stream" },
+          });
+        } catch {
+          throw new Error("Upload interrupted — file may be too large or connection was lost.");
+        }
+
         if (!r2Res.ok) {
-          throw new Error(`Upload to storage failed (${r2Res.status})`);
+          if (r2Res.status === 403) {
+            throw new Error("Upload link expired — please close and reopen the upload dialog.");
+          }
+          throw new Error(`Storage write failed (HTTP ${r2Res.status}) — file not saved.`);
         }
 
         // Step 3: Register file in DB
-        const dbRes = await fetch(`/api/projects/${projectId}/files`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            storageKey,
-            name: file.name,
-            size: file.size,
-            mimeType: file.type || "application/octet-stream",
-            folderId: folderId ?? null,
-          }),
-        });
+        let dbRes: Response;
+        try {
+          dbRes = await fetch(`/api/projects/${projectId}/files`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              storageKey,
+              name: file.name,
+              size: file.size,
+              mimeType: file.type || "application/octet-stream",
+              folderId: folderId ?? null,
+            }),
+          });
+        } catch {
+          throw new Error("File was uploaded but failed to save — it may appear after refreshing the page.");
+        }
+
         if (!dbRes.ok) {
           const errData = await dbRes.json().catch(() => ({}));
-          throw new Error(errData.error ?? "Failed to register file");
+          throw new Error(errData.error ?? `Registration failed (HTTP ${dbRes.status}) — file uploaded but not saved.`);
         }
       } catch (err) {
         setError(
@@ -92,7 +120,6 @@ export function UploadZone({ projectId, folderId, onComplete, onClose }: UploadZ
             : `${file.name}: Upload failed`,
         );
         setUploading(false);
-        onComplete();
         return;
       }
     }
