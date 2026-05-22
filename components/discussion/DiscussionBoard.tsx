@@ -253,6 +253,7 @@ export function DiscussionBoard({
                 onAiFormat={handleAiFormat}
                 onSetReplying={setReplyingTo}
                 onSetEditing={setEditingId}
+                repliesMap={repliesMap}
               />
             ))}
           </div>
