@@ -11,6 +11,7 @@ interface FileListProps {
   projectId: string;
   onDelete: (fileId: string) => void;
   onDownload: (fileId: string, fileName: string) => void;
+  onOpenPlayer?: (file: FileItem) => void;
 }
 
 function formatSize(bytes: number): string {
@@ -29,6 +30,13 @@ function fileIcon(mimeType: string): string {
   return "FILE";
 }
 
+function formatTime(seconds: number): string {
+  if (!isFinite(seconds) || seconds < 0) return "0:00";
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 const iconColors: Record<string, string> = {
   SPEAKER: "text-[#00FF41]",
   IMG: "text-[#00FF41]",
@@ -37,7 +45,7 @@ const iconColors: Record<string, string> = {
   FILE: "text-[#A0A0B0]",
 };
 
-export function FileList({ files, loading, projectId, onDelete, onDownload }: FileListProps) {
+export function FileList({ files, loading, projectId, onDelete, onDownload, onOpenPlayer }: FileListProps) {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [playingFileId, setPlayingFileId] = useState<string | null>(null);
   const [audioLoading, setAudioLoading] = useState(false);
@@ -46,9 +54,21 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
   const playingFileIdRef = useRef<string | null>(null);
   const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const audioListenersRef = useRef<Record<string, () => void> | null>(null);
+  const animationRef = useRef<number | null>(null);
+  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
+  const [audioDuration, setAudioDuration] = useState(0);
+  const [audioVolume, setAudioVolume] = useState(1);
 
   const handlePlayAudio = useCallback(
     (fileId: string, fileUrl: string, mimeType?: string) => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
+
+      setAudioCurrentTime(0);
+      setAudioDuration(0);
+
       if (playingFileIdRef.current === fileId) {
         audioRef.current?.pause();
         audioRef.current = null;
@@ -112,6 +132,12 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
       };
       const onCanPlay = () => {
         setAudioLoading(false);
+        setAudioDuration(audio.duration || 0);
+        const updateTime = () => {
+          setAudioCurrentTime(audio.currentTime);
+          animationRef.current = requestAnimationFrame(updateTime);
+        };
+        animationRef.current = requestAnimationFrame(updateTime);
       };
 
       audio.addEventListener("ended", onEnded);
@@ -137,9 +163,22 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
     [],
   );
 
+  const handleSeek = (time: number) => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = time;
+      setAudioCurrentTime(time);
+    }
+  };
+
+  const handleVolumeChange = (vol: number) => {
+    setAudioVolume(vol);
+    if (audioRef.current) audioRef.current.volume = vol;
+  };
+
   useEffect(() => {
     return () => {
       if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+      if (animationRef.current) cancelAnimationFrame(animationRef.current);
       if (audioRef.current) {
         const listeners = audioListenersRef.current;
         if (listeners) {
@@ -204,7 +243,16 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
                 <td className="py-2.5 px-3">
                   <div className="flex items-center gap-2">
                     <span className={`font-['Share_Tech_Mono',monospace] text-[10px] ${colorClass}`}>{icon}</span>
-                    <span className="text-[#F0F0F0] truncate max-w-[200px]">{file.name}</span>
+                    <span
+                      className={`text-[#F0F0F0] truncate max-w-[200px] ${file.mimeType.startsWith("audio/") ? "cursor-pointer hover:text-[#00F0FF] hover:underline transition-colors" : ""}`}
+                      onClick={() => {
+                        if (file.mimeType.startsWith("audio/") && onOpenPlayer) {
+                          onOpenPlayer(file);
+                        }
+                      }}
+                    >
+                      {file.name}
+                    </span>
                   </div>
                 </td>
                 <td className="py-2.5 px-3 text-[#A0A0B0] font-mono text-xs">{formatSize(file.size)}</td>
@@ -214,13 +262,53 @@ export function FileList({ files, loading, projectId, onDelete, onDownload }: Fi
                 <td className="py-2.5 px-3">
                   <div className="flex items-center justify-end gap-1">
                     {file.mimeType.startsWith("audio/") && (
-                      <Button
-                        variant={playingFileId === file.id ? "primary" : "ghost"}
-                        size="sm"
-                        onClick={() => handlePlayAudio(file.id, `/api/projects/${projectId}/files/${file.id}?inline=1`, file.mimeType)}
-                      >
-                        {playingFileId === file.id && audioLoading ? "..." : playingFileId === file.id ? "⏸" : "▶"}
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant={playingFileId === file.id ? "primary" : "ghost"}
+                          size="sm"
+                          onClick={() => handlePlayAudio(file.id, `/api/projects/${projectId}/files/${file.id}?inline=1`, file.mimeType)}
+                        >
+                          {playingFileId === file.id && audioLoading ? "..." : playingFileId === file.id ? "⏸" : "▶"}
+                        </Button>
+                        {playingFileId === file.id && !audioLoading && (
+                          <div className="flex items-center gap-1.5 bg-[#0F0F13] border border-white/5 rounded px-2 py-1">
+                            <span className="text-[10px] text-[#F0F0F0] font-mono tabular-nums min-w-[28px]">
+                              {formatTime(audioCurrentTime)}
+                            </span>
+                            <input
+                              type="range"
+                              min={0}
+                              max={audioDuration || 0}
+                              step={0.1}
+                              value={audioCurrentTime}
+                              onChange={(e) => handleSeek(parseFloat(e.target.value))}
+                              className="w-20 h-1 appearance-none bg-white/10 rounded-full outline-none cursor-pointer
+                                [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5
+                                [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#00F0FF]"
+                            />
+                            <span className="text-[10px] text-[#A0A0B0] font-mono tabular-nums min-w-[28px]">
+                              {formatTime(audioDuration)}
+                            </span>
+                            <button
+                              onClick={() => handleVolumeChange(audioVolume === 0 ? 1 : 0)}
+                              className="text-[10px] text-[#A0A0B0] hover:text-[#F0F0F0]"
+                            >
+                              {audioVolume === 0 ? "🔇" : audioVolume < 0.5 ? "🔉" : "🔊"}
+                            </button>
+                            <input
+                              type="range"
+                              min={0}
+                              max={1}
+                              step={0.05}
+                              value={audioVolume}
+                              onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                              className="w-12 h-1 appearance-none bg-white/10 rounded-full outline-none cursor-pointer
+                                [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5
+                                [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#00F0FF]"
+                            />
+                          </div>
+                        )}
+                      </div>
                     )}
                     <Button variant="ghost" size="sm" onClick={() => onDownload(file.id, file.name)}>DL</Button>
                     <Button variant="danger" size="sm" onClick={() => setDeleteTarget({ id: file.id, name: file.name })}>DEL</Button>
