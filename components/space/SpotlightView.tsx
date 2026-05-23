@@ -25,7 +25,7 @@ export function SpotlightView() {
   const prevVideoWatchRef = useRef(videoWatchEnabled);
 
   const [spotlightKey, setSpotlightKey] = useState<string | null>(null);
-  const [manualSpotlight, setManualSpotlight] = useState(false);
+  const manualSpotlightRef = useRef(false);
   const prevScreenShareKey = useRef<string | null>(null);
 
   const tracks = useTracks(
@@ -53,8 +53,10 @@ export function SpotlightView() {
       if (key !== prevScreenShareKey.current) {
         prevScreenShareKey.current = key;
         if (spotlightKey !== key) {
-          setSpotlightKey(key);
-          setManualSpotlight(false);
+          requestAnimationFrame(() => {
+            setSpotlightKey(key);
+            manualSpotlightRef.current = false;
+          });
         }
       }
     } else {
@@ -86,7 +88,7 @@ export function SpotlightView() {
 
     function handleTrackPublished(
       publication: RemoteTrackPublication,
-      _participant: RemoteParticipant,
+      _participant: RemoteParticipant, // eslint-disable-line @typescript-eslint/no-unused-vars
     ) {
       if (publication.kind === Track.Kind.Video) {
         publication.setSubscribed(false);
@@ -103,12 +105,12 @@ export function SpotlightView() {
 
   const enterSpotlight = useCallback((key: string) => {
     setSpotlightKey(key);
-    setManualSpotlight(true);
+    manualSpotlightRef.current = true;
   }, []);
 
   const exitSpotlight = useCallback(() => {
     setSpotlightKey(null);
-    setManualSpotlight(false);
+    manualSpotlightRef.current = false;
   }, []);
 
   const handleDoubleClick = useCallback(
