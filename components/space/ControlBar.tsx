@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useLocalParticipant, useMaybeRoomContext } from "@livekit/components-react";
 import { useRouter } from "next/navigation";
 import { useSpaceStore } from "@/lib/store/space";
@@ -34,15 +34,20 @@ export function ControlBar({
   const [micDeviceId, setMicDeviceId] = useState<string | null>(null);
   const [cameraDeviceId, setCameraDeviceId] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (isConnected && isMicrophoneEnabled) {
+      localParticipant.setMicrophoneEnabled(false);
+    }
+  }, [isConnected]);
+
   async function handleToggleMic() {
     try {
       if (!isMicrophoneEnabled) {
-        const preStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        preStream.getTracks().forEach((t) => t.stop());
-        const { bitrate } = useMediaSettingsStore.getState().audioQuality;
+        const { noiseSuppression, voiceIsolation } = useMediaSettingsStore.getState().audioQuality;
         const micOptions = {
           ...getMicProcessor().getCaptureOptions(),
-          audioEncoding: { maxBitrate: bitrate },
+          noiseSuppression,
+          voiceIsolation,
         };
         await localParticipant.setMicrophoneEnabled(true, micOptions);
       } else {
