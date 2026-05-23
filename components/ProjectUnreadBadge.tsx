@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useNotificationStore } from "@/lib/store/notification";
 
 export function ProjectUnreadBadge({ projectId }: { projectId: string }) {
-  const badge = useNotificationStore((s) => s.unreadByProject[projectId]?.total ?? 0);
+  const unreadByProject = useNotificationStore((s) => s.unreadByProject);
+
+  const badge = unreadByProject[projectId] ?? 0;
   if (badge === 0) return null;
 
   return (
@@ -14,11 +16,25 @@ export function ProjectUnreadBadge({ projectId }: { projectId: string }) {
   );
 }
 
+/** Wraps a project card with a relative container and unread badge */
 export function ProjectCardWrapper({
-  projectId, href, children,
-}: { projectId: string; href: string; children: React.ReactNode }) {
+  projectId,
+  href,
+  children,
+}: {
+  projectId: string;
+  href: string;
+  children: React.ReactNode;
+}) {
+  const recordProjectView = useNotificationStore((s) => s.recordProjectView);
+  const badge = useNotificationStore((s) => s.unreadByProject[projectId] ?? 0);
+
   return (
-    <Link href={href} className="relative block">
+    <Link
+      href={href}
+      onClick={() => { if (badge > 0) recordProjectView(projectId); }}
+      className="relative block"
+    >
       <ProjectUnreadBadge projectId={projectId} />
       {children}
     </Link>
