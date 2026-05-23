@@ -37,6 +37,7 @@ interface VstState {
   vstVolume: number;
   micVolume: number;
   micMeterLevel: number;
+  preferredPort: number;
 
   setStatus: (status: VstConnectionStatus) => void;
   setPluginInfo: (info: { name: string; version: string }) => void;
@@ -48,6 +49,7 @@ interface VstState {
   setMicVolume: (volume: number) => void;
   setMicMeterLevel: (level: number) => void;
   setError: (error: string | null) => void;
+  setPreferredPort: (port: number) => void;
   requestReconnect: () => void;
   reset: () => void;
 }
@@ -70,6 +72,7 @@ const initialState = {
   vstVolume: 1,
   micVolume: 1,
   micMeterLevel: 0,
+  preferredPort: 9420,
 };
 
 export const useVstStore = create<VstState>((set) => ({
@@ -97,6 +100,7 @@ export const useVstStore = create<VstState>((set) => ({
   setMicVolume: (volume) => set({ micVolume: volume }),
   setMicMeterLevel: (level) => set({ micMeterLevel: level }),
   setError: (error) => set({ lastError: error }),
+  setPreferredPort: (port) => set({ preferredPort: port }),
   requestReconnect: () => set((s) => ({ triggerReconnect: s.triggerReconnect + 1 })),
   reset: () => set(initialState),
 }));

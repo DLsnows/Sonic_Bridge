@@ -3,6 +3,7 @@
 import { useRemoteParticipants } from "@livekit/components-react";
 import { useSpaceStore } from "@/lib/store/space";
 import { useVstStore } from "@/lib/store/vst";
+import { useMediaSettingsStore } from "@/lib/store/media-settings";
 import { useState, useCallback } from "react";
 import { VstVolumeMeter } from "./VstVolumeMeter";
 
@@ -38,6 +39,8 @@ export function AudioMixer() {
   const micVolume = useVstStore((s) => s.micVolume);
   const setMicVolume = useVstStore((s) => s.setMicVolume);
   const micMeterLevel = useVstStore((s) => s.micMeterLevel);
+  const audioBitrate = useMediaSettingsStore((s) => s.audioQuality.bitrate);
+  const setAudioBitrate = useMediaSettingsStore((s) => s.setAudioBitrate);
 
   const handleRemoteVolumeChange = useCallback(
     (participantIdentity: string, value: number) => {
@@ -151,6 +154,30 @@ export function AudioMixer() {
               }}
             />
           </div>
+        </div>
+
+        {/* Opus Bitrate (LiveKit encoder) */}
+        <div className="space-y-1 pt-2 border-t border-[#00F0FF]/10">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-[#A0A0B0] font-['Share_Tech_Mono',monospace]">
+              Opus Bitrate
+            </span>
+            <span className="text-[10px] text-[#F0F0F0] tabular-nums">
+              {Math.round(audioBitrate / 1000)} kbps
+            </span>
+          </div>
+          <input
+            type="range"
+            min="192000"
+            max="640000"
+            step="32000"
+            value={audioBitrate}
+            onChange={(e) => setAudioBitrate(parseInt(e.target.value))}
+            className={sliderClass}
+            style={{
+              background: `linear-gradient(to right, rgba(0,240,255,0.25) ${((audioBitrate - 192000) / (640000 - 192000)) * 100}%, rgba(255,255,255,0.1) ${((audioBitrate - 192000) / (640000 - 192000)) * 100}%)`,
+            }}
+          />
         </div>
 
         {/* ===== OUTPUTS ===== */}
