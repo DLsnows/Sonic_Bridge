@@ -24,6 +24,7 @@ interface ActivityItem {
 }
 
 export async function GET() {
+  try {
   const session = await auth();
   if (!session?.user) {
     console.warn("[notif] GET: no session");
@@ -188,6 +189,10 @@ export async function GET() {
 
   console.log("[notif] GET: returning", items.length, "items");
   return NextResponse.json({ notifications: items.slice(0, 50) });
+  } catch (e) {
+    console.error("[notif] GET fatal:", e);
+    return NextResponse.json({ notifications: [], error: String(e) }, { status: 200 });
+  }
 }
 
 export async function POST(request: NextRequest) {
