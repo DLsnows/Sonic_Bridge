@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { useNotificationStore } from "@/lib/store/notification";
 import { Card } from "@/components/ui/Card";
@@ -13,7 +14,11 @@ const navCards = [
 
 export function ProjectNavCards({ projectId }: { projectId: string }) {
   const unreadByProject = useNotificationStore((s) => s.unreadByProject);
+  const fetchUnreadCounts = useNotificationStore((s) => s.fetchUnreadCounts);
   const entry = unreadByProject[projectId];
+
+  // Fetch on mount so badges show immediately (don't wait for Sidebar poll)
+  useEffect(() => { fetchUnreadCounts(); }, [fetchUnreadCounts]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
