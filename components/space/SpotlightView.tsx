@@ -135,9 +135,12 @@ export function SpotlightView() {
   // Auto-exit spotlight when the pinned track disappears (participant left)
   useEffect(() => {
     if (isSpotlightActive && !spotlightTrack) {
-      exitSpotlight();
+      requestAnimationFrame(() => {
+        setSpotlightKey(null);
+        manualSpotlightRef.current = false;
+      });
     }
-  }, [isSpotlightActive, spotlightTrack, exitSpotlight]);
+  }, [isSpotlightActive, spotlightTrack]);
 
   // Empty state
   if (tracks.length === 0) {
