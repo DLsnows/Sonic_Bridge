@@ -37,6 +37,7 @@ juce_add_plugin(SonicBridgeVST
 
 # ixwebsocket (static, bundles mbedtls for TLS — no separate OpenSSL needed)
 find_package(ixwebsocket CONFIG REQUIRED)
+find_path(IXWEBSOCKET_INCLUDE_DIR ixwebsocket/IXWebSocketServer.h REQUIRED)
 
 # --- Source Files ---
 target_sources(SonicBridgeVST PRIVATE
@@ -57,6 +58,7 @@ target_sources(SonicBridgeVST PRIVATE
 # --- Include Directories ---
 target_include_directories(SonicBridgeVST PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}
+  ${IXWEBSOCKET_INCLUDE_DIR}
 )
 
 # --- Link Libraries ---
