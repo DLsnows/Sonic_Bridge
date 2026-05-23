@@ -115,13 +115,14 @@ export function SpotlightView() {
 
   const handleDoubleClick = useCallback(
     (key: string) => {
+      if (tracks.length <= 2) return;
       if (spotlightKey === key) {
         exitSpotlight();
       } else {
         enterSpotlight(key);
       }
     },
-    [spotlightKey, enterSpotlight, exitSpotlight],
+    [spotlightKey, enterSpotlight, exitSpotlight, tracks.length],
   );
 
   const isSpotlightActive = spotlightKey !== null && tracks.length > 2;

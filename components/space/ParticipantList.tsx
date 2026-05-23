@@ -34,8 +34,8 @@ function ParticipantRow({
     return `${Math.round(bps / 1000)}kbps`;
   }
 
-  function formatResolution(w: number | null, h: number | null): string {
-    if (w === null || h === null) return "";
+  function formatResolution(_w: number | null, h: number | null): string {
+    if (h === null) return "";
     return `${h}p`;
   }
 
