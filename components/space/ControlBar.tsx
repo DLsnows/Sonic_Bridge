@@ -37,7 +37,8 @@ export function ControlBar({
   async function handleToggleMic() {
     try {
       if (!isMicrophoneEnabled) {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
+        const preStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        preStream.getTracks().forEach((t) => t.stop());
         const { bitrate } = useMediaSettingsStore.getState().audioQuality;
         const micOptions = {
           ...getMicProcessor().getCaptureOptions(),
