@@ -1,121 +1,32 @@
 import { create } from "zustand";
 
-export interface Notification {
-  id: string;
-  projectId: string;
-  type: string;
-  referenceId: string;
-  referenceType: string;
-  isRead: boolean;
-  createdAt: string;
-  title?: string;
-  actorName?: string;
+interface UnreadEntry {
+  total: number;
+  threads: number;
+  files: number;
+  events: number;
 }
 
 interface NotificationState {
-  notifications: Notification[];
-  unreadCount: number;
-  unreadByProject: Record<string, number>;
-  dropdownOpen: boolean;
-  setNotifications: (items: Notification[]) => void;
-  setDropdownOpen: (open: boolean) => void;
-  markRead: (id: string) => void;
-  markAllRead: () => void;
-  fetchNotifications: () => Promise<void>;
+  unreadByProject: Record<string, UnreadEntry>;
   fetchUnreadCounts: () => Promise<void>;
   recordProjectView: (projectId: string) => Promise<void>;
 }
 
-export const useNotificationStore = create<NotificationState>((set, get) => ({
-  notifications: [],
-  unreadCount: 0,
+export const useNotificationStore = create<NotificationState>((set) => ({
   unreadByProject: {},
-  dropdownOpen: false,
-
-  setNotifications: (items) =>
-    set({ notifications: items, unreadCount: items.filter((n) => !n.isRead).length }),
-
-  setDropdownOpen: (open) => set({ dropdownOpen: open }),
-
-  markRead: async (id) => {
-    const notif = get().notifications.find((n) => n.id === id);
-    // new_file and new_event are ephemeral (source-table queries, no DB row).
-    // new_post and reply_to_user are persistent notification rows — sync to server.
-    if (notif && notif.type !== "reply_to_user" && notif.type !== "new_post") {
-      set((state) => {
-        const updated = state.notifications.map((n) =>
-          n.id === id ? { ...n, isRead: true } : n,
-        );
-        return { notifications: updated, unreadCount: updated.filter((n) => !n.isRead).length };
-      });
-      return;
-    }
-
-    const res = await fetch("/api/notifications", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ notificationId: id }),
-    });
-    if (!res.ok) return;
-    set((state) => {
-      const updated = state.notifications.map((n) =>
-        n.id === id ? { ...n, isRead: true } : n,
-      );
-      return { notifications: updated, unreadCount: updated.filter((n) => !n.isRead).length };
-    });
-  },
-
-  markAllRead: async () => {
-    const current = get();
-    const projectIds = Object.keys(current.unreadByProject);
-    set((state) => ({
-      notifications: state.notifications.map((n) => ({ ...n, isRead: true })),
-      unreadCount: 0,
-      unreadByProject: {},
-    }));
-    try {
-      await fetch("/api/notifications", { method: "PATCH" });
-      if (projectIds.length > 0) {
-        await fetch("/api/notifications/view", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ projectIds }),
-        });
-      }
-    } catch (e) { console.error("markAllRead PATCH failed:", e); }
-  },
-
-  fetchNotifications: async () => {
-    try {
-      const res = await fetch("/api/notifications");
-      console.log("[notif] fetchNotifications status:", res.status);
-      if (res.ok) {
-        const data = await res.json();
-        console.log("[notif] fetchNotifications count:", data.notifications?.length ?? 0);
-        if (data._debug) console.log("[notif] debug:", JSON.stringify(data._debug));
-        get().setNotifications(data.notifications);
-      } else {
-        console.warn("[notif] fetchNotifications non-ok:", res.status);
-      }
-    } catch (e) { console.error("fetchNotifications failed:", e); }
-  },
 
   fetchUnreadCounts: async () => {
     try {
       const res = await fetch("/api/notifications/unread-counts");
-      console.log("[notif] fetchUnreadCounts status:", res.status);
       if (res.ok) {
         const data = await res.json();
-        console.log("[notif] fetchUnreadCounts counts:", JSON.stringify(data.counts ?? {}));
         set({ unreadByProject: data.counts ?? {} });
-      } else {
-        console.warn("[notif] fetchUnreadCounts non-ok:", res.status);
       }
     } catch (e) { console.error("fetchUnreadCounts failed:", e); }
   },
 
   recordProjectView: async (projectId: string) => {
-    // Clear local unread count for this project immediately
     set((state) => {
       const updated = { ...state.unreadByProject };
       delete updated[projectId];
