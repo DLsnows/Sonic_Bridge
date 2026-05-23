@@ -37,14 +37,17 @@ export function ControlBar({
   async function handleToggleMic() {
     try {
       if (!isMicrophoneEnabled) {
-        await localParticipant.setMicrophoneEnabled(
-          true,
-          getMicProcessor().getCaptureOptions(),
-        );
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+        const { bitrate } = useMediaSettingsStore.getState().audioQuality;
+        const micOptions = {
+          ...getMicProcessor().getCaptureOptions(),
+          audioEncoding: { maxBitrate: bitrate },
+        };
+        await localParticipant.setMicrophoneEnabled(true, micOptions);
       } else {
         await localParticipant.setMicrophoneEnabled(false);
       }
-    } catch { /* device access may be denied */ }
+    } catch (e) { console.error(e); }
   }
 
   async function handleToggleCamera() {

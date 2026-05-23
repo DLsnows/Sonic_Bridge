@@ -25,29 +25,34 @@ export class MicProcessor
     const { audioContext, track } = opts;
     this.audioContext = audioContext;
 
-    this.sourceNode = audioContext.createMediaStreamSource(
-      new MediaStream([track]),
-    );
+    try {
+      this.sourceNode = audioContext.createMediaStreamSource(
+        new MediaStream([track]),
+      );
 
-    this.analyserNode = audioContext.createAnalyser();
-    this.analyserNode.fftSize = 256;
-    this.analyserNode.smoothingTimeConstant = 0.4;
-    this.meterDataArray = new Uint8Array(
-      new ArrayBuffer(this.analyserNode.fftSize),
-    );
+      this.analyserNode = audioContext.createAnalyser();
+      this.analyserNode.fftSize = 256;
+      this.analyserNode.smoothingTimeConstant = 0.4;
+      this.meterDataArray = new Uint8Array(
+        new ArrayBuffer(this.analyserNode.fftSize),
+      );
 
-    this.gainNode = audioContext.createGain();
-    this.gainNode.gain.value = useVstStore.getState().micVolume;
+      this.gainNode = audioContext.createGain();
+      this.gainNode.gain.value = useVstStore.getState().micVolume;
 
-    this.destination = audioContext.createMediaStreamDestination();
+      this.destination = audioContext.createMediaStreamDestination();
 
-    this.sourceNode.connect(this.analyserNode);
-    this.analyserNode.connect(this.gainNode);
-    this.gainNode.connect(this.destination);
+      this.sourceNode.connect(this.analyserNode);
+      this.analyserNode.connect(this.gainNode);
+      this.gainNode.connect(this.destination);
 
-    this.processedTrack = this.destination.stream.getAudioTracks()[0];
+      this.processedTrack = this.destination.stream.getAudioTracks()[0];
 
-    this.startMeterLoop();
+      this.startMeterLoop();
+    } catch (e) {
+      console.error(e);
+      this.processedTrack = track;
+    }
   }
 
   async restart(opts: AudioProcessorOptions): Promise<void> {
