@@ -47,21 +47,20 @@ export function SpotlightView() {
     [tracks],
   );
 
-  if (screenShareTrack) {
-    const key = makeKey(screenShareTrack);
-    if (key !== prevScreenShareKey.current) {
-      prevScreenShareKey.current = key;
-      if (spotlightKey !== key) {
-        // Use a microtask to avoid setState during render
-        queueMicrotask(() => {
+  useEffect(() => {
+    if (screenShareTrack) {
+      const key = makeKey(screenShareTrack);
+      if (key !== prevScreenShareKey.current) {
+        prevScreenShareKey.current = key;
+        if (spotlightKey !== key) {
           setSpotlightKey(key);
           setManualSpotlight(false);
-        });
+        }
       }
+    } else {
+      prevScreenShareKey.current = null;
     }
-  } else {
-    prevScreenShareKey.current = null;
-  }
+  }, [screenShareTrack, spotlightKey]);
 
   // Subscribe/unsubscribe video tracks based on videoWatchEnabled
   useEffect(() => {

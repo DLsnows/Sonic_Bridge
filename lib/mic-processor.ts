@@ -50,7 +50,16 @@ export class MicProcessor
 
       this.startMeterLoop();
     } catch (e) {
-      console.error(e);
+      console.error("MicProcessor init failed, using pass-through:", e);
+      // Clean up any partially-created nodes
+      this.sourceNode?.disconnect();
+      this.analyserNode?.disconnect();
+      this.gainNode?.disconnect();
+      this.sourceNode = null;
+      this.analyserNode = null;
+      this.gainNode = null;
+      this.destination = null;
+      this.meterDataArray = null;
       this.processedTrack = track;
     }
   }

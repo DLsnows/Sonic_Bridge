@@ -36,9 +36,6 @@ function ParticipantRow({
 
   function formatResolution(w: number | null, h: number | null): string {
     if (w === null || h === null) return "";
-    if (h <= 480) return `${h}p`;
-    if (h <= 720) return "720p";
-    if (h <= 1080) return "1080p";
     return `${h}p`;
   }
 
