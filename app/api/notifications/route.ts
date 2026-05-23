@@ -26,9 +26,11 @@ interface ActivityItem {
 export async function GET() {
   const session = await auth();
   if (!session?.user) {
+    console.warn("[notif] GET: no session");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const userId = session.user.id as string;
+  console.log("[notif] GET: userId=", userId?.slice(0,8));
 
   // Get all projects the user is a member of
   const memberOf = await db
@@ -36,8 +38,10 @@ export async function GET() {
     .from(projectMembers)
     .where(eq(projectMembers.userId, userId));
   const projectIds = memberOf.map((m) => m.projectId);
+  console.log("[notif] GET: projectIds=", projectIds.length);
 
   if (projectIds.length === 0) {
+    console.log("[notif] GET: no projects, returning empty");
     return NextResponse.json({ notifications: [] });
   }
 
@@ -182,6 +186,7 @@ export async function GET() {
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
 
+  console.log("[notif] GET: returning", items.length, "items");
   return NextResponse.json({ notifications: items.slice(0, 50) });
 }
 

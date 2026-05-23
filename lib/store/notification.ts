@@ -88,9 +88,13 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   fetchNotifications: async () => {
     try {
       const res = await fetch("/api/notifications");
+      console.log("[notif] fetchNotifications status:", res.status);
       if (res.ok) {
         const data = await res.json();
+        console.log("[notif] fetchNotifications count:", data.notifications?.length ?? 0);
         get().setNotifications(data.notifications);
+      } else {
+        console.warn("[notif] fetchNotifications non-ok:", res.status);
       }
     } catch (e) { console.error("fetchNotifications failed:", e); }
   },
@@ -98,9 +102,13 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   fetchUnreadCounts: async () => {
     try {
       const res = await fetch("/api/notifications/unread-counts");
+      console.log("[notif] fetchUnreadCounts status:", res.status);
       if (res.ok) {
         const data = await res.json();
+        console.log("[notif] fetchUnreadCounts counts:", JSON.stringify(data.counts ?? {}));
         set({ unreadByProject: data.counts ?? {} });
+      } else {
+        console.warn("[notif] fetchUnreadCounts non-ok:", res.status);
       }
     } catch (e) { console.error("fetchUnreadCounts failed:", e); }
   },
