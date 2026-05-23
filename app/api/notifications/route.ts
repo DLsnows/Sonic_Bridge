@@ -117,7 +117,40 @@ export async function GET() {
     });
   }
 
-  // 2. Recent files (type: new_file) from source table
+  // 2. Recent discussion threads (source-table fallback)
+  const threads = await db
+    .select({
+      id: discussionPosts.id,
+      projectId: discussionPosts.projectId,
+      title: discussionPosts.title,
+      username: users.username,
+      createdAt: discussionPosts.createdAt,
+    })
+    .from(discussionPosts)
+    .innerJoin(users, eq(discussionPosts.userId, users.id))
+    .where(and(
+      inArray(discussionPosts.projectId, projectIds),
+      isNull(discussionPosts.parentId),
+      ne(discussionPosts.isAiGenerated, true),
+    ))
+    .orderBy(desc(discussionPosts.createdAt))
+    .limit(15);
+
+  for (const t of threads) {
+    addItem({
+      id: t.id,
+      projectId: t.projectId,
+      type: "new_post",
+      referenceId: t.id,
+      referenceType: "discussion_post",
+      isRead: false,
+      createdAt: t.createdAt.toISOString(),
+      title: t.title,
+      actorName: t.username ?? undefined,
+    });
+  }
+
+  // 3. Recent files (type: new_file) from source table
   const recentFiles = await db
     .select({
       id: files.id,
@@ -146,7 +179,7 @@ export async function GET() {
     });
   }
 
-  // 3. Upcoming/recent events (type: new_event) from source table
+  // 4. Upcoming/recent events (type: new_event) from source table
   const events = await db
     .select({
       id: scheduleEvents.id,
