@@ -33,9 +33,8 @@ export async function PATCH(request: NextRequest) {
   if (!projectIds || !Array.isArray(projectIds) || projectIds.length === 0) {
     return NextResponse.json({ error: "Missing projectIds" }, { status: 400 });
   }
-
-  for (const projectId of projectIds) {
-    try { await upsertProjectView(userId, projectId); } catch { /* non-fatal */ }
+  for (const pid of projectIds) {
+    try { await upsertProjectView(userId, pid); } catch { /* non-fatal */ }
   }
   return NextResponse.json({ success: true });
 }

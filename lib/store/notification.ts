@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-interface UnreadEntry {
+export interface UnreadEntry {
   total: number;
   threads: number;
   files: number;
