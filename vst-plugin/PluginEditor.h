@@ -29,8 +29,14 @@ private:
 
   // Volume meters
   struct MeterBar : public juce::Component {
-    juce::Colour barColour;
-    float level = 0.0f; // 0.0 to 1.0
+    float level = 0.0f;      // 0.0 to 1.0 (instantaneous)
+    float peakHold = 0.0f;   // 0.0 to 1.0 (peak hold)
+
+    static juce::Colour levelColour(float linear) {
+      if (linear > 0.707f) return juce::Colour(0xffff4444);   // > -3dB -> red
+      if (linear > 0.251f) return juce::Colour(0xffffb800);   // > -12dB -> yellow
+      return juce::Colour(0xff00ff41);                         // green
+    }
 
     void paint(juce::Graphics& g) override {
       auto bounds = getLocalBounds().toFloat();
@@ -39,12 +45,30 @@ private:
 
       auto barWidth = bounds.getWidth() * level;
       if (barWidth > 0) {
-        g.setColour(barColour);
+        g.setColour(levelColour(level));
         g.fillRoundedRectangle(bounds.withWidth(barWidth), 2.0f);
+      }
+
+      // Peak hold line
+      auto peakX = bounds.getWidth() * peakHold;
+      if (peakX > 0.5f) {
+        g.setColour(juce::Colours::white.withAlpha(0.9f));
+        g.fillRect(peakX - 0.5f, 0.0f, 1.5f, bounds.getHeight());
       }
 
       g.setColour(juce::Colour(0xff00ff41).withAlpha(0.2f));
       g.drawRoundedRectangle(bounds, 2.0f, 1.0f);
+    }
+  };
+
+  // Status dot indicator (child component, not hardcoded in paint)
+  struct StatusDot : public juce::Component {
+    juce::Colour colour = juce::Colour(0xffa0a0b0);
+    void paint(juce::Graphics& g) override {
+      g.setColour(colour);
+      g.fillEllipse(0.0f, 0.0f, 8.0f, 8.0f);
+      g.setColour(colour.withAlpha(0.3f));
+      g.drawEllipse(-1.0f, -1.0f, 10.0f, 10.0f, 1.0f);
     }
   };
 
@@ -55,11 +79,14 @@ private:
 
   // Settings
   juce::Label mSampleRateLabel;
-  juce::Label mBufferSizeLabel;
 
   // Connection
   juce::TextButton mStartStopButton;
   juce::Label mPortLabel;
+
+  // Status
+  StatusDot mStatusDot;
+  int mActualPort = -1;
 
   void updateStatus();
   void updateMeters();
