@@ -39,7 +39,9 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
 
   markRead: async (id) => {
     const notif = get().notifications.find((n) => n.id === id);
-    if (notif && notif.type !== "reply_to_user") {
+    // new_file and new_event are ephemeral (source-table queries, no DB row).
+    // new_post and reply_to_user are persistent notification rows — sync to server.
+    if (notif && notif.type !== "reply_to_user" && notif.type !== "new_post") {
       set((state) => {
         const updated = state.notifications.map((n) =>
           n.id === id ? { ...n, isRead: true } : n,

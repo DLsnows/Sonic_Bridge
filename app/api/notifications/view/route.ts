@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { projectMembers } from "@/lib/db/schema";
+import { notifications, projectMembers } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { upsertProjectView } from "@/lib/project-views";
 
@@ -31,6 +31,19 @@ export async function POST(request: NextRequest) {
   if (!membership) {
     return NextResponse.json({ error: "Not a project member" }, { status: 403 });
   }
+
+  // Mark all new_post notifications as read for this project+user
+  await db
+    .update(notifications)
+    .set({ isRead: true })
+    .where(
+      and(
+        eq(notifications.userId, userId),
+        eq(notifications.projectId, projectId),
+        eq(notifications.type, "new_post"),
+        eq(notifications.isRead, false),
+      ),
+    );
 
   await upsertProjectView(userId, projectId);
   return NextResponse.json({ success: true });
