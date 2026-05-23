@@ -61,6 +61,11 @@ export function SpotlightView() {
       }
     } else {
       prevScreenShareKey.current = null;
+      if (!manualSpotlightRef.current && spotlightKey !== null) {
+        requestAnimationFrame(() => {
+          setSpotlightKey(null);
+        });
+      }
     }
   }, [screenShareTrack, spotlightKey]);
 
@@ -126,6 +131,13 @@ export function SpotlightView() {
   );
 
   const isSpotlightActive = spotlightKey !== null && tracks.length > 2;
+
+  // Auto-exit spotlight when the pinned track disappears (participant left)
+  useEffect(() => {
+    if (isSpotlightActive && !spotlightTrack) {
+      exitSpotlight();
+    }
+  }, [isSpotlightActive, spotlightTrack, exitSpotlight]);
 
   // Empty state
   if (tracks.length === 0) {
