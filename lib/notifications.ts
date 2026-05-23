@@ -45,8 +45,6 @@ export async function createThreadNotifications(params: {
 
 /**
  * Creates targeted reply_to_user notifications for all thread participants.
- * Generic activity notifications (new_post, new_file, new_event) are covered
- * by the unified GET /api/notifications query reading source tables directly.
  */
 export async function createReplyNotifications(params: {
   referenceId: string;

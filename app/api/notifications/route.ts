@@ -141,7 +141,7 @@ export async function GET() {
     });
   }
 
-  // 4. Upcoming/recent events (type: new_event) from source table
+  // 3. Upcoming/recent events (type: new_event) from source table
   const events = await db
     .select({
       id: scheduleEvents.id,
