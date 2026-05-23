@@ -32,6 +32,7 @@ export function VstAudioBridge({
   useEffect(() => {
     if (triggerReconnect > 0 && bridgeRef.current) {
       bridgeRef.current.disconnect();
+      bridgeRef.current.setPort(useVstStore.getState().preferredPort);
       bridgeRef.current.connect({ projectId, userId, username });
     }
   }, [triggerReconnect, projectId, userId, username]);

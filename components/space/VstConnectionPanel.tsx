@@ -136,7 +136,7 @@ export function VstConnectionPanel() {
             </button>
           </div>
           <p className="text-[9px] text-[#A0A0B0]">
-            Enter the port shown in your DAW's SonicBridge VST window
+            Enter the port shown in your DAW&apos;s SonicBridge VST window
           </p>
         </div>
       )}
