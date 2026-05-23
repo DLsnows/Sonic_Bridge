@@ -6,6 +6,7 @@ import {
   useRemoteParticipants,
 } from "@livekit/components-react";
 import type { Participant } from "livekit-client";
+import { useTrackStats } from "@/lib/hooks/useTrackStats";
 
 interface ParticipantListProps {
   userId: string;
@@ -25,76 +26,123 @@ function ParticipantRow({
   const isMicOn = participant.isMicrophoneEnabled;
   const isCameraOn = participant.isCameraEnabled;
   const isScreenOn = participant.isScreenShareEnabled;
+  const trackStats = useTrackStats(participant.identity);
+
+  function formatBitrate(bps: number | null): string {
+    if (bps === null) return "";
+    if (bps >= 1_000_000) return `${(bps / 1_000_000).toFixed(1)}Mbps`;
+    return `${Math.round(bps / 1000)}kbps`;
+  }
+
+  function formatResolution(_w: number | null, h: number | null): string {
+    if (h === null) return "";
+    return `${h}p`;
+  }
+
+  function formatFps(fps: number | null): string {
+    if (fps === null) return "";
+    return `${Math.round(fps)}fps`;
+  }
+
+  const hasStats =
+    trackStats.audioBitrate !== null ||
+    trackStats.videoBitrate !== null ||
+    trackStats.screenShareBitrate !== null;
 
   return (
-    <div className="flex items-center gap-3 px-3 py-2 hover:bg-white/[0.02] transition-colors">
-      {/* Avatar with speaking glow */}
-      <div
-        className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 border transition-all duration-200"
-        style={{
-          backgroundColor: "#0F0F13",
-          borderColor: isSpeaking
-            ? `rgba(0,255,65,${0.3 + audioLevel * 0.5})`
-            : "rgba(0,255,65,0.15)",
-          boxShadow: isSpeaking
-            ? `0 0 ${4 + audioLevel * 12}px rgba(0,255,65,${0.15 + audioLevel * 0.45})`
-            : undefined,
-          animation: isSpeaking ? "glow-pulse 1.5s ease-in-out infinite" : undefined,
-        }}
-      >
-        <span className="font-mono text-[11px] text-[#F0F0F0]">
-          {initial}
-        </span>
-      </div>
-
-      {/* Name */}
-      <div className="flex-1 min-w-0 flex items-center gap-1.5">
-        <span className="text-xs text-[#F0F0F0] truncate font-['Fira_Code',monospace]">
-          {name}
-        </span>
-        {isLocal && (
-          <span className="text-[9px] px-1.5 py-px rounded-full bg-[#B44DFF]/15 text-[#B44DFF] font-['Share_Tech_Mono',monospace] flex-shrink-0">
-            You
-          </span>
-        )}
-      </div>
-
-      {/* Status indicators */}
-      <div className="flex items-center gap-1.5 flex-shrink-0">
-        {/* Mic */}
-        <span
-          className="w-2 h-2 rounded-full transition-colors duration-200"
+    <div>
+      <div className="flex items-center gap-3 px-3 py-2 hover:bg-white/[0.02] transition-colors">
+        {/* Avatar with speaking glow */}
+        <div
+          className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 border transition-all duration-200"
           style={{
-            backgroundColor: isMicOn ? "#00FF41" : "#FF4444",
-            boxShadow: isMicOn
-              ? "0 0 4px rgba(0,255,65,0.4)"
-              : "0 0 2px rgba(255,68,68,0.3)",
-          }}
-          title={isMicOn ? "Mic on" : "Mic off"}
-        />
-        {/* Camera */}
-        <span
-          className="w-2 h-2 rounded-full transition-colors duration-200"
-          style={{
-            backgroundColor: isCameraOn ? "#00FF41" : "#FF4444",
-            boxShadow: isCameraOn
-              ? "0 0 4px rgba(0,255,65,0.4)"
-              : "0 0 2px rgba(255,68,68,0.3)",
-          }}
-          title={isCameraOn ? "Camera on" : "Camera off"}
-        />
-        {/* Screen share */}
-        <span
-          className="w-2 h-2 rounded-full transition-colors duration-200"
-          style={{
-            backgroundColor: isScreenOn ? "#00F0FF" : "#A0A0B0",
-            boxShadow: isScreenOn
-              ? "0 0 4px rgba(0,240,255,0.4)"
+            backgroundColor: "#0F0F13",
+            borderColor: isSpeaking
+              ? `rgba(0,255,65,${0.3 + audioLevel * 0.5})`
+              : "rgba(0,255,65,0.15)",
+            boxShadow: isSpeaking
+              ? `0 0 ${4 + audioLevel * 12}px rgba(0,255,65,${0.15 + audioLevel * 0.45})`
               : undefined,
+            animation: isSpeaking ? "glow-pulse 1.5s ease-in-out infinite" : undefined,
           }}
-          title={isScreenOn ? "Screen sharing" : "Not sharing"}
-        />
+        >
+          <span className="font-mono text-[11px] text-[#F0F0F0]">
+            {initial}
+          </span>
+        </div>
+
+        {/* Name */}
+        <div className="flex-1 min-w-0 flex items-center gap-1.5">
+          <span className="text-xs text-[#F0F0F0] truncate font-['Fira_Code',monospace]">
+            {name}
+          </span>
+          {isLocal && (
+            <span className="text-[9px] px-1.5 py-px rounded-full bg-[#B44DFF]/15 text-[#B44DFF] font-['Share_Tech_Mono',monospace] flex-shrink-0">
+              You
+            </span>
+          )}
+        </div>
+
+        {/* Status indicators */}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {/* Mic */}
+          <span
+            className="w-2 h-2 rounded-full transition-colors duration-200"
+            style={{
+              backgroundColor: isMicOn ? "#00FF41" : "#FF4444",
+              boxShadow: isMicOn
+                ? "0 0 4px rgba(0,255,65,0.4)"
+                : "0 0 2px rgba(255,68,68,0.3)",
+            }}
+            title={isMicOn ? "Mic on" : "Mic off"}
+          />
+          {/* Camera */}
+          <span
+            className="w-2 h-2 rounded-full transition-colors duration-200"
+            style={{
+              backgroundColor: isCameraOn ? "#00FF41" : "#FF4444",
+              boxShadow: isCameraOn
+                ? "0 0 4px rgba(0,255,65,0.4)"
+                : "0 0 2px rgba(255,68,68,0.3)",
+            }}
+            title={isCameraOn ? "Camera on" : "Camera off"}
+          />
+          {/* Screen share */}
+          <span
+            className="w-2 h-2 rounded-full transition-colors duration-200"
+            style={{
+              backgroundColor: isScreenOn ? "#00F0FF" : "#A0A0B0",
+              boxShadow: isScreenOn
+                ? "0 0 4px rgba(0,240,255,0.4)"
+                : undefined,
+            }}
+            title={isScreenOn ? "Screen sharing" : "Not sharing"}
+          />
+        </div>
       </div>
+
+      {/* Stats row */}
+      {hasStats && (
+        <div className="flex items-center gap-2 px-3 pb-1.5 ml-10">
+          {isMicOn && trackStats.audioBitrate !== null && (
+            <span className="text-[8px] text-[#00F0FF] font-['Share_Tech_Mono',monospace] bg-[#00F0FF]/10 px-1 py-0.5 rounded">
+              {formatBitrate(trackStats.audioBitrate)}
+            </span>
+          )}
+          {isCameraOn && trackStats.videoBitrate !== null && (
+            <span className="text-[8px] text-[#00FF41] font-['Share_Tech_Mono',monospace] bg-[#00FF41]/10 px-1 py-0.5 rounded">
+              {formatResolution(trackStats.videoWidth, trackStats.videoHeight)}
+              {trackStats.videoFps !== null ? formatFps(trackStats.videoFps) : ""}
+              {" "}{formatBitrate(trackStats.videoBitrate)}
+            </span>
+          )}
+          {isScreenOn && trackStats.screenShareBitrate !== null && (
+            <span className="text-[8px] text-[#00F0FF] font-['Share_Tech_Mono',monospace] bg-[#00F0FF]/10 px-1 py-0.5 rounded">
+              {formatBitrate(trackStats.screenShareBitrate)}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
