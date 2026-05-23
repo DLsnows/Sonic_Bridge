@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useVstStore } from "@/lib/store/vst";
 import { VstVolumeMeter } from "./VstVolumeMeter";
 
@@ -35,6 +35,7 @@ export function VstConnectionPanel() {
   const preferredPort = useVstStore((s) => s.preferredPort);
   const setPreferredPort = useVstStore((s) => s.setPreferredPort);
   const [portInput, setPortInput] = useState(String(preferredPort));
+  useEffect(() => { setPortInput(String(preferredPort)); }, [preferredPort]);
 
   const color = statusColors[status] ?? statusColors.disconnected;
 
