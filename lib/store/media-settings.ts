@@ -9,6 +9,8 @@ interface AudioQualitySettings {
   bitrate: number; // bps, 192000–640000
   sendBufferMs: BufferMs;
   receiveBufferMs: BufferMs;
+  noiseSuppression: boolean;
+  voiceIsolation: boolean;
 }
 
 interface ScreenShareSettings {
@@ -24,6 +26,8 @@ interface MediaSettingsState {
   setAudioBitrate: (bitrate: number) => void;
   setSendBufferMs: (ms: BufferMs) => void;
   setReceiveBufferMs: (ms: BufferMs) => void;
+  setNoiseSuppression: (enabled: boolean) => void;
+  setVoiceIsolation: (enabled: boolean) => void;
   setScreenFps: (fps: ScreenFps) => void;
   setScreenResolution: (res: ScreenResolution) => void;
   setScreenBitrate: (bitrate: number) => void;
@@ -41,6 +45,8 @@ export const useMediaSettingsStore = create<MediaSettingsState>((set) => ({
     bitrate: DEFAULT_AUDIO_BITRATE,
     sendBufferMs: DEFAULT_SEND_BUFFER_MS,
     receiveBufferMs: DEFAULT_RECEIVE_BUFFER_MS,
+    noiseSuppression: true,
+    voiceIsolation: false,
   },
   screenShare: {
     frameRate: DEFAULT_SCREEN_FPS,
@@ -54,6 +60,10 @@ export const useMediaSettingsStore = create<MediaSettingsState>((set) => ({
     set((s) => ({ audioQuality: { ...s.audioQuality, sendBufferMs: ms } })),
   setReceiveBufferMs: (ms) =>
     set((s) => ({ audioQuality: { ...s.audioQuality, receiveBufferMs: ms } })),
+  setNoiseSuppression: (enabled) =>
+    set((s) => ({ audioQuality: { ...s.audioQuality, noiseSuppression: enabled } })),
+  setVoiceIsolation: (enabled) =>
+    set((s) => ({ audioQuality: { ...s.audioQuality, voiceIsolation: enabled } })),
   setScreenFps: (frameRate) =>
     set((s) => ({ screenShare: { ...s.screenShare, frameRate } })),
   setScreenResolution: (resolution) =>

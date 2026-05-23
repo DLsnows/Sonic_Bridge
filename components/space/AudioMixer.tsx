@@ -1,10 +1,11 @@
 "use client";
 
-import { useRemoteParticipants } from "@livekit/components-react";
+import { useRemoteParticipants, useMaybeRoomContext, useLocalParticipant } from "@livekit/components-react";
 import { useSpaceStore } from "@/lib/store/space";
 import { useVstStore } from "@/lib/store/vst";
 import { useMediaSettingsStore } from "@/lib/store/media-settings";
-import { useState, useCallback } from "react";
+import { getMicProcessor } from "@/lib/mic-processor";
+import { useState, useCallback, useEffect } from "react";
 import { VstVolumeMeter } from "./VstVolumeMeter";
 
 const sliderClass =
@@ -41,6 +42,25 @@ export function AudioMixer() {
   const micMeterLevel = useVstStore((s) => s.micMeterLevel);
   const audioBitrate = useMediaSettingsStore((s) => s.audioQuality.bitrate);
   const setAudioBitrate = useMediaSettingsStore((s) => s.setAudioBitrate);
+  const noiseSuppression = useMediaSettingsStore((s) => s.audioQuality.noiseSuppression);
+  const setNoiseSuppression = useMediaSettingsStore((s) => s.setNoiseSuppression);
+  const voiceIsolation = useMediaSettingsStore((s) => s.audioQuality.voiceIsolation);
+  const setVoiceIsolation = useMediaSettingsStore((s) => s.setVoiceIsolation);
+
+  const room = useMaybeRoomContext();
+  const { localParticipant, isMicrophoneEnabled } = useLocalParticipant();
+
+  useEffect(() => {
+    if (!room || !isMicrophoneEnabled) return;
+    const micOptions = {
+      ...getMicProcessor().getCaptureOptions(),
+      noiseSuppression: noiseSuppression,
+      voiceIsolation: voiceIsolation,
+    };
+    localParticipant.setMicrophoneEnabled(false).then(() => {
+      localParticipant.setMicrophoneEnabled(true, micOptions);
+    }).catch(() => {});
+  }, [noiseSuppression, voiceIsolation]);
 
   const handleRemoteVolumeChange = useCallback(
     (participantIdentity: string, value: number) => {
@@ -122,6 +142,30 @@ export function AudioMixer() {
                 background: `linear-gradient(to right, rgba(0,240,255,0.25) ${micVolume * 50}%, rgba(255,255,255,0.1) ${micVolume * 50}%)`,
               }}
             />
+          </div>
+
+          {/* Mic Processing Toggles */}
+          <div className="flex items-center gap-2 py-1">
+            <button
+              onClick={() => setNoiseSuppression(!noiseSuppression)}
+              className={`flex-1 px-2 py-1 rounded-full text-[10px] font-['Share_Tech_Mono',monospace] transition-all ${
+                noiseSuppression
+                  ? "bg-[#00FF41]/20 text-[#00FF41] border border-[#00FF41]/30"
+                  : "bg-white/5 text-[#A0A0B0] border border-white/10"
+              }`}
+            >
+              Noise Suppression
+            </button>
+            <button
+              onClick={() => setVoiceIsolation(!voiceIsolation)}
+              className={`flex-1 px-2 py-1 rounded-full text-[10px] font-['Share_Tech_Mono',monospace] transition-all ${
+                voiceIsolation
+                  ? "bg-[#BF5AF2]/20 text-[#BF5AF2] border border-[#BF5AF2]/30"
+                  : "bg-white/5 text-[#A0A0B0] border border-white/10"
+              }`}
+            >
+              Voice Isolation (Chrome)
+            </button>
           </div>
 
           {/* DAW/VST Channel */}
