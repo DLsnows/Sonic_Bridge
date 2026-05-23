@@ -30,6 +30,7 @@ jobs:
 
       - name: Configure CMake
         run: |
+          if (Test-Path vst-plugin/build) { Remove-Item -Recurse -Force vst-plugin/build }
           cmake -S vst-plugin -B vst-plugin/build `
             -DCMAKE_BUILD_TYPE=Release `
             -DJUCE_PATH="${{ github.workspace }}/JUCE" `
