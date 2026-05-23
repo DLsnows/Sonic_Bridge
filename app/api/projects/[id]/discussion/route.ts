@@ -5,7 +5,7 @@ import { discussionPosts, projectMembers, users } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { z } from "zod";
 import { resolveProjectId } from "@/lib/project-utils";
-import { createReplyNotifications } from "@/lib/notifications";
+import { createReplyNotifications, createThreadNotifications } from "@/lib/notifications";
 
 const createPostSchema = z.discriminatedUnion("hasParent", [
   z.object({
@@ -168,14 +168,20 @@ export async function POST(
     );
   }
 
-  // Emit targeted reply notifications to all thread participants
+  // Emit notifications to project members
   if (parentId) {
     createReplyNotifications({
       referenceId: post.id,
       projectId,
       actorUserId: userId,
       parentId,
-    }).catch((e) => console.error("Notification creation failed:", e));
+    }).catch((e) => console.error("Reply notification creation failed:", e));
+  } else {
+    createThreadNotifications({
+      referenceId: post.id,
+      projectId,
+      actorUserId: userId,
+    }).catch((e) => console.error("Thread notification creation failed:", e));
   }
 
   const [result] = await db

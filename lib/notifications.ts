@@ -3,9 +3,48 @@ import { notifications, projectMembers, discussionPosts } from "@/lib/db/schema"
 import { eq, and, ne, inArray } from "drizzle-orm";
 
 /**
+ * Creates new_post notifications for all project members when a new thread is created.
+ */
+export async function createThreadNotifications(params: {
+  referenceId: string;
+  projectId: string;
+  actorUserId: string;
+}) {
+  const { referenceId, projectId, actorUserId } = params;
+
+  // Skip notifications for AI-generated threads
+  const [post] = await db
+    .select({ isAiGenerated: discussionPosts.isAiGenerated })
+    .from(discussionPosts)
+    .where(eq(discussionPosts.id, referenceId))
+    .limit(1);
+  if (!post || post.isAiGenerated) return;
+
+  const memberRows = await db
+    .select({ userId: projectMembers.userId })
+    .from(projectMembers)
+    .where(
+      and(
+        eq(projectMembers.projectId, projectId),
+        ne(projectMembers.userId, actorUserId),
+      ),
+    );
+
+  if (memberRows.length === 0) return;
+
+  const rows = memberRows.map((m) => ({
+    userId: m.userId,
+    projectId,
+    type: "new_post" as const,
+    referenceId,
+    referenceType: "discussion_post" as const,
+  }));
+
+  await db.insert(notifications).values(rows);
+}
+
+/**
  * Creates targeted reply_to_user notifications for all thread participants.
- * Generic activity notifications (new_post, new_file, new_event) are covered
- * by the unified GET /api/notifications query reading source tables directly.
  */
 export async function createReplyNotifications(params: {
   referenceId: string;
