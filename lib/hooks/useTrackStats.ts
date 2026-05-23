@@ -39,12 +39,12 @@ function collectSsrcs(
   for (const [, pub] of participant.audioTrackPublications) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ssrc = (pub as any)?.track?.info?.ssrc as number | undefined;
-    if (ssrc) audioSsrcs.add(ssrc);
+    if (ssrc !== undefined) audioSsrcs.add(ssrc);
   }
   for (const [, pub] of participant.videoTrackPublications) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ssrc = (pub as any)?.track?.info?.ssrc as number | undefined;
-    if (!ssrc) continue;
+    if (ssrc === undefined) continue;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (pub.source === Track.Source.ScreenShare || (pub as any)?.track?.source === Track.Source.ScreenShare) {
       screenSsrcs.add(ssrc);
