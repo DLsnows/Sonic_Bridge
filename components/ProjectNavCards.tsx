@@ -7,17 +7,17 @@ import { Card } from "@/components/ui/Card";
 
 const navCards = [
   { href: "space", label: "Creative Space", desc: "Real-time audio, screen sharing, voice & video", icon: "◈", glow: "cyan" as const, countKey: null as null },
-  { href: "files", label: "Project Files", desc: "Upload, download & manage project assets", icon: "◫", glow: "green" as const, countKey: "files" as const },
-  { href: "schedule", label: "Schedule", desc: "Meetings, production cycles, release dates", icon: "◷", glow: "purple" as const, countKey: "events" as const },
-  { href: "discussion", label: "Discussion", desc: "Ideas, feedback & team conversations", icon: "☰", glow: "orange" as const, countKey: "threads" as const },
+  { href: "files", label: "Project Files", desc: "Upload, download & manage project assets", icon: "◫", glow: "green" as const, countKey: "files" as const, tabKey: "files" as const },
+  { href: "schedule", label: "Schedule", desc: "Meetings, production cycles, release dates", icon: "◷", glow: "purple" as const, countKey: "events" as const, tabKey: "schedule" as const },
+  { href: "discussion", label: "Discussion", desc: "Ideas, feedback & team conversations", icon: "☰", glow: "orange" as const, countKey: "threads" as const, tabKey: "discussion" as const },
 ];
 
 export function ProjectNavCards({ projectId }: { projectId: string }) {
   const unreadByProject = useNotificationStore((s) => s.unreadByProject);
   const fetchUnreadCounts = useNotificationStore((s) => s.fetchUnreadCounts);
+  const recordTabView = useNotificationStore((s) => s.recordTabView);
   const entry = unreadByProject[projectId];
 
-  // Fetch on mount so badges show immediately (don't wait for Sidebar poll)
   useEffect(() => { fetchUnreadCounts(); }, [fetchUnreadCounts]);
 
   return (
@@ -25,7 +25,12 @@ export function ProjectNavCards({ projectId }: { projectId: string }) {
       {navCards.map((card) => {
         const count = card.countKey ? (entry?.[card.countKey] ?? 0) : 0;
         return (
-          <Link key={card.href} href={`/projects/${projectId}/${card.href}`} className="relative">
+          <Link
+            key={card.href}
+            href={`/projects/${projectId}/${card.href}`}
+            className="relative"
+            onClick={() => { if (count > 0 && card.tabKey) recordTabView(projectId, card.tabKey); }}
+          >
             <Card hover glow={card.glow} className="h-full group">
               <div className="flex items-start gap-4">
                 <span className="text-2xl mt-1">{card.icon}</span>
