@@ -188,7 +188,10 @@ export async function GET() {
   );
 
   console.log("[notif] GET: returning", items.length, "items");
-  return NextResponse.json({ notifications: items.slice(0, 50) });
+  return NextResponse.json({
+    notifications: items.slice(0, 50),
+    _debug: { targeted: targetedNotifs.length, files: recentFiles.length, events: events.length, projectIds: projectIds.length },
+  });
   } catch (e) {
     console.error("[notif] GET fatal:", e);
     return NextResponse.json({ notifications: [], error: String(e) }, { status: 200 });

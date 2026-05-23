@@ -92,6 +92,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       if (res.ok) {
         const data = await res.json();
         console.log("[notif] fetchNotifications count:", data.notifications?.length ?? 0);
+        if (data._debug) console.log("[notif] debug:", JSON.stringify(data._debug));
         get().setNotifications(data.notifications);
       } else {
         console.warn("[notif] fetchNotifications non-ok:", res.status);
