@@ -3,13 +3,12 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
   notifications,
-  discussionPosts,
   files,
   scheduleEvents,
   projectMembers,
   projectViews,
 } from "@/lib/db/schema";
-import { eq, and, isNull, gte, inArray, ne, gt, count } from "drizzle-orm";
+import { eq, and, gte, inArray, gt, count } from "drizzle-orm";
 
 export async function GET() {
   const session = await auth();
@@ -47,16 +46,6 @@ export async function GET() {
     const since = lastViewedMap.get(pid);
     let unread = 0;
 
-    // New discussion threads
-    const threadConds = [
-      eq(discussionPosts.projectId, pid),
-      isNull(discussionPosts.parentId),
-      ne(discussionPosts.isAiGenerated, true),
-    ];
-    if (since) threadConds.push(gt(discussionPosts.createdAt, since));
-    const [tr] = await db.select({ c: count() }).from(discussionPosts).where(and(...threadConds));
-    unread += tr?.c ?? 0;
-
     // New files
     const fileConds = [eq(files.projectId, pid)];
     if (since) fileConds.push(gt(files.uploadedAt, since));
@@ -69,11 +58,15 @@ export async function GET() {
     const [er] = await db.select({ c: count() }).from(scheduleEvents).where(and(...eventConds));
     unread += er?.c ?? 0;
 
-    // Unread reply notifications
+    // Unread new_post and reply_to_user notifications
     const [nr] = await db
       .select({ c: count() })
       .from(notifications)
-      .where(and(eq(notifications.userId, userId), eq(notifications.projectId, pid), eq(notifications.isRead, false)));
+      .where(and(
+        eq(notifications.userId, userId),
+        eq(notifications.projectId, pid),
+        eq(notifications.isRead, false),
+      ));
     unread += nr?.c ?? 0;
 
     if (unread > 0) counts[pid] = unread;

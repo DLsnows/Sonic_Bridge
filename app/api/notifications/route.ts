@@ -9,7 +9,7 @@ import {
   projectMembers,
   users,
 } from "@/lib/db/schema";
-import { eq, desc, and, isNull, gte, inArray, asc, ne } from "drizzle-orm";
+import { eq, desc, and, gte, inArray, asc } from "drizzle-orm";
 
 interface ActivityItem {
   id: string;
@@ -53,7 +53,7 @@ export async function GET() {
     }
   };
 
-  // 1. Targeted reply_to_user notifications from the notifications table
+  // 1. Targeted notifications from the notifications table (new_post, reply_to_user)
   const targetedNotifs = await db
     .select({
       id: notifications.id,
@@ -112,42 +112,7 @@ export async function GET() {
     });
   }
 
-  // 2. Recent discussion threads (type: new_post) from source table
-  const threads = await db
-    .select({
-      id: discussionPosts.id,
-      projectId: discussionPosts.projectId,
-      title: discussionPosts.title,
-      username: users.username,
-      createdAt: discussionPosts.createdAt,
-    })
-    .from(discussionPosts)
-    .innerJoin(users, eq(discussionPosts.userId, users.id))
-    .where(
-      and(
-        inArray(discussionPosts.projectId, projectIds),
-        isNull(discussionPosts.parentId),
-        ne(discussionPosts.isAiGenerated, true),
-      ),
-    )
-    .orderBy(desc(discussionPosts.createdAt))
-    .limit(15);
-
-  for (const t of threads) {
-    addItem({
-      id: t.id,
-      projectId: t.projectId,
-      type: "new_post",
-      referenceId: t.id,
-      referenceType: "discussion_post",
-      isRead: false,
-      createdAt: t.createdAt.toISOString(),
-      title: t.title,
-      actorName: t.username ?? undefined,
-    });
-  }
-
-  // 3. Recent files (type: new_file) from source table
+  // 2. Recent files (type: new_file) from source table
   const recentFiles = await db
     .select({
       id: files.id,

@@ -90,7 +90,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         const data = await res.json();
         get().setNotifications(data.notifications);
       }
-    } catch { /* network ok to fail silently */ }
+    } catch (e) { console.error("fetchNotifications failed:", e); }
   },
 
   fetchUnreadCounts: async () => {
@@ -100,7 +100,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         const data = await res.json();
         set({ unreadByProject: data.counts ?? {} });
       }
-    } catch { /* best-effort */ }
+    } catch (e) { console.error("fetchUnreadCounts failed:", e); }
   },
 
   recordProjectView: async (projectId: string) => {
@@ -116,6 +116,6 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ projectId }),
       });
-    } catch { /* best-effort */ }
+    } catch (e) { console.error("recordProjectView failed:", e); }
   },
 }));
