@@ -21,23 +21,32 @@ const EMPTY_STATS: TrackStats = {
   screenShareBitrate: null,
 };
 
+// Minimal interface matching the LiveKit participant shape we need
+interface ParticipantLike {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  audioTrackPublications: Map<string, any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  videoTrackPublications: Map<string, any>;
+}
+
 function collectSsrcs(
-  participant: NonNullable<ReturnType<typeof import("@livekit/components-react").useMaybeRoomContext> extends { localParticipant?: infer L } ? L : never>,
+  participant: ParticipantLike,
 ): { audioSsrcs: Set<number>; videoSsrcs: Set<number>; screenSsrcs: Set<number> } {
   const audioSsrcs = new Set<number>();
   const videoSsrcs = new Set<number>();
   const screenSsrcs = new Set<number>();
 
-  if (!participant) return { audioSsrcs, videoSsrcs, screenSsrcs };
-
   for (const [, pub] of participant.audioTrackPublications) {
-    const ssrc = (pub as Record<string, unknown>).track?.info?.ssrc as number | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ssrc = (pub as any)?.track?.info?.ssrc as number | undefined;
     if (ssrc) audioSsrcs.add(ssrc);
   }
   for (const [, pub] of participant.videoTrackPublications) {
-    const ssrc = (pub as Record<string, unknown>).track?.info?.ssrc as number | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ssrc = (pub as any)?.track?.info?.ssrc as number | undefined;
     if (!ssrc) continue;
-    if (pub.source === 2 || (pub as Record<string, unknown>).track?.source === 2) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (pub.source === 2 || (pub as any)?.track?.source === 2) {
       screenSsrcs.add(ssrc);
     } else {
       videoSsrcs.add(ssrc);
@@ -92,22 +101,24 @@ export function useTrackStats(participantIdentity: string): TrackStats {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    if (!room) return;
+    const currentRoom = room;
+    if (!currentRoom) return;
+    // captured inside poll — guaranteed non-null after the guard above
+    const r = currentRoom;
 
     async function poll() {
       try {
-        const isLocal = room?.localParticipant?.identity === participantIdentity;
+        const isLocal = r.localParticipant?.identity === participantIdentity;
         const participant = isLocal
-          ? room.localParticipant
-          : room.remoteParticipants.get(participantIdentity);
+          ? r.localParticipant
+          : r.remoteParticipants.get(participantIdentity);
 
         if (!participant) return;
 
-        const ssrcs = collectSsrcs(participant);
+        const ssrcs = collectSsrcs(participant as unknown as ParticipantLike);
 
         // Access publisher/subscriber peer connections via engine internals
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const eng = room.engine as unknown as Record<string, unknown>;
+        const eng = r.engine as unknown as Record<string, unknown>;
         const pc = isLocal
           ? (eng.publisher as Record<string, unknown> | undefined)?.peerConnection as RTCPeerConnection | undefined
           : (eng.subscriber as Record<string, unknown> | undefined)?.peerConnection as RTCPeerConnection | undefined;
