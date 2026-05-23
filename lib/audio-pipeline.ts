@@ -2,7 +2,6 @@ export class VstAudioPipeline {
   private audioContext: AudioContext | null = null;
   private destination: MediaStreamAudioDestinationNode | null = null;
   private workletNode: AudioWorkletNode | null = null;
-  private decoder: AudioDecoder | null = null;
   private sampleRate = 48000;
   private channels = 2;
   private ready = false;
@@ -14,9 +13,9 @@ export class VstAudioPipeline {
   }
 
   static isSupported() {
+    // No WebCodecs dependency — works in any browser with AudioContext + AudioWorklet
     return (
       typeof AudioContext !== "undefined" &&
-      typeof AudioDecoder !== "undefined" &&
       typeof AudioWorkletNode !== "undefined"
     );
   }
@@ -48,34 +47,39 @@ export class VstAudioPipeline {
     this.workletNode.connect(this.gainNode);
     this.gainNode.connect(this.destination);
 
-    this.decoder = new AudioDecoder({
-      output: (audioData: AudioData) => {
-        this.handleDecodedAudio(audioData);
-        audioData.close();
-      },
-      error: (e: DOMException) => {
-        console.error("VST audio decode error:", e.message);
-      },
-    });
-
-    this.decoder.configure({
-      codec: "opus",
-      sampleRate,
-      numberOfChannels: channels,
-    });
-
     this.ready = true;
   }
 
-  feedOpusPacket(opusData: Uint8Array) {
-    if (!this.decoder || this.decoder.state !== "configured") return;
+  // Feed interleaved PCM directly — deinterleave and send to AudioWorklet
+  feedPcm(
+    interleaved: Float32Array,
+    sampleRate: number,
+    channels: number,
+    numSamples: number,
+  ) {
+    if (!this.workletNode || this.destroyed) return;
 
-    const chunk = new EncodedAudioChunk({
-      type: "key",
-      timestamp: 0,
-      data: opusData,
-    });
-    this.decoder.decode(chunk);
+    // Deinterleave
+    const buffers: Float32Array[] = [];
+    for (let ch = 0; ch < channels; ch++) {
+      const plane = new Float32Array(numSamples);
+      for (let i = 0; i < numSamples; i++) {
+        plane[i] = interleaved[i * channels + ch];
+      }
+      buffers.push(plane);
+    }
+
+    // Send to AudioWorklet via MessagePort (transfer buffers to avoid copying)
+    this.workletNode.port.postMessage(
+      {
+        type: "pcm",
+        sampleRate,
+        channels,
+        frames: numSamples,
+        buffers,
+      },
+      buffers.map((b) => b.buffer),
+    );
   }
 
   getMediaStreamTrack(): MediaStreamTrack | null {
@@ -102,11 +106,6 @@ export class VstAudioPipeline {
     this.destroyed = true;
     this.ready = false;
 
-    if (this.decoder?.state === "configured") {
-      this.decoder.close();
-    }
-    this.decoder = null;
-
     this.workletNode?.disconnect();
     this.workletNode = null;
 
@@ -118,33 +117,5 @@ export class VstAudioPipeline {
 
     this.audioContext?.close();
     this.audioContext = null;
-  }
-
-  private handleDecodedAudio(audioData: AudioData) {
-    if (!this.workletNode || this.destroyed) return;
-
-    const frameSamples = audioData.numberOfFrames;
-    const frameChannels = audioData.numberOfChannels;
-
-    // Copy planar PCM data
-    const buffers: Float32Array[] = [];
-    for (let ch = 0; ch < frameChannels; ch++) {
-      const plane = new Float32Array(frameSamples);
-      audioData.copyTo(plane, { planeIndex: ch, format: "f32-planar" });
-      buffers.push(plane);
-    }
-
-    // Send PCM to AudioWorklet via MessagePort
-    this.workletNode.port.postMessage(
-      {
-        type: "pcm",
-        sampleRate: audioData.sampleRate,
-        channels: frameChannels,
-        frames: frameSamples,
-        buffers,
-      },
-      // Transfer the buffers to avoid copying
-      buffers.map((b) => b.buffer),
-    );
   }
 }
