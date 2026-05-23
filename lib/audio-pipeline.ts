@@ -78,6 +78,31 @@ export class VstAudioPipeline {
     this.decoder.decode(chunk);
   }
 
+  feedPcm(interleaved: Float32Array, sampleRate: number, channels: number, numSamples: number) {
+    if (!this.workletNode || this.destroyed) return;
+
+    // Split interleaved PCM into planar channel buffers
+    const buffers: Float32Array[] = [];
+    for (let ch = 0; ch < channels; ch++) {
+      const plane = new Float32Array(numSamples);
+      for (let i = 0; i < numSamples; i++) {
+        plane[i] = interleaved[i * channels + ch];
+      }
+      buffers.push(plane);
+    }
+
+    this.workletNode.port.postMessage(
+      {
+        type: "pcm",
+        sampleRate,
+        channels,
+        frames: numSamples,
+        buffers,
+      },
+      buffers.map((b) => b.buffer),
+    );
+  }
+
   getMediaStreamTrack(): MediaStreamTrack | null {
     return this.destination?.stream.getAudioTracks()[0] ?? null;
   }

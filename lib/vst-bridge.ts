@@ -16,6 +16,7 @@ export interface AudioPacket {
 }
 
 export type AudioPacketCallback = (packet: AudioPacket) => void;
+export type PcmDataCallback = (interleaved: Float32Array, sampleRate: number, channels: number, numSamples: number) => void;
 export type StateChangeCallback = () => void;
 export type MeterCallback = (levels: MeterLevels) => void;
 export type SettingsCallback = (settings: VstAudioSettings) => void;
@@ -32,6 +33,7 @@ export class VstBridge {
   private intentionalClose = false;
 
   private audioCallback: AudioPacketCallback | null = null;
+  private pcmCallback: PcmDataCallback | null = null;
   private meterCallback: MeterCallback | null = null;
   private settingsCallback: SettingsCallback | null = null;
 
@@ -63,6 +65,10 @@ export class VstBridge {
 
   onAudioPacket(cb: AudioPacketCallback) {
     this.audioCallback = cb;
+  }
+
+  onPcmData(cb: PcmDataCallback) {
+    this.pcmCallback = cb;
   }
 
   onMeterUpdate(cb: MeterCallback) {
