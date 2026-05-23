@@ -149,6 +149,7 @@ export function Sidebar({ username, projects }: { username?: string; projects?: 
             size="sm"
             onClick={() => signOut({ callbackUrl: "/login" })}
             title="Sign out"
+            className="!text-[#F0F0F0] hover:!text-[#FF4444]"
           >
             {"⏻"}
           </Button>
