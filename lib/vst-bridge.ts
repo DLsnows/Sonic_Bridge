@@ -140,9 +140,12 @@ export class VstBridge {
     const channels = header.getUint32(4, true);
     const numSamples = header.getUint32(8, true);
 
-    // Validate frame contains enough data for the declared PCM payload
-    const expectedBytes = 12 + numSamples * channels * 4; // float32 = 4 bytes
-    if (data.byteLength < expectedBytes || numSamples === 0 || channels === 0) return;
+    // Validate frame bounds (real-world DAW constraints)
+    if (numSamples === 0 || numSamples > 16384) return;
+    if (channels === 0 || channels > 16) return;
+
+    const expectedBytes = 12 + numSamples * channels * 4;
+    if (data.byteLength < expectedBytes) return;
 
     const pcmData = new Float32Array(data, 12, numSamples * channels);
     this.pcmCallback?.(pcmData, sampleRate, channels, numSamples);

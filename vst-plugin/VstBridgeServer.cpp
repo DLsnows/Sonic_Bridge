@@ -131,8 +131,8 @@ void VstBridgeServer::sendPcmPacket(const float* interleaved, int numSamples,
   if (!mServer) return;
 
   // Pack header: 3 x u32 LE (sampleRate, channels, numSamples)
-  const int headerSize = 12;
-  const int dataSize = numSamples * channels * static_cast<int>(sizeof(float));
+  const size_t headerSize = 12;
+  const size_t dataSize = static_cast<size_t>(numSamples) * static_cast<size_t>(channels) * sizeof(float);
   std::string frame(headerSize + dataSize, '\0');
 
   auto writeU32 = [&](int offset, uint32_t val) {
