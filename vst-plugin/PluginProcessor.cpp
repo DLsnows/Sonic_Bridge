@@ -15,11 +15,22 @@ SonicBridgeAudioProcessor::SonicBridgeAudioProcessor()
       juce::ignoreUnused(projectId, userId, username);
       mBridgeServer.sendStatus(true, "SonicBridge VST",
                                JucePlugin_VersionString);
+      mBridgeServer.sendSettings(
+        static_cast<int>(mCurrentSampleRate),
+        mCurrentBlockSize,
+        2,
+        128000
+      );
     };
 
   mBridgeServer.callbacks.onSettingsRequest =
     [this]() {
-      juce::ignoreUnused();
+      mBridgeServer.sendSettings(
+        static_cast<int>(mCurrentSampleRate),
+        mCurrentBlockSize,
+        2,
+        128000
+      );
     };
 }
 

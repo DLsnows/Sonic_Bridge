@@ -102,5 +102,5 @@ export const useVstStore = create<VstState>((set) => ({
   setError: (error) => set({ lastError: error }),
   setPreferredPort: (port) => set({ preferredPort: port }),
   requestReconnect: () => set((s) => ({ triggerReconnect: s.triggerReconnect + 1 })),
-  reset: () => set(initialState),
+  reset: () => set((s) => ({ ...initialState, preferredPort: s.preferredPort })),
 }));

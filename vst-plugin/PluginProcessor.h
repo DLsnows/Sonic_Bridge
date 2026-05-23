@@ -44,8 +44,6 @@ private:
   AudioMeter mMeter;
   VstBridgeServer mBridgeServer;
 
-  std::atomic<uint32_t> mAudioSeq{0};
-
   double mCurrentSampleRate = 48000.0;
   int mCurrentBlockSize = 256;
 
