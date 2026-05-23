@@ -6,6 +6,7 @@ import {
   integer,
   pgEnum,
   boolean,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 
 export const userRole = pgEnum("user_role", ["admin", "member"]);
@@ -152,3 +153,12 @@ export const notifications = pgTable("notifications", {
   isRead: boolean("is_read").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// Tracks the last time a user viewed a project (for unread notification counts)
+export const projectViews = pgTable("project_views", {
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  lastViewedAt: timestamp("last_viewed_at").defaultNow().notNull(),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.userId, t.projectId] }),
+}));

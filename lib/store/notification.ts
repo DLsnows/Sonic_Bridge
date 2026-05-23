@@ -15,17 +15,21 @@ export interface Notification {
 interface NotificationState {
   notifications: Notification[];
   unreadCount: number;
+  unreadByProject: Record<string, number>;
   dropdownOpen: boolean;
   setNotifications: (items: Notification[]) => void;
   setDropdownOpen: (open: boolean) => void;
   markRead: (id: string) => void;
   markAllRead: () => void;
   fetchNotifications: () => Promise<void>;
+  fetchUnreadCounts: () => Promise<void>;
+  recordProjectView: (projectId: string) => Promise<void>;
 }
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
   notifications: [],
   unreadCount: 0,
+  unreadByProject: {},
   dropdownOpen: false,
 
   setNotifications: (items) =>
@@ -34,10 +38,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   setDropdownOpen: (open) => set({ dropdownOpen: open }),
 
   markRead: async (id) => {
-    // Find the notification to check if it's from the notifications table
     const notif = get().notifications.find((n) => n.id === id);
-    // Source-table items (new_post, new_file, new_event) have no DB row —
-    // just update local state. Only reply_to_user items need an API call.
     if (notif && notif.type !== "reply_to_user") {
       set((state) => {
         const updated = state.notifications.map((n) =>
@@ -63,14 +64,22 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   },
 
   markAllRead: async () => {
-    // Update local state immediately for all items
+    const current = get();
+    const projectIds = Object.keys(current.unreadByProject);
     set((state) => ({
       notifications: state.notifications.map((n) => ({ ...n, isRead: true })),
       unreadCount: 0,
+      unreadByProject: {},
     }));
-    // Also sync DB-backed items (reply_to_user) via API
     try {
       await fetch("/api/notifications", { method: "PATCH" });
+      if (projectIds.length > 0) {
+        await fetch("/api/notifications/view", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ projectIds }),
+        });
+      }
     } catch (e) { console.error("markAllRead PATCH failed:", e); }
   },
 
@@ -82,5 +91,31 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         get().setNotifications(data.notifications);
       }
     } catch { /* network ok to fail silently */ }
+  },
+
+  fetchUnreadCounts: async () => {
+    try {
+      const res = await fetch("/api/notifications/unread-counts");
+      if (res.ok) {
+        const data = await res.json();
+        set({ unreadByProject: data.counts ?? {} });
+      }
+    } catch { /* best-effort */ }
+  },
+
+  recordProjectView: async (projectId: string) => {
+    // Clear local unread count for this project immediately
+    set((state) => {
+      const updated = { ...state.unreadByProject };
+      delete updated[projectId];
+      return { unreadByProject: updated };
+    });
+    try {
+      await fetch("/api/notifications/view", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId }),
+      });
+    } catch { /* best-effort */ }
   },
 }));
