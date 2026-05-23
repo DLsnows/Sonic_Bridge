@@ -22,122 +22,194 @@ const EMPTY_STATS: TrackStats = {
   screenShareBitrate: null,
 };
 
-interface ParticipantLike {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  audioTrackPublications: Map<string, any>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  videoTrackPublications: Map<string, any>;
-}
-
-function collectSsrcs(
-  participant: ParticipantLike,
-): { audioSsrcs: Set<number>; videoSsrcs: Set<number>; screenSsrcs: Set<number> } {
-  const audioSsrcs = new Set<number>();
-  const videoSsrcs = new Set<number>();
-  const screenSsrcs = new Set<number>();
-
-  for (const [, pub] of participant.audioTrackPublications) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ssrc = (pub as any)?.track?.info?.ssrc as number | undefined;
-    if (ssrc !== undefined) audioSsrcs.add(ssrc);
-  }
-  for (const [, pub] of participant.videoTrackPublications) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ssrc = (pub as any)?.track?.info?.ssrc as number | undefined;
-    if (ssrc === undefined) continue;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (pub.source === Track.Source.ScreenShare || (pub as any)?.track?.source === Track.Source.ScreenShare) {
-      screenSsrcs.add(ssrc);
-    } else {
-      videoSsrcs.add(ssrc);
-    }
-  }
-
-  return { audioSsrcs, videoSsrcs, screenSsrcs };
-}
-
-// Compute bitrate from bytesReceived/bytesSent delta between polls (cross-browser standard)
+// Cross-browser bitrate: prefer Chrome's non-standard bitrate, fall back to bytes delta
 function extractBitrateFromBytes(
   e: Record<string, unknown>,
-  prevBytesMap: Map<number, { bytes: number; ts: number }> | null,
-  ssrc: number,
+  prevBytesMap: Map<string, { bytes: number; ts: number }> | null,
+  trackKey: string,
 ): number | undefined {
-  // Prefer Chrome's non-standard bitrate field if available
   if (typeof e.bitrate === "number") return e.bitrate;
 
-  // Fall back to bytes delta for Firefox/Safari compatibility
   const bytes = e.bytesReceived ?? e.bytesSent;
   const ts = e.timestamp;
   if (typeof bytes !== "number" || typeof ts !== "number" || !prevBytesMap) return undefined;
 
-  const prev = prevBytesMap.get(ssrc);
-  prevBytesMap.set(ssrc, { bytes, ts });
+  const prev = prevBytesMap.get(trackKey);
+  prevBytesMap.set(trackKey, { bytes, ts });
 
   if (!prev) return undefined;
 
   const byteDelta = bytes - prev.bytes;
-  const timeDelta = (ts - prev.ts) / 1000; // ms → s
+  const timeDelta = (ts - prev.ts) / 1000;
   if (timeDelta <= 0 || byteDelta < 0) return undefined;
 
-  return Math.round((byteDelta * 8) / timeDelta); // bps
+  return Math.round((byteDelta * 8) / timeDelta);
 }
 
-function parseRtpStats(
+interface RtpStatsResult {
+  bitrate: number | null;
+  width: number | null;
+  height: number | null;
+  fps: number | null;
+}
+
+// SSRC-agnostic: filter stats by kind ("audio" | "video") instead of matching SSRC values
+function parseReportForKind(
   stats: RTCStatsReport,
-  ssrcs: { audioSsrcs: Set<number>; videoSsrcs: Set<number>; screenSsrcs: Set<number> },
+  kind: "audio" | "video",
   isLocal: boolean,
-  prevBytesMap: Map<number, { bytes: number; ts: number }>,
-): TrackStats {
+  prevBytesMap: Map<string, { bytes: number; ts: number }>,
+  trackKey: string,
+): RtpStatsResult {
   const entryType = isLocal ? "outbound-rtp" : "inbound-rtp";
-  let audioBitrate: number | null = null;
-  let videoBitrate: number | null = null;
-  let videoWidth: number | null = null;
-  let videoHeight: number | null = null;
-  let videoFps: number | null = null;
-  let screenShareBitrate: number | null = null;
+  let bitrate: number | null = null;
+  let width: number | null = null;
+  let height: number | null = null;
+  let fps: number | null = null;
 
   for (const [, entry] of stats) {
     if (entry.type !== entryType) continue;
     const e = entry as Record<string, unknown>;
-    const ssrc = e.ssrc as number | undefined;
-    if (ssrc === undefined) continue;
+    if (e.kind !== kind) continue;
 
-    if (ssrcs.audioSsrcs.has(ssrc)) {
-      const br = extractBitrateFromBytes(e, prevBytesMap, ssrc);
-      if (br !== undefined) audioBitrate = br;
-    } else if (ssrcs.videoSsrcs.has(ssrc)) {
-      const br = extractBitrateFromBytes(e, prevBytesMap, ssrc);
-      if (br !== undefined) videoBitrate = br;
-      if (e.frameWidth !== undefined) videoWidth = e.frameWidth as number;
-      if (e.frameHeight !== undefined) videoHeight = e.frameHeight as number;
-      if (e.framesPerSecond !== undefined) videoFps = e.framesPerSecond as number;
-    } else if (ssrcs.screenSsrcs.has(ssrc)) {
-      const br = extractBitrateFromBytes(e, prevBytesMap, ssrc);
-      if (br !== undefined) screenShareBitrate = br;
-      if (videoWidth === null && e.frameWidth !== undefined) {
-        videoWidth = e.frameWidth as number;
-        videoHeight = e.frameHeight as number;
-        videoFps = e.framesPerSecond as number;
-      }
+    const br = extractBitrateFromBytes(e, prevBytesMap, trackKey);
+    if (br !== undefined) bitrate = br;
+
+    if (kind === "video") {
+      if (e.frameWidth !== undefined) width = e.frameWidth as number;
+      if (e.frameHeight !== undefined) height = e.frameHeight as number;
+      if (e.framesPerSecond !== undefined) fps = e.framesPerSecond as number;
     }
   }
 
-  return { audioBitrate, videoBitrate, videoWidth, videoHeight, videoFps, screenShareBitrate };
+  return { bitrate, width, height, fps };
 }
 
 export function useTrackStats(participantIdentity: string): TrackStats {
   const room = useMaybeRoomContext();
   const [stats, setStats] = useState<TrackStats>(EMPTY_STATS);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // Track previous bytes for cross-browser bitrate computation
-  const prevBytesRef = useRef<Map<number, { bytes: number; ts: number }>>(new Map());
+  const prevBytesRef = useRef<Map<string, { bytes: number; ts: number }>>(new Map());
 
   useEffect(() => {
     const currentRoom = room;
     if (!currentRoom) return;
     const r = currentRoom;
-    // Reset byte deltas when room/identity changes
     prevBytesRef.current = new Map();
+
+    // 1) Primary: iterate track publications, call track.getRTCStatsReport() on each
+    async function pollPerTrack(
+      participant: import("livekit-client").Participant | import("livekit-client").LocalParticipant,
+      isLocal: boolean,
+    ): Promise<TrackStats> {
+      let audioBitrate: number | null = null;
+      let videoBitrate: number | null = null;
+      let videoWidth: number | null = null;
+      let videoHeight: number | null = null;
+      let videoFps: number | null = null;
+      let screenShareBitrate: number | null = null;
+
+      for (const [, pub] of participant.audioTrackPublications) {
+        const track = pub.track;
+        if (!track) continue;
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const report: RTCStatsReport | undefined = await (track as any).getRTCStatsReport();
+          if (!report) continue;
+          const result = parseReportForKind(report, "audio", isLocal, prevBytesRef.current, `audio-${pub.trackSid}`);
+          if (result.bitrate !== null) audioBitrate = result.bitrate;
+        } catch {
+          // Per-track stats can fail transiently
+        }
+      }
+
+      for (const [, pub] of participant.videoTrackPublications) {
+        const track = pub.track;
+        if (!track) continue;
+
+        const isScreenShare =
+          pub.source === Track.Source.ScreenShare ||
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (pub as any)?.track?.source === Track.Source.ScreenShare;
+
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const report: RTCStatsReport | undefined = await (track as any).getRTCStatsReport();
+          if (!report) continue;
+          const result = parseReportForKind(report, "video", isLocal, prevBytesRef.current, `video-${pub.trackSid}`);
+
+          if (isScreenShare) {
+            if (result.bitrate !== null) screenShareBitrate = result.bitrate;
+            if (videoWidth === null && result.width !== null) {
+              videoWidth = result.width;
+              videoHeight = result.height;
+              videoFps = result.fps;
+            }
+          } else {
+            if (result.bitrate !== null) videoBitrate = result.bitrate;
+            if (result.width !== null) videoWidth = result.width;
+            if (result.height !== null) videoHeight = result.height;
+            if (result.fps !== null) videoFps = result.fps;
+          }
+        } catch {
+          // Per-track stats can fail transiently
+        }
+      }
+
+      return { audioBitrate, videoBitrate, videoWidth, videoHeight, videoFps, screenShareBitrate };
+    }
+
+    // 2) Fallback: room.getStats() (LiveKit 1.5+)
+    async function pollWithRoomGetStats(isLocal: boolean): Promise<TrackStats | null> {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const roomAny = r as any;
+        if (typeof roomAny.getStats !== "function") return null;
+        const report = await roomAny.getStats();
+        const audioResult = parseReportForKind(report, "audio", isLocal, prevBytesRef.current, "audio-room");
+        const videoResult = parseReportForKind(report, "video", isLocal, prevBytesRef.current, "video-room");
+        return {
+          audioBitrate: audioResult.bitrate,
+          videoBitrate: videoResult.bitrate,
+          videoWidth: videoResult.width,
+          videoHeight: videoResult.height,
+          videoFps: videoResult.fps,
+          screenShareBitrate: null,
+        };
+      } catch {
+        return null;
+      }
+    }
+
+    // 3) Last resort: engine internals (peer connection)
+    async function pollWithEngineInternals(isLocal: boolean): Promise<TrackStats | null> {
+      try {
+        const eng = r.engine as unknown as Record<string, unknown>;
+        const pc = isLocal
+          ? (eng.publisher as Record<string, unknown> | undefined)?.peerConnection as RTCPeerConnection | undefined
+          : (eng.subscriber as Record<string, unknown> | undefined)?.peerConnection as RTCPeerConnection | undefined;
+
+        if (!pc || typeof pc.getStats !== "function") return null;
+
+        const statsReport = await pc.getStats();
+        const audioResult = parseReportForKind(statsReport, "audio", isLocal, prevBytesRef.current, "audio-engine");
+        const videoResult = parseReportForKind(statsReport, "video", isLocal, prevBytesRef.current, "video-engine");
+        return {
+          audioBitrate: audioResult.bitrate,
+          videoBitrate: videoResult.bitrate,
+          videoWidth: videoResult.width,
+          videoHeight: videoResult.height,
+          videoFps: videoResult.fps,
+          screenShareBitrate: null,
+        };
+      } catch {
+        return null;
+      }
+    }
+
+    function hasAnyStats(s: TrackStats): boolean {
+      return s.audioBitrate !== null || s.videoBitrate !== null || s.screenShareBitrate !== null;
+    }
 
     async function poll() {
       try {
@@ -148,37 +220,28 @@ export function useTrackStats(participantIdentity: string): TrackStats {
 
         if (!participant) return;
 
-        const ssrcs = collectSsrcs(participant as unknown as ParticipantLike);
-
-        // Try public API first (LiveKit 1.5+), fall back to engine internals
-        let pc: RTCPeerConnection | undefined;
-        try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const roomAny = r as any;
-          if (typeof roomAny.getStats === "function") {
-            // LiveKit 1.5+ public API — returns RTCStatsReport directly
-            const report = await roomAny.getStats();
-            setStats(parseRtpStats(report, ssrcs, isLocal, prevBytesRef.current));
-            return;
-          }
-        } catch {
-          // Fall through to engine internals
-        }
-
-        try {
-          const eng = r.engine as unknown as Record<string, unknown>;
-          pc = isLocal
-            ? (eng.publisher as Record<string, unknown> | undefined)?.peerConnection as RTCPeerConnection | undefined
-            : (eng.subscriber as Record<string, unknown> | undefined)?.peerConnection as RTCPeerConnection | undefined;
-        } catch {
-          setStats(EMPTY_STATS);
+        // 1) Primary: per-track getRTCStatsReport()
+        const perTrackStats = await pollPerTrack(participant, isLocal);
+        if (hasAnyStats(perTrackStats)) {
+          setStats(perTrackStats);
           return;
         }
 
-        if (!pc || typeof pc.getStats !== "function") return;
+        // 2) Fallback: room.getStats()
+        const roomStats = await pollWithRoomGetStats(isLocal);
+        if (roomStats && hasAnyStats(roomStats)) {
+          setStats(roomStats);
+          return;
+        }
 
-        const statsReport = await pc.getStats();
-        setStats(parseRtpStats(statsReport, ssrcs, isLocal, prevBytesRef.current));
+        // 3) Last resort: engine internals
+        const engineStats = await pollWithEngineInternals(isLocal);
+        if (engineStats) {
+          setStats(engineStats);
+          return;
+        }
+
+        setStats(EMPTY_STATS);
       } catch {
         // Stats polling can fail transiently — ignore
       }
