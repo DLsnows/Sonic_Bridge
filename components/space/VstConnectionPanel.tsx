@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useVstStore } from "@/lib/store/vst";
 import { VstVolumeMeter } from "./VstVolumeMeter";
 
@@ -35,7 +35,6 @@ export function VstConnectionPanel() {
   const preferredPort = useVstStore((s) => s.preferredPort);
   const setPreferredPort = useVstStore((s) => s.setPreferredPort);
   const [portInput, setPortInput] = useState(String(preferredPort));
-  useEffect(() => { setPortInput(String(preferredPort)); }, [preferredPort]);
 
   const color = statusColors[status] ?? statusColors.disconnected;
 
@@ -118,7 +117,7 @@ export function VstConnectionPanel() {
           <div className="flex gap-2">
             <input
               type="number"
-              value={portInput}
+              defaultValue={String(preferredPort)}
               onChange={(e) => setPortInput(e.target.value)}
               placeholder="9420"
               className="flex-1 bg-black/60 border border-[#00F0FF]/20 rounded px-2 py-1 text-[10px] text-[#F0F0F0] font-mono outline-none focus:border-[#00F0FF]/50"
