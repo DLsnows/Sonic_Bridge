@@ -12,6 +12,14 @@ export async function createThreadNotifications(params: {
 }) {
   const { referenceId, projectId, actorUserId } = params;
 
+  // Skip notifications for AI-generated threads
+  const [post] = await db
+    .select({ isAiGenerated: discussionPosts.isAiGenerated })
+    .from(discussionPosts)
+    .where(eq(discussionPosts.id, referenceId))
+    .limit(1);
+  if (!post || post.isAiGenerated) return;
+
   const memberRows = await db
     .select({ userId: projectMembers.userId })
     .from(projectMembers)
