@@ -25,15 +25,20 @@ public:
   VstBridgeServer(const VstBridgeServer&) = delete;
   VstBridgeServer& operator=(const VstBridgeServer&) = delete;
 
-  bool start(int port = 9420);
+  // Returns actual port bound, or -1 if all ports failed.
+  // Tries `port` through `port + 9`.
+  int start(int port = 9420);
   void stop();
 
   // Send messages to all connected clients
   void sendStatus(bool connected, const juce::String& pluginName,
                   const juce::String& version);
-  void sendAudioPacket(uint32_t seq, uint64_t timestamp, int sampleRate,
-                       int channels, int frameSize,
-                       const std::vector<uint8_t>& opusData);
+
+  // Send raw PCM to all connected clients as binary WebSocket frame.
+  // Frame format: u32 sampleRate | u32 channels | u32 numSamples | float32 interleaved
+  void sendPcmPacket(const float* interleaved, int numSamples,
+                     int sampleRate, int channels);
+
   void sendMeterLevels(float left, float right, float peak);
   void sendSettings(int sampleRate, int bufferSize, int channels,
                     int opusBitrate);
@@ -41,6 +46,7 @@ public:
 
   bool isRunning() const { return mRunning; }
   int getClientCount() const;
+  int getPort() const { return mPort; }
 
   VstBridgeCallbacks callbacks;
 
@@ -52,6 +58,7 @@ private:
 
   std::unique_ptr<ix::WebSocketServer> mServer;
   std::atomic<bool> mRunning{false};
+  std::atomic<int> mPort{-1};
   mutable std::mutex mClientsMutex;
 };
 

@@ -26,11 +26,12 @@ jobs:
 
       - name: Install dependencies (static)
         run: |
-          vcpkg install --triplet x64-windows-static ixwebsocket opus
+          vcpkg install --triplet x64-windows-static ixwebsocket
 
       - name: Configure CMake
         run: |
-          cmake -B vst-plugin/build `
+          if (Test-Path vst-plugin/build) { Remove-Item -Recurse -Force vst-plugin/build }
+          cmake -S vst-plugin -B vst-plugin/build `
             -DCMAKE_BUILD_TYPE=Release `
             -DJUCE_PATH="${{ github.workspace }}/JUCE" `
             -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" `

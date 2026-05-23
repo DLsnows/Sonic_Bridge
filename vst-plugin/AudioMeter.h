@@ -23,11 +23,11 @@ public:
 private:
   float mCurrentPeakLeft  = 0.0f;
   float mCurrentPeakRight = 0.0f;
-  float mCurrentRMSLeft   = 0.0f;
-  float mCurrentRMSRight  = 0.0f;
   float mHoldPeakLeft     = 0.0f;
   float mHoldPeakRight    = 0.0f;
   int   mHoldCounter      = 0;
+
+  static constexpr int kHoldFrames = 60; // 3s at ~20 updates/sec
 
   static float amplitudeToDB(float amplitude) {
     if (amplitude < 1e-10f) return -60.0f;

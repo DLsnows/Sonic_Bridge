@@ -26,17 +26,13 @@ export function VstAudioBridge({
   useEffect(() => { participantRef.current = localParticipant; }, [localParticipant]);
   const triggerReconnect = useVstStore((s) => s.triggerReconnect);
   const vstVolume = useVstStore((s) => s.vstVolume);
-  const vstStatus = useVstStore((s) => s.status);
-  const audioBitrate = useMediaSettingsStore((s) => s.audioQuality.bitrate);
-  const sendBufferMs = useMediaSettingsStore((s) => s.audioQuality.sendBufferMs);
   const receiveBufferMs = useMediaSettingsStore((s) => s.audioQuality.receiveBufferMs);
-  const settingsAppliedRef = useRef(false);
 
-  // Watch for manual reconnect requests (triggerReconnect > 0 guards against mount-time fire)
+  // Watch for manual reconnect requests
   useEffect(() => {
     if (triggerReconnect > 0 && bridgeRef.current) {
       bridgeRef.current.disconnect();
-      settingsAppliedRef.current = false;
+      bridgeRef.current.setPort(useVstStore.getState().preferredPort);
       bridgeRef.current.connect({ projectId, userId, username });
     }
   }, [triggerReconnect, projectId, userId, username]);
@@ -44,31 +40,6 @@ export function VstAudioBridge({
   useEffect(() => {
     pipelineRef.current?.setVolume(vstVolume);
   }, [vstVolume]);
-
-  // Apply user's audio settings to VST plugin after connection is established
-  useEffect(() => {
-    if (vstStatus === "connected" && bridgeRef.current && !settingsAppliedRef.current) {
-      const bitrate = useMediaSettingsStore.getState().audioQuality.bitrate;
-      const sendSamples = msToSamples(useMediaSettingsStore.getState().audioQuality.sendBufferMs);
-      bridgeRef.current.sendSettings(bitrate, sendSamples);
-      settingsAppliedRef.current = true;
-    }
-  }, [vstStatus]);
-
-  // Apply bitrate change (user interaction after initial connection)
-  useEffect(() => {
-    if (bridgeRef.current && settingsAppliedRef.current) {
-      bridgeRef.current.sendBitrateChange(audioBitrate);
-    }
-  }, [audioBitrate]);
-
-  // Apply send buffer change (user interaction after initial connection)
-  useEffect(() => {
-    if (bridgeRef.current && settingsAppliedRef.current) {
-      const samples = msToSamples(sendBufferMs);
-      bridgeRef.current.sendBufferChange(samples);
-    }
-  }, [sendBufferMs]);
 
   // Apply receive buffer change to audio pipeline
   useEffect(() => {
@@ -81,7 +52,7 @@ export function VstAudioBridge({
   useEffect(() => {
     if (!VstAudioPipeline.isSupported()) {
       useVstStore.getState().setError(
-        "VST audio requires Chrome or Edge (WebCodecs AudioDecoder not available)",
+        "VST audio requires AudioContext + AudioWorklet support",
       );
       return;
     }
@@ -90,30 +61,21 @@ export function VstAudioBridge({
     bridgeRef.current = bridge;
 
     let published = false;
-    let initializing = false;
 
-    bridge.onAudioPacket(async (packet) => {
-      if (!pipelineRef.current && !initializing) {
-        initializing = true;
+    bridge.onPcmData((interleaved, sampleRate, channels, numSamples) => {
+      if (!pipelineRef.current) {
         pipelineRef.current = new VstAudioPipeline();
-        try {
-          await pipelineRef.current.initialize(
-            packet.sampleRate,
-            packet.channels,
-          );
-        } catch {
+        pipelineRef.current.initialize(sampleRate, channels).catch(() => {
           pipelineRef.current = null;
-          initializing = false;
-          return;
-        }
-        initializing = false;
+        });
       }
 
-      const pipeline = pipelineRef.current!;
+      const pipeline = pipelineRef.current;
+      if (!pipeline?.isReady) return;
 
-      pipeline.feedOpusPacket(packet.data);
+      pipeline.feedPcm(interleaved, sampleRate, channels, numSamples);
 
-      // Publish audio track to LiveKit once the pipeline produces a track
+      // Publish audio track to LiveKit once ready
       const store = useVstStore.getState();
       if (
         pipeline.isReady &&
@@ -122,18 +84,17 @@ export function VstAudioBridge({
       ) {
         const track = pipeline.getMediaStreamTrack();
         if (track) {
-          try {
-            await participantRef.current.publishTrack(track, {
-              name: "DAW Audio (VST)",
-              source: Track.Source.Microphone,
-            });
+          participantRef.current.publishTrack(track, {
+            name: "DAW Audio (VST)",
+            source: Track.Source.Microphone,
+          }).then(() => {
             published = true;
             store.setAudioTrackPublished(true);
-          } catch (e) {
+          }).catch((e: unknown) => {
             store.setError(
               `Failed to publish audio track: ${e instanceof Error ? e.message : "Unknown error"}`,
             );
-          }
+          });
         }
       }
     });
@@ -149,5 +110,5 @@ export function VstAudioBridge({
     };
   }, [projectId, userId, username]);
 
-  return null; // no UI — managed by VstConnectionPanel
+  return null; // no UI
 }

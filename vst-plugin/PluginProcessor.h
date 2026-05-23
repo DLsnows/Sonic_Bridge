@@ -2,7 +2,6 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <atomic>
-#include "AudioEncoder.h"
 #include "AudioMeter.h"
 #include "VstBridgeServer.h"
 
@@ -41,27 +40,15 @@ public:
   VstBridgeServer& getBridgeServer() { return mBridgeServer; }
   AudioMeter& getMeter() { return mMeter; }
 
-  // Audio settings persistence
-  int getCurrentBitrate() const { return mOpusBitrate.load(); }
-  void setCurrentBitrate(int bitrate);
-
 private:
-  AudioEncoder mEncoder;
   AudioMeter mMeter;
   VstBridgeServer mBridgeServer;
-
-  std::atomic<int> mOpusBitrate{128000};
-  std::atomic<uint32_t> mAudioSeq{0};
 
   double mCurrentSampleRate = 48000.0;
   int mCurrentBlockSize = 256;
 
   // Work buffer for interleaved stereo
   juce::AudioBuffer<float> mWorkBuffer;
-
-  // Opus frame accumulation (per-instance, not static)
-  juce::AudioBuffer<float> mAccumulationBuffer{2, 960};
-  int mAccumulatedSamples = 0;
 
   // Meter broadcast throttle
   int mMeterFrameCounter = 0;

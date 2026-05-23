@@ -35,24 +35,9 @@ juce_add_plugin(SonicBridgeVST
 
 # --- Dependencies (all static via x64-windows-static triplet) ---
 
-# libopus (via vcpkg or system)
-find_package(Opus CONFIG QUIET)
-if(NOT Opus_FOUND)
-  find_package(PkgConfig QUIET)
-  if(PkgConfig_FOUND)
-    pkg_check_modules(OPUS opus)
-  endif()
-  if(NOT OPUS_FOUND)
-    find_path(OPUS_INCLUDE_DIRS opus/opus.h)
-    find_library(OPUS_LIBRARIES opus)
-    if(NOT OPUS_INCLUDE_DIRS OR NOT OPUS_LIBRARIES)
-      message(FATAL_ERROR "libopus not found. Install with: vcpkg install opus")
-    endif()
-  endif()
-endif()
-
 # ixwebsocket (static, bundles mbedtls for TLS — no separate OpenSSL needed)
 find_package(ixwebsocket CONFIG REQUIRED)
+find_path(IXWEBSOCKET_INCLUDE_DIR ixwebsocket/IXWebSocketServer.h REQUIRED)
 
 # --- Source Files ---
 target_sources(SonicBridgeVST PRIVATE
@@ -62,8 +47,6 @@ target_sources(SonicBridgeVST PRIVATE
   PluginEditor.cpp
   VstBridgeServer.h
   VstBridgeServer.cpp
-  AudioEncoder.h
-  AudioEncoder.cpp
   AudioMeter.h
   AudioMeter.cpp
   PluginLookAndFeel.h
@@ -75,21 +58,12 @@ target_sources(SonicBridgeVST PRIVATE
 # --- Include Directories ---
 target_include_directories(SonicBridgeVST PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}
+  ${IXWEBSOCKET_INCLUDE_DIR}
 )
-if(NOT Opus_FOUND AND OPUS_INCLUDE_DIRS)
-  target_include_directories(SonicBridgeVST PRIVATE ${OPUS_INCLUDE_DIRS})
-endif()
 
 # --- Link Libraries ---
-if(Opus_FOUND)
-  set(OPUS_TARGET Opus::opus)
-else()
-  set(OPUS_TARGET ${OPUS_LIBRARIES})
-endif()
-
 target_link_libraries(SonicBridgeVST PRIVATE
   juce::juce_audio_plugin_client
-  ${OPUS_TARGET}
   ixwebsocket::ixwebsocket
 )
 

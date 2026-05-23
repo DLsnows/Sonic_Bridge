@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { useVstStore } from "@/lib/store/vst";
 import { VstVolumeMeter } from "./VstVolumeMeter";
 
@@ -25,14 +26,15 @@ export function VstConnectionPanel() {
   const meterRight = useVstStore((s) => s.meterRight);
   const meterPeak = useVstStore((s) => s.meterPeak);
   const sampleRate = useVstStore((s) => s.sampleRate);
-  const bufferSize = useVstStore((s) => s.bufferSize);
   const channels = useVstStore((s) => s.channels);
-  const opusBitrate = useVstStore((s) => s.opusBitrate);
   const lastError = useVstStore((s) => s.lastError);
   const audioTrackPublished = useVstStore((s) => s.audioTrackPublished);
   const broadcastEnabled = useVstStore((s) => s.broadcastEnabled);
   const setBroadcastEnabled = useVstStore((s) => s.setBroadcastEnabled);
   const requestReconnect = useVstStore((s) => s.requestReconnect);
+  const preferredPort = useVstStore((s) => s.preferredPort);
+  const setPreferredPort = useVstStore((s) => s.setPreferredPort);
+  const portInputRef = useRef<HTMLInputElement>(null);
 
   const color = statusColors[status] ?? statusColors.disconnected;
 
@@ -106,6 +108,40 @@ export function VstConnectionPanel() {
         </div>
       )}
 
+      {/* Port input (disconnected or error) */}
+      {(status === "disconnected" || status === "error") && (
+        <div className="space-y-2 pt-2 border-t border-[#00F0FF]/10">
+          <p className="text-[10px] text-[#A0A0B0] font-['Share_Tech_Mono',monospace] uppercase tracking-wider">
+            Port
+          </p>
+          <div className="flex gap-2">
+            <input
+              ref={portInputRef}
+              type="number"
+              defaultValue={String(preferredPort)}
+              placeholder="9420"
+              className="flex-1 bg-black/60 border border-[#00F0FF]/20 rounded px-2 py-1 text-[10px] text-[#F0F0F0] font-mono outline-none focus:border-[#00F0FF]/50"
+            />
+            <button
+              onClick={() => {
+                const val = portInputRef.current?.value ?? String(preferredPort);
+                const port = parseInt(val, 10);
+                if (port > 0 && port < 65536) {
+                  setPreferredPort(port);
+                  requestReconnect();
+                }
+              }}
+              className="px-3 py-1 text-[10px] text-[#00F0FF] bg-[#00F0FF]/10 border border-[#00F0FF]/20 rounded hover:bg-[#00F0FF]/20 transition-colors font-['Share_Tech_Mono',monospace]"
+            >
+              Connect
+            </button>
+          </div>
+          <p className="text-[9px] text-[#A0A0B0]">
+            Enter the port shown in your DAW&apos;s SonicBridge VST window
+          </p>
+        </div>
+      )}
+
       {/* Volume Meter */}
       {status === "connected" && (
         <>
@@ -121,7 +157,7 @@ export function VstConnectionPanel() {
           </div>
 
           {/* Audio Settings */}
-          {(sampleRate || bufferSize || opusBitrate) && (
+          {(sampleRate || channels) && (
             <div className="space-y-1">
               <p className="text-[10px] text-[#A0A0B0] font-['Share_Tech_Mono',monospace] uppercase tracking-wider">
                 Audio
@@ -135,27 +171,11 @@ export function VstConnectionPanel() {
                     </span>
                   </>
                 )}
-                {bufferSize && (
-                  <>
-                    <span className="text-[#A0A0B0]">Buffer</span>
-                    <span className="text-[#F0F0F0] font-mono text-right">
-                      {bufferSize} smp
-                    </span>
-                  </>
-                )}
                 {channels && (
                   <>
                     <span className="text-[#A0A0B0]">Channels</span>
                     <span className="text-[#F0F0F0] font-mono text-right">
                       {channels === 2 ? "Stereo" : `${channels}ch`}
-                    </span>
-                  </>
-                )}
-                {opusBitrate && (
-                  <>
-                    <span className="text-[#A0A0B0]">Opus Bitrate</span>
-                    <span className="text-[#F0F0F0] font-mono text-right">
-                      {Math.round(opusBitrate / 1000)} kbps
                     </span>
                   </>
                 )}
