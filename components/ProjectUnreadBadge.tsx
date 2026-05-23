@@ -26,13 +26,11 @@ export function ProjectCardWrapper({
   href: string;
   children: React.ReactNode;
 }) {
-  const recordProjectView = useNotificationStore((s) => s.recordProjectView);
   const badge = useNotificationStore((s) => s.unreadByProject[projectId]?.total ?? 0);
 
   return (
     <Link
       href={href}
-      onClick={() => { if (badge > 0) recordProjectView(projectId); }}
       className="relative block"
     >
       <ProjectUnreadBadge projectId={projectId} />

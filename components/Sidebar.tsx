@@ -25,7 +25,6 @@ export function Sidebar({ username, projects }: { username?: string; projects?: 
   const setProjects = useSidebarStore((s) => s.setProjects);
   const refreshProjects = useSidebarStore((s) => s.refreshProjects);
   const unreadByProject = useNotificationStore((s) => s.unreadByProject);
-  const recordProjectView = useNotificationStore((s) => s.recordProjectView);
   const fetchUnreadCounts = useNotificationStore((s) => s.fetchUnreadCounts);
 
   // Periodically poll for unread counts (replaces NotificationBellInline polling)
@@ -107,7 +106,6 @@ export function Sidebar({ username, projects }: { username?: string; projects?: 
             <Link
               key={project.id}
               href={href}
-              onClick={() => { if (badge > 0) recordProjectView(project.id); }}
               className={`flex items-center rounded-lg text-sm transition-all duration-200 relative
                 ${collapsed ? "justify-center px-2 py-2" : "gap-2 px-3 py-2"}
                 ${isActive
