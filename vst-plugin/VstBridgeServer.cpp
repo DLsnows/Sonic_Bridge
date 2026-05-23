@@ -1,5 +1,6 @@
 #include "VstBridgeServer.h"
 #include "WebSocketProtocol.h"
+#include <cstring>
 
 namespace SonicBridge {
 
@@ -119,6 +120,22 @@ void VstBridgeServer::broadcast(const juce::String& message) {
   }
 }
 
+void VstBridgeServer::broadcastBinary(const std::vector<uint8_t>& data) {
+  if (!mServer || data.empty()) return;
+
+  std::vector<std::shared_ptr<ix::WebSocket>> snapshot;
+  {
+    std::lock_guard<std::mutex> lock(mClientsMutex);
+    for (const auto& client : mServer->getClients()) {
+      snapshot.push_back(client);
+    }
+  }
+
+  for (auto& client : snapshot) {
+    client->sendBinary(ix::IXWebSocketSendData(data));
+  }
+}
+
 void VstBridgeServer::sendStatus(bool connected,
                                   const juce::String& pluginName,
                                   const juce::String& version) {
@@ -138,6 +155,48 @@ void VstBridgeServer::sendAudioPacket(uint32_t seq, uint64_t timestamp,
   msg.frameSize = frameSize;
   msg.opusData = opusData;
   broadcast(Protocol::serialize(msg.toJson()));
+}
+
+void VstBridgeServer::sendPcmPacket(const float* interleavedSamples,
+                                     int numSamples,
+                                     int sampleRate,
+                                     int channels) {
+  if (!mServer) return;
+
+  // Binary PCM frame format:
+  // [4B magic "SBPC"][4B uint32 numSamples][4B uint32 sampleRate][2B uint16 channels]
+  // [numSamples * channels * 4B: float32 PCM]
+  const int headerSize = 4 + 4 + 4 + 2;
+  const int dataSize = numSamples * channels * static_cast<int>(sizeof(float));
+  std::vector<uint8_t> packet(static_cast<size_t>(headerSize + dataSize));
+
+  // Magic
+  packet[0] = 'S'; packet[1] = 'B'; packet[2] = 'P'; packet[3] = 'C';
+
+  // numSamples (uint32 LE)
+  auto u32 = static_cast<uint32_t>(numSamples);
+  packet[4] = static_cast<uint8_t>(u32 & 0xff);
+  packet[5] = static_cast<uint8_t>((u32 >> 8) & 0xff);
+  packet[6] = static_cast<uint8_t>((u32 >> 16) & 0xff);
+  packet[7] = static_cast<uint8_t>((u32 >> 24) & 0xff);
+
+  // sampleRate (uint32 LE)
+  auto sr = static_cast<uint32_t>(sampleRate);
+  packet[8] = static_cast<uint8_t>(sr & 0xff);
+  packet[9] = static_cast<uint8_t>((sr >> 8) & 0xff);
+  packet[10] = static_cast<uint8_t>((sr >> 16) & 0xff);
+  packet[11] = static_cast<uint8_t>((sr >> 24) & 0xff);
+
+  // channels (uint16 LE)
+  auto ch = static_cast<uint16_t>(channels);
+  packet[12] = static_cast<uint8_t>(ch & 0xff);
+  packet[13] = static_cast<uint8_t>((ch >> 8) & 0xff);
+
+  // PCM float32 data
+  std::memcpy(packet.data() + headerSize, interleavedSamples,
+              static_cast<size_t>(dataSize));
+
+  broadcastBinary(packet);
 }
 
 void VstBridgeServer::sendMeterLevels(float left, float right, float peak) {

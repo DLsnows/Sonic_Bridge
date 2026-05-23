@@ -34,6 +34,8 @@ public:
   void sendAudioPacket(uint32_t seq, uint64_t timestamp, int sampleRate,
                        int channels, int frameSize,
                        const std::vector<uint8_t>& opusData);
+  void sendPcmPacket(const float* interleavedSamples, int numSamples,
+                     int sampleRate, int channels);
   void sendMeterLevels(float left, float right, float peak);
   void sendSettings(int sampleRate, int bufferSize, int channels,
                     int opusBitrate);
@@ -49,6 +51,7 @@ private:
                        ix::WebSocket& client,
                        const ix::WebSocketMessagePtr& msg);
   void broadcast(const juce::String& message);
+  void broadcastBinary(const std::vector<uint8_t>& data);
 
   std::unique_ptr<ix::WebSocketServer> mServer;
   std::atomic<bool> mRunning{false};

@@ -53,31 +53,7 @@ SonicBridgeAudioProcessorEditor::SonicBridgeAudioProcessorEditor(
                          juce::Colour(0xffa0a0b0));
   addAndMakeVisible(mMeterLabelR);
 
-  // Bitrate slider
-  mBitrateSlider.setRange(32000, 320000, 8000);
-  mBitrateSlider.setValue(mProcessor.getCurrentBitrate(),
-                          juce::dontSendNotification);
-  mBitrateSlider.setTextValueSuffix(" bps");
-  mBitrateSlider.onValueChange = [this]() {
-    int bitrate = static_cast<int>(mBitrateSlider.getValue());
-    mProcessor.setCurrentBitrate(bitrate);
-    mBitrateLabel.setText(
-      juce::String(bitrate / 1000) + " kbps",
-      juce::dontSendNotification
-    );
-  };
-  addAndMakeVisible(mBitrateSlider);
-
-  mBitrateLabel.setText(
-    juce::String(mProcessor.getCurrentBitrate() / 1000) + " kbps",
-    juce::dontSendNotification
-  );
-  mBitrateLabel.setFont(juce::Font(juce::FontOptions().withHeight(10.0f)));
-  mBitrateLabel.setColour(juce::Label::textColourId,
-                          juce::Colour(0xfff0f0f0));
-  addAndMakeVisible(mBitrateLabel);
-
-  // Audio info
+  // Audio info label
   mSampleRateLabel.setText("48 kHz", juce::dontSendNotification);
   mSampleRateLabel.setFont(juce::Font(juce::FontOptions().withHeight(10.0f)));
   mSampleRateLabel.setColour(juce::Label::textColourId,
@@ -185,13 +161,6 @@ void SonicBridgeAudioProcessorEditor::resized() {
   mBufferSizeLabel.setBounds(infoRow.removeFromRight(80));
 
   area.removeFromTop(4);
-
-  // Bitrate
-  mBitrateLabel.setBounds(area.removeFromTop(16));
-  auto sliderArea = area.removeFromTop(40);
-  mBitrateSlider.setBounds(sliderArea);
-
-  area.removeFromTop(8);
 
   // Port info
   mPortLabel.setBounds(area.removeFromTop(16));

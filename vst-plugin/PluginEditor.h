@@ -54,8 +54,6 @@ private:
   juce::Label mMeterLabelR;
 
   // Settings
-  juce::Slider mBitrateSlider;
-  juce::Label mBitrateLabel;
   juce::Label mSampleRateLabel;
   juce::Label mBufferSizeLabel;
 
