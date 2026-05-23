@@ -50,7 +50,7 @@ export function SpotlightView() {
   useEffect(() => {
     if (screenShareTrack) {
       const key = makeKey(screenShareTrack);
-      if (key !== prevScreenShareKey.current) {
+      if (key !== prevScreenShareKey.current && !manualSpotlightRef.current) {
         prevScreenShareKey.current = key;
         if (spotlightKey !== key) {
           requestAnimationFrame(() => {
