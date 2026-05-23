@@ -63,8 +63,6 @@ void VstBridgeServer::onClientMessage(
 
   using namespace Protocol;
 
-  // Connection lifecycle events need no handling here —
-  // client counting and broadcast use mServer->getClients() directly
   if (msg->type == ix::WebSocketMessageType::Open ||
       msg->type == ix::WebSocketMessageType::Close) {
     return;
@@ -96,7 +94,6 @@ void VstBridgeServer::onClientMessage(
         break;
       }
       case MessageType::Pong:
-        // keep-alive acknowledged
         break;
       default:
         break;
@@ -109,9 +106,6 @@ void VstBridgeServer::onClientMessage(
 void VstBridgeServer::broadcast(const juce::String& message) {
   if (!mServer) return;
 
-  // Snapshot clients under lock to minimize contention on the audio thread.
-  // shared_ptr keeps each WebSocket alive; send() is thread-safe and a
-  // no-op on closed sockets, so iterating outside the lock is safe.
   std::vector<std::shared_ptr<ix::WebSocket>> snapshot;
   {
     std::lock_guard<std::mutex> lock(mClientsMutex);
@@ -132,42 +126,11 @@ void VstBridgeServer::sendStatus(bool connected,
   broadcast(Protocol::serialize(msg.toJson()));
 }
 
-void VstBridgeServer::sendAudioPacket(uint32_t seq, uint64_t timestamp,
-                                       int sampleRate, int channels,
-                                       int frameSize,
-                                       const std::vector<uint8_t>& opusData) {
-  Protocol::AudioMessage msg;
-  msg.seq = seq;
-  msg.timestamp = timestamp;
-  msg.sampleRate = sampleRate;
-  msg.channels = channels;
-  msg.frameSize = frameSize;
-  msg.opusData = opusData;
-  broadcast(Protocol::serialize(msg.toJson()));
-}
-
-void VstBridgeServer::sendMeterLevels(float left, float right, float peak) {
-  Protocol::MeterMessage msg{left, right, peak};
-  broadcast(Protocol::serialize(msg.toJson()));
-}
-
-void VstBridgeServer::sendSettings(int sampleRate, int bufferSize,
-                                    int channels, int opusBitrate) {
-  Protocol::SettingsMessage msg{sampleRate, bufferSize, channels, opusBitrate};
-  broadcast(Protocol::serialize(msg.toJson()));
-}
-
-void VstBridgeServer::sendError(const juce::String& code,
-                                 const juce::String& message) {
-  Protocol::ErrorMessage msg{code, message};
-  broadcast(Protocol::serialize(msg.toJson()));
-}
-
 void VstBridgeServer::sendPcmPacket(const float* interleaved, int numSamples,
                                      int sampleRate, int channels) {
   if (!mServer) return;
 
-  // Pack header: 3 x u32 LE
+  // Pack header: 3 x u32 LE (sampleRate, channels, numSamples)
   const int headerSize = 12;
   const int dataSize = numSamples * channels * static_cast<int>(sizeof(float));
   std::string frame(headerSize + dataSize, '\0');
@@ -197,6 +160,23 @@ void VstBridgeServer::sendPcmPacket(const float* interleaved, int numSamples,
   for (auto& client : snapshot) {
     client->sendBinary(frame);
   }
+}
+
+void VstBridgeServer::sendMeterLevels(float left, float right, float peak) {
+  Protocol::MeterMessage msg{left, right, peak};
+  broadcast(Protocol::serialize(msg.toJson()));
+}
+
+void VstBridgeServer::sendSettings(int sampleRate, int bufferSize,
+                                    int channels, int opusBitrate) {
+  Protocol::SettingsMessage msg{sampleRate, bufferSize, channels, opusBitrate};
+  broadcast(Protocol::serialize(msg.toJson()));
+}
+
+void VstBridgeServer::sendError(const juce::String& code,
+                                 const juce::String& message) {
+  Protocol::ErrorMessage msg{code, message};
+  broadcast(Protocol::serialize(msg.toJson()));
 }
 
 } // namespace SonicBridge
