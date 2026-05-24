@@ -7,6 +7,7 @@ import { eq, and, gte, desc, asc, isNull } from "drizzle-orm";
 import { TopBar } from "@/components/TopBar";
 import { ProjectIdBadge } from "@/components/ProjectIdBadge";
 import { GlassPanel } from "@/components/ui/GlassPanel";
+import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { MemberAvatar } from "@/components/MemberAvatar";
 import { resolveProjectId } from "@/lib/project-utils";
@@ -112,6 +113,28 @@ export default async function ProjectPage({
 
       <div className="p-6">
         {/* Navigation Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          {[
+            { href: "space", label: "Creative Space", desc: "Real-time audio, screen sharing, voice & video", icon: "◈", glow: "cyan" as const },
+            { href: "files", label: "Project Files", desc: "Upload, download & manage project assets", icon: "◫", glow: "green" as const },
+            { href: "schedule", label: "Schedule", desc: "Meetings, production cycles, release dates", icon: "◷", glow: "purple" as const },
+            { href: "discussion", label: "Discussion", desc: "Ideas, feedback & team conversations", icon: "☰", glow: "orange" as const },
+          ].map((card) => (
+            <Link key={card.href} href={`/projects/${project.id}/${card.href}`}>
+              <Card hover glow={card.glow} className="h-full group">
+                <div className="flex items-start gap-4">
+                  <span className="text-2xl mt-1">{card.icon}</span>
+                  <div>
+                    <h3 className="font-['Share_Tech_Mono',monospace] text-[#F0F0F0] text-lg mb-1">
+                      {card.label}
+                    </h3>
+                    <p className="text-sm text-[#A0A0B0]">{card.desc}</p>
+                  </div>
+                </div>
+              </Card>
+            </Link>
+          ))}
+        </div>
 
         {/* Recent Activity & Members */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
