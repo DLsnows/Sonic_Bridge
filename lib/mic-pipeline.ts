@@ -40,6 +40,7 @@ export class MicPipeline {
     this.stream = await navigator.mediaDevices.getUserMedia(constraints);
 
     this.audioContext = new AudioContext();
+    await this.audioContext.resume();
     const sourceTrack = this.stream.getAudioTracks()[0];
     this.sourceNode = this.audioContext.createMediaStreamSource(
       new MediaStream([sourceTrack]),

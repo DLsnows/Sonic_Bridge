@@ -68,19 +68,26 @@ export function VstAudioBridge({
       publishedTrackRef.current = null;
       useVstStore.getState().setAudioTrackPublished(false);
     }
-    if (broadcastEnabled && !publishedTrackRef.current && pipelineRef.current?.isReady) {
-      const track = pipelineRef.current.getMediaStreamTrack();
-      if (track) {
-        participantRef.current.publishTrack(track, {
-          name: "DAW Audio (VST)",
-          source: Track.Source.Unknown,
-          audioBitrate: useMediaSettingsStore.getState().dawAudio.bitrate,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } as any).then(() => {
-          publishedTrackRef.current = track;
-          useVstStore.getState().setAudioTrackPublished(true);
-        }).catch(() => {});
-      }
+    if (broadcastEnabled && !publishedTrackRef.current) {
+      // Small delay to ensure unpublish completed, then try to publish on next PCM frame
+      const timer = setTimeout(() => {
+        if (!publishedTrackRef.current && pipelineRef.current?.isReady) {
+          // Force a new PCM frame to trigger re-publish
+          const track = pipelineRef.current.getMediaStreamTrack();
+          if (track) {
+            participantRef.current.publishTrack(track, {
+              name: "DAW Audio (VST)",
+              source: Track.Source.Unknown,
+              audioBitrate: useMediaSettingsStore.getState().dawAudio.bitrate,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            } as any).then(() => {
+              publishedTrackRef.current = track;
+              useVstStore.getState().setAudioTrackPublished(true);
+            }).catch(() => {});
+          }
+        }
+      }, 500);
+      return () => clearTimeout(timer);
     }
   }, [broadcastEnabled]);
 

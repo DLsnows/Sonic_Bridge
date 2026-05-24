@@ -252,6 +252,13 @@ export function ParticipantList({ userId: _ }: ParticipantListProps) {
           />
           Screen
         </span>
+        <span className="flex items-center gap-1">
+          <span
+            className="w-1.5 h-1.5 rounded-full"
+            style={{ backgroundColor: "#B44DFF" }}
+          />
+          DAW
+        </span>
       </div>
     </div>
   );

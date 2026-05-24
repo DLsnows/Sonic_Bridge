@@ -26,6 +26,7 @@ export class VstAudioPipeline {
     this.channels = channels;
 
     this.audioContext = new AudioContext({ sampleRate });
+    await this.audioContext.resume();
 
     // Register AudioWorklet processor from public/
     await this.audioContext.audioWorklet.addModule("/audio-worklet.js");

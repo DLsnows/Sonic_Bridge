@@ -42,6 +42,7 @@ export function CreativeSpaceRoom({
   const mediaSettingsOpen = useSpaceStore((s) => s.mediaSettingsOpen);
   const setMediaSettingsOpen = useSpaceStore((s) => s.setMediaSettingsOpen);
   const abortRef = useRef<AbortController | null>(null);
+  const [dawPanelCollapsed, setDawPanelCollapsed] = useState(false);
 
   const fetchToken = useCallback(
     async (signal: AbortSignal) => {
@@ -166,11 +167,32 @@ export function CreativeSpaceRoom({
         {/* Mic volume bridge — invisible, syncs mic gain to processor */}
         <MicVolumeBridge />
 
-        {/* Left sidebar: VST panel */}
-        <aside className="w-72 flex-shrink-0 border-r border-[#00F0FF]/10 bg-[#09090B]/60 backdrop-blur-sm">
-          <div className="h-full overflow-y-auto">
-            <VstConnectionPanel />
-          </div>
+        {/* Left sidebar: VST panel — collapsible */}
+        <aside className={`flex-shrink-0 border-r border-[#00F0FF]/10 bg-[#09090B]/60 backdrop-blur-sm transition-all duration-200 ${dawPanelCollapsed ? "w-9" : "w-72"}`}>
+          {dawPanelCollapsed ? (
+            <div
+              className="h-full flex flex-col items-center py-3 cursor-pointer hover:bg-white/[0.02] transition-colors"
+              onClick={() => setDawPanelCollapsed(false)}
+              title="Expand DAW Bridge"
+            >
+              <span className="text-sm">◈</span>
+              <span className="text-[8px] text-[#00F0FF] font-['Share_Tech_Mono',monospace] uppercase tracking-wider mt-1" style={{ writingMode: "vertical-rl" }}>
+                DAW
+              </span>
+              <span className="text-[9px] text-[#A0A0B0] mt-auto mb-2">▶</span>
+            </div>
+          ) : (
+            <div className="h-full overflow-y-auto relative">
+              <button
+                onClick={() => setDawPanelCollapsed(true)}
+                className="absolute top-2 right-2 z-10 text-[10px] text-[#A0A0B0] hover:text-[#F0F0F0] transition-colors"
+                title="Collapse"
+              >
+                ◀
+              </button>
+              <VstConnectionPanel />
+            </div>
+          )}
         </aside>
 
         {/* Main area: video grid + audio renderer */}
