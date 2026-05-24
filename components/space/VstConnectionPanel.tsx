@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useVstStore } from "@/lib/store/vst";
 import { VstVolumeMeter } from "./VstVolumeMeter";
 
@@ -35,8 +35,33 @@ export function VstConnectionPanel() {
   const preferredPort = useVstStore((s) => s.preferredPort);
   const setPreferredPort = useVstStore((s) => s.setPreferredPort);
   const portInputRef = useRef<HTMLInputElement>(null);
+  const [collapsed, setCollapsed] = useState(false);
 
   const color = statusColors[status] ?? statusColors.disconnected;
+
+  if (collapsed) {
+    return (
+      <div
+        className="p-3 cursor-pointer hover:bg-white/[0.02] transition-colors border-b border-[#00F0FF]/10"
+        onClick={() => setCollapsed(false)}
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-lg">◈</span>
+          <span className="font-['Share_Tech_Mono',monospace] text-[10px] text-[#00F0FF] uppercase tracking-wider">
+            DAW Bridge
+          </span>
+          <span
+            className="w-2 h-2 rounded-full ml-auto"
+            style={{
+              backgroundColor: color,
+              boxShadow: status === "connected" ? `0 0 6px ${color}` : "none",
+            }}
+          />
+          <span className="text-[9px] text-[#A0A0B0]">▶</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 space-y-4">
@@ -46,6 +71,13 @@ export function VstConnectionPanel() {
         <h3 className="font-['Share_Tech_Mono',monospace] text-xs text-[#00F0FF] uppercase tracking-wider">
           DAW Audio Bridge
         </h3>
+        <button
+          onClick={() => setCollapsed(true)}
+          className="ml-auto text-[10px] text-[#A0A0B0] hover:text-[#F0F0F0] transition-colors"
+          title="Collapse"
+        >
+          ▲
+        </button>
       </div>
 
       {/* Status LED */}

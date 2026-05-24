@@ -207,7 +207,7 @@ export function AudioMixer() {
               {Math.round(dawBitrate / 1000)} kbps
             </span>
           </div>
-          <input type="range" min="192000" max="510000" step="16000" value={dawBitrate}
+          <input type="range" min="192000" max="510000" step="2000" value={dawBitrate}
             onChange={(e) => setDawBitrate(parseInt(e.target.value))}
             className={sliderClass}
             style={{ background: `linear-gradient(to right, rgba(0,240,255,0.25) ${((dawBitrate - 192000) / (510000 - 192000)) * 100}%, rgba(255,255,255,0.1) ${((dawBitrate - 192000) / (510000 - 192000)) * 100}%)` }}

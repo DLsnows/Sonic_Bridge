@@ -60,12 +60,27 @@ export function VstAudioBridge({
     }
   }, [sendBufferMs]);
 
-  // Broadcast toggle: unpublish when disabled
+  // Broadcast toggle: unpublish when disabled, re-publish when enabled
   useEffect(() => {
     if (!broadcastEnabled && publishedTrackRef.current) {
       const track = publishedTrackRef.current;
       participantRef.current.unpublishTrack(track).catch(() => {});
       publishedTrackRef.current = null;
+      useVstStore.getState().setAudioTrackPublished(false);
+    }
+    if (broadcastEnabled && !publishedTrackRef.current && pipelineRef.current?.isReady) {
+      const track = pipelineRef.current.getMediaStreamTrack();
+      if (track) {
+        participantRef.current.publishTrack(track, {
+          name: "DAW Audio (VST)",
+          source: Track.Source.Unknown,
+          audioBitrate: useMediaSettingsStore.getState().dawAudio.bitrate,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any).then(() => {
+          publishedTrackRef.current = track;
+          useVstStore.getState().setAudioTrackPublished(true);
+        }).catch(() => {});
+      }
     }
   }, [broadcastEnabled]);
 

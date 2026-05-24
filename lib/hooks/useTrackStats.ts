@@ -37,7 +37,18 @@ function computeDeltaBitrate(
 function getPubSsrc(pub: unknown): number | undefined {
   const t = (pub as Record<string, unknown>).track;
   if (!t || typeof t !== "object") return undefined;
-  return (t as Record<string, unknown>).info as number | undefined;
+  // Try track.info.ssrc first, then track.trackInfo.ssrc
+  const info = (t as Record<string, unknown>).info;
+  if (info && typeof info === "object") {
+    const ssrc = (info as Record<string, unknown>).ssrc;
+    if (typeof ssrc === "number") return ssrc;
+  }
+  const trackInfo = (t as Record<string, unknown>).trackInfo;
+  if (trackInfo && typeof trackInfo === "object") {
+    const ssrc = (trackInfo as Record<string, unknown>).ssrc;
+    if (typeof ssrc === "number") return ssrc;
+  }
+  return undefined;
 }
 
 export function useTrackStats(participantIdentity: string): TrackStats {
@@ -80,18 +91,24 @@ export function useTrackStats(participantIdentity: string): TrackStats {
         const entryType = isLocal ? "outbound-rtp" : "inbound-rtp";
         const result: TrackStats = { ...EMPTY_STATS };
 
+        // If SSRC matching failed (no SSRCs found), fall back to kind-only matching
+        const useKindFallback = audioSsrcs.size === 0 && videoSsrcs.size === 0 && screenSsrcs.size === 0;
+
         for (const [, entry] of report) {
           if (entry.type !== entryType) continue;
           const e = entry as Record<string, unknown>;
           const ssrc = e.ssrc as number | undefined;
-          if (ssrc === undefined) continue;
           const bytes = (e.bytesSent ?? e.bytesReceived) as number | undefined;
           const ts = e.timestamp as number | undefined;
 
-          if (audioSsrcs.has(ssrc) && e.kind === "audio" && bytes !== undefined && ts !== undefined) {
+          const matchAudio = useKindFallback ? e.kind === "audio" : audioSsrcs.has(ssrc!) && e.kind === "audio";
+          const matchVideo = useKindFallback ? e.kind === "video" : videoSsrcs.has(ssrc!) && e.kind === "video";
+          const matchScreen = useKindFallback ? e.kind === "video" : screenSsrcs.has(ssrc!) && e.kind === "video";
+
+          if (matchAudio && bytes !== undefined && ts !== undefined) {
             const br = computeDeltaBitrate(bytes, ts, prevBytesRef.current, `a-${ssrc}`);
             if (br !== undefined) result.audioBitrate = br;
-          } else if (videoSsrcs.has(ssrc) && e.kind === "video") {
+          } else if (matchVideo) {
             if (bytes !== undefined && ts !== undefined) {
               const br = computeDeltaBitrate(bytes, ts, prevBytesRef.current, `v-${ssrc}`);
               if (br !== undefined) result.videoBitrate = br;
@@ -99,7 +116,7 @@ export function useTrackStats(participantIdentity: string): TrackStats {
             if (e.frameWidth !== undefined) result.videoWidth = e.frameWidth as number;
             if (e.frameHeight !== undefined) result.videoHeight = e.frameHeight as number;
             if (e.framesPerSecond !== undefined) result.videoFps = e.framesPerSecond as number;
-          } else if (screenSsrcs.has(ssrc) && e.kind === "video") {
+          } else if (matchScreen) {
             if (bytes !== undefined && ts !== undefined) {
               const br = computeDeltaBitrate(bytes, ts, prevBytesRef.current, `s-${ssrc}`);
               if (br !== undefined) result.screenShareBitrate = br;
