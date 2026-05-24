@@ -53,5 +53,10 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     viewed[`${projectId}:${tabKey}`] = Date.now();
     saveViewed(viewed);
     get().fetchUnreadCounts();
+    fetch("/api/notifications/view", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ projectId }),
+    }).catch(() => {});
   },
 }));
