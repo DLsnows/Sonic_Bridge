@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
-  notifications,
   discussionPosts,
   files,
   scheduleEvents,
@@ -37,6 +36,7 @@ export async function GET() {
       const since = lastViewedMap.get(pid);
       let threadCount = 0, fileCount = 0, eventCount = 0;
 
+      // Threads from source table only (notifications counted by client-side localStorage)
       try {
         const conds = [eq(discussionPosts.projectId, pid), isNull(discussionPosts.parentId), ne(discussionPosts.isAiGenerated, true)];
         if (since) conds.push(gt(discussionPosts.createdAt, since));
@@ -44,13 +44,7 @@ export async function GET() {
         threadCount = r?.c ?? 0;
       } catch { /* non-fatal */ }
 
-      try {
-        const conds = [eq(notifications.userId, userId), eq(notifications.projectId, pid)];
-        if (since) conds.push(gt(notifications.createdAt, since));
-        const [r] = await db.select({ c: count() }).from(notifications).where(and(...conds));
-        threadCount += r?.c ?? 0;
-      } catch { /* non-fatal */ }
-
+      // Files
       try {
         const conds = [eq(files.projectId, pid)];
         if (since) conds.push(gt(files.uploadedAt, since));
@@ -58,6 +52,7 @@ export async function GET() {
         fileCount = r?.c ?? 0;
       } catch { /* non-fatal */ }
 
+      // Events
       try {
         const conds = [eq(scheduleEvents.projectId, pid), gte(scheduleEvents.startTime, new Date())];
         if (since) conds.push(gt(scheduleEvents.createdAt, since));
