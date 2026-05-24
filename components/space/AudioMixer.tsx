@@ -1,10 +1,12 @@
 "use client";
 
-import { useRemoteParticipants } from "@livekit/components-react";
+import { useRemoteParticipants, useMaybeRoomContext, useLocalParticipant } from "@livekit/components-react";
 import { useSpaceStore } from "@/lib/store/space";
 import { useVstStore } from "@/lib/store/vst";
 import { useMediaSettingsStore } from "@/lib/store/media-settings";
-import { useState, useCallback } from "react";
+import { getMicPipeline } from "@/lib/mic-pipeline";
+import { Track } from "livekit-client";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { VstVolumeMeter } from "./VstVolumeMeter";
 
 const sliderClass =
@@ -41,6 +43,40 @@ export function AudioMixer() {
   const micMeterLevel = useVstStore((s) => s.micMeterLevel);
   const audioBitrate = useMediaSettingsStore((s) => s.audioQuality.bitrate);
   const setAudioBitrate = useMediaSettingsStore((s) => s.setAudioBitrate);
+  const noiseMode = useMediaSettingsStore((s) => s.audioQuality.noiseMode);
+  const setNoiseMode = useMediaSettingsStore((s) => s.setNoiseMode);
+  const { localParticipant, isMicrophoneEnabled } = useLocalParticipant();
+
+  const restartingRef = useRef(false);
+
+  useEffect(() => {
+    if (!isMicrophoneEnabled) return;
+    if (restartingRef.current) return;
+    const nm = useMediaSettingsStore.getState().audioQuality.noiseMode;
+    const pipeline = getMicPipeline();
+    if (!pipeline.isRunning) return;
+    const lp = localParticipant;
+    const pub = lp.getTrackPublication(Track.Source.Microphone);
+    if (!pub?.track) return;
+    restartingRef.current = true;
+    lp.unpublishTrack(pub.track).then(() => {
+      pipeline.stop();
+      return pipeline.start({
+        echoCancellation: true,
+        noiseSuppression: nm === "suppression",
+        voiceIsolation: nm === "voiceIsolation",
+      });
+    }).then((track) => {
+      return lp.publishTrack(track, { source: Track.Source.Microphone });
+    }).catch(() => {
+      // On failure, re-publish the original track if possible
+      if (pipeline.isRunning && pipeline.processedTrack) {
+        lp.publishTrack(pipeline.processedTrack, { source: Track.Source.Microphone }).catch(() => {});
+      }
+    }).finally(() => {
+      restartingRef.current = false;
+    });
+  }, [noiseMode]);
 
   const handleRemoteVolumeChange = useCallback(
     (participantIdentity: string, value: number) => {
@@ -123,6 +159,7 @@ export function AudioMixer() {
               }}
             />
           </div>
+
 
           {/* DAW/VST Channel */}
           <div className="space-y-1">
@@ -240,3 +277,4 @@ export function AudioMixer() {
     </div>
   );
 }
+

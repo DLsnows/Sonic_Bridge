@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { Track } from "livekit-client";
 import { useLocalParticipant, useMaybeRoomContext } from "@livekit/components-react";
 import { useRouter } from "next/navigation";
 import { useSpaceStore } from "@/lib/store/space";
 import { useMediaSettingsStore } from "@/lib/store/media-settings";
-import { getMicProcessor } from "@/lib/mic-processor";
+import { getMicPipeline } from "@/lib/mic-pipeline";
 import { DeviceSelector } from "./DeviceSelector";
 
 export function ControlBar({
@@ -37,14 +38,22 @@ export function ControlBar({
   async function handleToggleMic() {
     try {
       if (!isMicrophoneEnabled) {
-        await localParticipant.setMicrophoneEnabled(
-          true,
-          getMicProcessor().getCaptureOptions(),
-        );
+        const { noiseMode } = useMediaSettingsStore.getState().audioQuality;
+        const pipeline = getMicPipeline();
+        const track = await pipeline.start({
+          echoCancellation: true,
+          noiseSuppression: noiseMode === 'suppression',
+          voiceIsolation: noiseMode === 'voiceIsolation',
+        });
+        await localParticipant.publishTrack(track, {
+          source: Track.Source.Microphone,
+        });
       } else {
-        await localParticipant.setMicrophoneEnabled(false);
+        getMicPipeline().stop();
+        const pub = localParticipant.getTrackPublication(Track.Source.Microphone);
+        if (pub) { await localParticipant.unpublishTrack(pub.track!); }
       }
-    } catch { /* device access may be denied */ }
+    } catch (e) { console.error('Mic toggle failed:', e); }
   }
 
   async function handleToggleCamera() {
@@ -252,3 +261,5 @@ export function ControlBar({
     </div>
   );
 }
+
+

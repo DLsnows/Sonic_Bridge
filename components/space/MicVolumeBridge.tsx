@@ -2,14 +2,14 @@
 
 import { useEffect, useRef } from "react";
 import { useVstStore } from "@/lib/store/vst";
-import { getMicProcessor } from "@/lib/mic-processor";
+import { getMicPipeline } from "@/lib/mic-pipeline";
 
 export function MicVolumeBridge() {
   const micVolume = useVstStore((s) => s.micVolume);
-  const processorRef = useRef(getMicProcessor());
+  const pipelineRef = useRef(getMicPipeline());
 
   useEffect(() => {
-    processorRef.current.setVolume(micVolume);
+    pipelineRef.current.setVolume(micVolume);
   }, [micVolume]);
 
   useEffect(() => {
@@ -20,3 +20,4 @@ export function MicVolumeBridge() {
 
   return null;
 }
+

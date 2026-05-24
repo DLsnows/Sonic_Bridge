@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { LiveKitRoom, RoomAudioRenderer } from "@livekit/components-react";
 import { useSpaceStore } from "@/lib/store/space";
 import { LiveKitTheme } from "./LiveKitTheme";
-import { ParticipantGrid } from "./ParticipantGrid";
+import { SpotlightView } from "./SpotlightView";
 import { ControlBar } from "./ControlBar";
 import { ChatPanel } from "./ChatPanel";
 import { VstConnectionPanel } from "./VstConnectionPanel";
@@ -175,7 +175,7 @@ export function CreativeSpaceRoom({
 
         {/* Main area: video grid + audio renderer */}
         <div className="flex-1 flex flex-col min-w-0">
-          <ParticipantGrid />
+          <SpotlightView />
           <RoomAudioRenderer />
         </div>
 
