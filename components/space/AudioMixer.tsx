@@ -4,8 +4,9 @@ import { useRemoteParticipants, useMaybeRoomContext, useLocalParticipant } from 
 import { useSpaceStore } from "@/lib/store/space";
 import { useVstStore } from "@/lib/store/vst";
 import { useMediaSettingsStore } from "@/lib/store/media-settings";
-import { getMicProcessor } from "@/lib/mic-processor";
-import { useState, useCallback, useEffect } from "react";
+import { getMicPipeline } from "@/lib/mic-pipeline";
+import { Track } from "livekit-client";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { VstVolumeMeter } from "./VstVolumeMeter";
 
 const sliderClass =
@@ -42,25 +43,40 @@ export function AudioMixer() {
   const micMeterLevel = useVstStore((s) => s.micMeterLevel);
   const audioBitrate = useMediaSettingsStore((s) => s.audioQuality.bitrate);
   const setAudioBitrate = useMediaSettingsStore((s) => s.setAudioBitrate);
-  const noiseSuppression = useMediaSettingsStore((s) => s.audioQuality.noiseSuppression);
-  const setNoiseSuppression = useMediaSettingsStore((s) => s.setNoiseSuppression);
-  const voiceIsolation = useMediaSettingsStore((s) => s.audioQuality.voiceIsolation);
-  const setVoiceIsolation = useMediaSettingsStore((s) => s.setVoiceIsolation);
-
-  const room = useMaybeRoomContext();
+  const noiseMode = useMediaSettingsStore((s) => s.audioQuality.noiseMode);
+  const setNoiseMode = useMediaSettingsStore((s) => s.setNoiseMode);
   const { localParticipant, isMicrophoneEnabled } = useLocalParticipant();
 
+  const restartingRef = useRef(false);
+
   useEffect(() => {
-    if (!room || !isMicrophoneEnabled) return;
-    const micOptions = {
-      ...getMicProcessor().getCaptureOptions(),
-      noiseSuppression: noiseSuppression,
-      voiceIsolation: voiceIsolation,
-    };
-    localParticipant.setMicrophoneEnabled(false).then(() => {
-      localParticipant.setMicrophoneEnabled(true, micOptions);
-    }).catch(() => {});
-  }, [noiseSuppression, voiceIsolation]);
+    if (!isMicrophoneEnabled) return;
+    if (restartingRef.current) return;
+    const nm = useMediaSettingsStore.getState().audioQuality.noiseMode;
+    const pipeline = getMicPipeline();
+    if (!pipeline.isRunning) return;
+    const lp = localParticipant;
+    const pub = lp.getTrackPublication(Track.Source.Microphone);
+    if (!pub?.track) return;
+    restartingRef.current = true;
+    lp.unpublishTrack(pub.track).then(() => {
+      pipeline.stop();
+      return pipeline.start({
+        echoCancellation: true,
+        noiseSuppression: nm === "suppression",
+        voiceIsolation: nm === "voiceIsolation",
+      });
+    }).then((track) => {
+      return lp.publishTrack(track, { source: Track.Source.Microphone });
+    }).catch(() => {
+      // On failure, re-publish the original track if possible
+      if (pipeline.isRunning && pipeline.processedTrack) {
+        lp.publishTrack(pipeline.processedTrack, { source: Track.Source.Microphone }).catch(() => {});
+      }
+    }).finally(() => {
+      restartingRef.current = false;
+    });
+  }, [noiseMode]);
 
   const handleRemoteVolumeChange = useCallback(
     (participantIdentity: string, value: number) => {
@@ -144,29 +160,6 @@ export function AudioMixer() {
             />
           </div>
 
-          {/* Mic Processing Toggles */}
-          <div className="flex items-center gap-2 py-1">
-            <button
-              onClick={() => setNoiseSuppression(!noiseSuppression)}
-              className={`flex-1 px-2 py-1 rounded-full text-[10px] font-['Share_Tech_Mono',monospace] transition-all ${
-                noiseSuppression
-                  ? "bg-[#00FF41]/20 text-[#00FF41] border border-[#00FF41]/30"
-                  : "bg-white/5 text-[#A0A0B0] border border-white/10"
-              }`}
-            >
-              Noise Suppression
-            </button>
-            <button
-              onClick={() => setVoiceIsolation(!voiceIsolation)}
-              className={`flex-1 px-2 py-1 rounded-full text-[10px] font-['Share_Tech_Mono',monospace] transition-all ${
-                voiceIsolation
-                  ? "bg-[#BF5AF2]/20 text-[#BF5AF2] border border-[#BF5AF2]/30"
-                  : "bg-white/5 text-[#A0A0B0] border border-white/10"
-              }`}
-            >
-              Voice Isolation (Chrome)
-            </button>
-          </div>
 
           {/* DAW/VST Channel */}
           <div className="space-y-1">
@@ -284,3 +277,4 @@ export function AudioMixer() {
     </div>
   );
 }
+

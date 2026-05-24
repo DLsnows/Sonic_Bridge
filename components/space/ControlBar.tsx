@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { Track } from "livekit-client";
 import { useLocalParticipant, useMaybeRoomContext } from "@livekit/components-react";
 import { useRouter } from "next/navigation";
 import { useSpaceStore } from "@/lib/store/space";
 import { useMediaSettingsStore } from "@/lib/store/media-settings";
-import { getMicProcessor } from "@/lib/mic-processor";
+import { getMicPipeline } from "@/lib/mic-pipeline";
 import { DeviceSelector } from "./DeviceSelector";
 
 export function ControlBar({
@@ -34,26 +35,25 @@ export function ControlBar({
   const [micDeviceId, setMicDeviceId] = useState<string | null>(null);
   const [cameraDeviceId, setCameraDeviceId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isConnected && isMicrophoneEnabled) {
-      localParticipant.setMicrophoneEnabled(false);
-    }
-  }, [isConnected]);
-
   async function handleToggleMic() {
     try {
       if (!isMicrophoneEnabled) {
-        const { noiseSuppression, voiceIsolation } = useMediaSettingsStore.getState().audioQuality;
-        const micOptions = {
-          ...getMicProcessor().getCaptureOptions(),
-          noiseSuppression,
-          voiceIsolation,
-        };
-        await localParticipant.setMicrophoneEnabled(true, micOptions);
+        const { noiseMode } = useMediaSettingsStore.getState().audioQuality;
+        const pipeline = getMicPipeline();
+        const track = await pipeline.start({
+          echoCancellation: true,
+          noiseSuppression: noiseMode === 'suppression',
+          voiceIsolation: noiseMode === 'voiceIsolation',
+        });
+        await localParticipant.publishTrack(track, {
+          source: Track.Source.Microphone,
+        });
       } else {
-        await localParticipant.setMicrophoneEnabled(false);
+        getMicPipeline().stop();
+        const pub = localParticipant.getTrackPublication(Track.Source.Microphone);
+        if (pub) { await localParticipant.unpublishTrack(pub.track!); }
       }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error('Mic toggle failed:', e); }
   }
 
   async function handleToggleCamera() {
@@ -261,3 +261,5 @@ export function ControlBar({
     </div>
   );
 }
+
+
