@@ -60,7 +60,7 @@ export function AudioMixer() {
     localParticipant.setMicrophoneEnabled(false).then(() => {
       localParticipant.setMicrophoneEnabled(true, micOptions);
     }).catch(() => {});
-  }, [noiseMode, room, isMicrophoneEnabled]);
+  }, [noiseMode, room]);
 
   const handleRemoteVolumeChange = useCallback(
     (participantIdentity: string, value: number) => {
