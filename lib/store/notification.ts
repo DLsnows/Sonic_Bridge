@@ -12,10 +12,17 @@ export interface Notification {
   actorName?: string;
 }
 
+export interface UnreadEntry {
+  total: number;
+  threads: number;
+  files: number;
+  events: number;
+}
+
 interface NotificationState {
   notifications: Notification[];
   unreadCount: number;
-  unreadByProject: Record<string, number>;
+  unreadByProject: Record<string, UnreadEntry>;
   dropdownOpen: boolean;
   setNotifications: (items: Notification[]) => void;
   setDropdownOpen: (open: boolean) => void;
@@ -82,13 +89,11 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   },
 
   recordProjectView: (projectId: string) => {
-    // Optimistic local clear
     set((state) => {
       const updated = { ...state.unreadByProject };
       delete updated[projectId];
       return { unreadByProject: updated };
     });
-    // Server sync — updates project_views.last_viewed_at
     fetch("/api/notifications/view", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

@@ -101,7 +101,7 @@ export function Sidebar({ username, projects }: { username?: string; projects?: 
         {displayProjects.filter((p) => p.status !== "archived").map((project) => {
           const href = projectHref(project);
           const isActive = pathname.startsWith(href);
-          const badge = unreadByProject[project.id] ?? 0;
+          const badge = unreadByProject[project.id]?.total ?? 0;
           return (
             <Link
               key={project.id}

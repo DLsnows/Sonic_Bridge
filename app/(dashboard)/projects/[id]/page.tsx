@@ -13,6 +13,7 @@ import { MemberAvatar } from "@/components/MemberAvatar";
 import { resolveProjectId } from "@/lib/project-utils";
 import { ProjectStatusBadge } from "@/components/ProjectStatusBadge";
 import { CreativeSpaceStatus } from "@/components/CreativeSpaceStatus";
+import { NavBadge } from "@/components/NavBadge";
 
 export default async function ProjectPage({
   params,
@@ -120,7 +121,8 @@ export default async function ProjectPage({
             { href: "schedule", label: "Schedule", desc: "Meetings, production cycles, release dates", icon: "◷", glow: "purple" as const },
             { href: "discussion", label: "Discussion", desc: "Ideas, feedback & team conversations", icon: "☰", glow: "orange" as const },
           ].map((card) => (
-            <Link key={card.href} href={`/projects/${project.id}/${card.href}`}>
+            <Link key={card.href} href={`/projects/${project.id}/${card.href}`} className="relative">
+              <NavBadge projectId={project.id} href={card.href} />
               <Card hover glow={card.glow} className="h-full group">
                 <div className="flex items-start gap-4">
                   <span className="text-2xl mt-1">{card.icon}</span>
