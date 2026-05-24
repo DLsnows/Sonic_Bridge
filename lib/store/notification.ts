@@ -31,6 +31,7 @@ interface NotificationState {
   fetchNotifications: () => Promise<void>;
   fetchUnreadCounts: () => Promise<void>;
   recordProjectView: (projectId: string) => void;
+  recordTabView: (projectId: string, tabKey: string) => void;
 }
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
@@ -93,6 +94,27 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       const updated = { ...state.unreadByProject };
       delete updated[projectId];
       return { unreadByProject: updated };
+    });
+    fetch("/api/notifications/view", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ projectId }),
+    }).catch(() => {});
+  },
+
+  recordTabView: (projectId: string, tabKey: string) => {
+    const key = tabKey === "discussion" ? "threads" : tabKey === "files" ? "files" : tabKey === "schedule" ? "events" : null;
+    if (!key) return;
+    set((state) => {
+      const entry = state.unreadByProject[projectId];
+      if (!entry) return { unreadByProject: state.unreadByProject };
+      const updated = { ...entry, [key]: 0 };
+      updated.total = updated.threads + updated.files + updated.events;
+      if (updated.total > 0) {
+        return { unreadByProject: { ...state.unreadByProject, [projectId]: updated } };
+      }
+      const { [projectId]: _, ...rest } = state.unreadByProject;
+      return { unreadByProject: rest };
     });
     fetch("/api/notifications/view", {
       method: "POST",
