@@ -25,6 +25,14 @@ export function Sidebar({ username, projects }: { username?: string; projects?: 
   const setProjects = useSidebarStore((s) => s.setProjects);
   const refreshProjects = useSidebarStore((s) => s.refreshProjects);
   const unreadByProject = useNotificationStore((s) => s.unreadByProject);
+  const fetchUnreadCounts = useNotificationStore((s) => s.fetchUnreadCounts);
+
+  // Periodically poll for unread counts (replaces NotificationBellInline polling)
+  useEffect(() => {
+    fetchUnreadCounts();
+    const interval = setInterval(fetchUnreadCounts, 30000);
+    return () => clearInterval(interval);
+  }, [fetchUnreadCounts]);
 
   // Initialize store from server props on first render
   useEffect(() => {
