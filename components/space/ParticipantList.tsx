@@ -138,7 +138,9 @@ function ParticipantRow({
           )}
           {isScreenOn && trackStats.screenShareBitrate !== null && (
             <span className="text-[8px] text-[#00F0FF] font-['Share_Tech_Mono',monospace] bg-[#00F0FF]/10 px-1 py-0.5 rounded">
-              {formatBitrate(trackStats.screenShareBitrate)}
+              {formatResolution(trackStats.screenShareWidth, trackStats.screenShareHeight)}
+              {trackStats.screenShareFps !== null ? formatFps(trackStats.screenShareFps) : ""}
+              {" "}{formatBitrate(trackStats.screenShareBitrate)}
             </span>
           )}
         </div>
