@@ -1,57 +1,98 @@
 import { create } from "zustand";
 
-export interface UnreadEntry {
-  total: number;
-  threads: number;
-  files: number;
-  events: number;
-}
-
-const STORAGE_KEY = "notif-viewed";
-function loadViewed(): Record<string, number> {
-  try { const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : {}; } catch { return {}; }
-}
-function saveViewed(v: Record<string, number>) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch { /* quota */ }
+export interface Notification {
+  id: string;
+  projectId: string;
+  type: string;
+  referenceId: string;
+  referenceType: string;
+  isRead: boolean;
+  createdAt: string;
+  title?: string;
+  actorName?: string;
 }
 
 interface NotificationState {
-  unreadByProject: Record<string, UnreadEntry>;
+  notifications: Notification[];
+  unreadCount: number;
+  unreadByProject: Record<string, number>;
+  dropdownOpen: boolean;
+  setNotifications: (items: Notification[]) => void;
+  setDropdownOpen: (open: boolean) => void;
+  markRead: (id: string) => void;
+  markAllRead: () => void;
+  fetchNotifications: () => Promise<void>;
   fetchUnreadCounts: () => Promise<void>;
-  recordTabView: (projectId: string, tabKey: string) => void;
+  recordProjectView: (projectId: string) => void;
 }
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
+  notifications: [],
+  unreadCount: 0,
   unreadByProject: {},
+  dropdownOpen: false,
+
+  setNotifications: (items) =>
+    set({ notifications: items, unreadCount: items.filter((n) => !n.isRead).length }),
+
+  setDropdownOpen: (open) => set({ dropdownOpen: open }),
+
+  markRead: async (id) => {
+    const notif = get().notifications.find((n) => n.id === id);
+    if (notif && notif.type !== "reply_to_user" && notif.type !== "new_post") {
+      set((state) => {
+        const updated = state.notifications.map((n) => n.id === id ? { ...n, isRead: true } : n);
+        return { notifications: updated, unreadCount: updated.filter((n) => !n.isRead).length };
+      });
+      return;
+    }
+    await fetch("/api/notifications", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ notificationId: id }) });
+    set((state) => {
+      const updated = state.notifications.map((n) => n.id === id ? { ...n, isRead: true } : n);
+      return { notifications: updated, unreadCount: updated.filter((n) => !n.isRead).length };
+    });
+  },
+
+  markAllRead: async () => {
+    const projectIds = Object.keys(get().unreadByProject);
+    set((state) => ({ notifications: state.notifications.map((n) => ({ ...n, isRead: true })), unreadCount: 0, unreadByProject: {} }));
+    try {
+      await fetch("/api/notifications", { method: "PATCH" });
+      if (projectIds.length > 0) {
+        await fetch("/api/notifications/view", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectIds }) });
+      }
+    } catch (e) { console.error("markAllRead failed:", e); }
+  },
+
+  fetchNotifications: async () => {
+    try {
+      const res = await fetch("/api/notifications");
+      if (res.ok) { const data = await res.json(); get().setNotifications(data.notifications); }
+    } catch (e) { console.error("fetchNotifications failed:", e); }
+  },
 
   fetchUnreadCounts: async () => {
-    const viewed = typeof window !== "undefined" ? loadViewed() : {};
     try {
       const res = await fetch("/api/notifications/unread-counts");
       if (res.ok) {
         const data = await res.json();
-        const raw: Record<string, UnreadEntry> = data.counts ?? {};
-        const adjusted: Record<string, UnreadEntry> = {};
-        for (const [pid, entry] of Object.entries(raw)) {
-          const e = entry as UnreadEntry;
-          const tv = viewed[`${pid}:discussion`] ?? 0;
-          const fv = viewed[`${pid}:files`] ?? 0;
-          const ev = viewed[`${pid}:schedule`] ?? 0;
-          const threads = tv > 0 ? 0 : e.threads;
-          const files = fv > 0 ? 0 : e.files;
-          const events = ev > 0 ? 0 : e.events;
-          const total = threads + files + events;
-          if (total > 0) adjusted[pid] = { total, threads, files, events };
-        }
-        set({ unreadByProject: adjusted });
+        set({ unreadByProject: data.counts ?? {} });
       }
     } catch (e) { console.error("fetchUnreadCounts failed:", e); }
   },
 
-  recordTabView: (projectId: string, tabKey: string) => {
-    const viewed = loadViewed();
-    viewed[`${projectId}:${tabKey}`] = Date.now();
-    saveViewed(viewed);
-    get().fetchUnreadCounts();
+  recordProjectView: (projectId: string) => {
+    // Optimistic local clear
+    set((state) => {
+      const updated = { ...state.unreadByProject };
+      delete updated[projectId];
+      return { unreadByProject: updated };
+    });
+    // Server sync — updates project_views.last_viewed_at
+    fetch("/api/notifications/view", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ projectId }),
+    }).catch(() => {});
   },
 }));

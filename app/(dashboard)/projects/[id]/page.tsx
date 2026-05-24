@@ -12,7 +12,6 @@ import { MemberAvatar } from "@/components/MemberAvatar";
 import { resolveProjectId } from "@/lib/project-utils";
 import { ProjectStatusBadge } from "@/components/ProjectStatusBadge";
 import { CreativeSpaceStatus } from "@/components/CreativeSpaceStatus";
-import { ProjectNavCards } from "@/components/ProjectNavCards";
 
 export default async function ProjectPage({
   params,
@@ -113,7 +112,6 @@ export default async function ProjectPage({
 
       <div className="p-6">
         {/* Navigation Cards */}
-        <ProjectNavCards projectId={project.id} />
 
         {/* Recent Activity & Members */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
