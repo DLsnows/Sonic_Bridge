@@ -11,9 +11,6 @@ interface TrackStats {
   videoHeight: number | null;
   videoFps: number | null;
   screenShareBitrate: number | null;
-  screenShareWidth: number | null;
-  screenShareHeight: number | null;
-  screenShareFps: number | null;
 }
 
 const EMPTY_STATS: TrackStats = {
@@ -23,9 +20,6 @@ const EMPTY_STATS: TrackStats = {
   videoHeight: null,
   videoFps: null,
   screenShareBitrate: null,
-  screenShareWidth: null,
-  screenShareHeight: null,
-  screenShareFps: null,
 };
 
 // Cross-browser bitrate: prefer Chrome's non-standard bitrate, fall back to bytes delta
@@ -114,9 +108,6 @@ export function useTrackStats(participantIdentity: string): TrackStats {
       let videoHeight: number | null = null;
       let videoFps: number | null = null;
       let screenShareBitrate: number | null = null;
-      let screenShareWidth: number | null = null;
-      let screenShareHeight: number | null = null;
-      let screenShareFps: number | null = null;
 
       for (const [, pub] of participant.audioTrackPublications) {
         const track = pub.track;
@@ -149,9 +140,11 @@ export function useTrackStats(participantIdentity: string): TrackStats {
 
           if (isScreenShare) {
             if (result.bitrate !== null) screenShareBitrate = result.bitrate;
-            if (result.width !== null) screenShareWidth = result.width;
-            if (result.height !== null) screenShareHeight = result.height;
-            if (result.fps !== null) screenShareFps = result.fps;
+            if (videoWidth === null && result.width !== null) {
+              videoWidth = result.width;
+              videoHeight = result.height;
+              videoFps = result.fps;
+            }
           } else {
             if (result.bitrate !== null) videoBitrate = result.bitrate;
             if (result.width !== null) videoWidth = result.width;
@@ -163,7 +156,7 @@ export function useTrackStats(participantIdentity: string): TrackStats {
         }
       }
 
-      return { audioBitrate, videoBitrate, videoWidth, videoHeight, videoFps, screenShareBitrate, screenShareWidth, screenShareHeight, screenShareFps };
+      return { audioBitrate, videoBitrate, videoWidth, videoHeight, videoFps, screenShareBitrate };
     }
 
     // 2) Fallback: room.getStats() (LiveKit 1.5+)
@@ -182,9 +175,6 @@ export function useTrackStats(participantIdentity: string): TrackStats {
           videoHeight: videoResult.height,
           videoFps: videoResult.fps,
           screenShareBitrate: null,
-          screenShareWidth: null,
-          screenShareHeight: null,
-          screenShareFps: null,
         };
       } catch {
         return null;
@@ -211,9 +201,6 @@ export function useTrackStats(participantIdentity: string): TrackStats {
           videoHeight: videoResult.height,
           videoFps: videoResult.fps,
           screenShareBitrate: null,
-          screenShareWidth: null,
-          screenShareHeight: null,
-          screenShareFps: null,
         };
       } catch {
         return null;
