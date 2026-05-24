@@ -5,9 +5,9 @@ import { Modal } from "@/components/ui/Modal";
 
 interface MediaSettingsPanelProps { open: boolean; onClose: () => void; }
 
-const BITRATE_STEP = 32000;
+const BITRATE_STEP = 16000;
 const BITRATE_MIN = 192000;
-const BITRATE_MAX = 640000;
+const BITRATE_MAX = 510000;
 const BUFFER_MIN_MS = 8;
 const BUFFER_MAX_MS = 2048;
 const BUFFER_STEP_MS = 8;

@@ -7,6 +7,11 @@ export type VideoResolution = "720p" | "1080p";
 export type ScreenResolution = "720p" | "1080p" | "original";
 export type NoiseMode = "off" | "suppression" | "voiceIsolation";
 
+// Audio bitrate range per LiveKit spec: 192–510 kbps
+export const AUDIO_BITRATE_MIN = 192_000;
+export const AUDIO_BITRATE_MAX = 510_000;
+export const AUDIO_BITRATE_STEP = 16_000;
+
 interface AudioQualitySettings {
   bitrate: number;
   sendBufferMs: BufferMs;
@@ -26,10 +31,15 @@ interface ScreenShareSettings {
   bitrate: number;
 }
 
+interface DawAudioSettings {
+  bitrate: number; // 192000–510000
+}
+
 interface MediaSettingsState {
   audioQuality: AudioQualitySettings;
   camera: CameraSettings;
   screenShare: ScreenShareSettings;
+  dawAudio: DawAudioSettings;
 
   setAudioBitrate: (bitrate: number) => void;
   setSendBufferMs: (ms: BufferMs) => void;
@@ -41,9 +51,10 @@ interface MediaSettingsState {
   setScreenFps: (fps: VideoFps) => void;
   setScreenResolution: (res: ScreenResolution) => void;
   setScreenBitrate: (bitrate: number) => void;
+  setDawBitrate: (bitrate: number) => void;
 }
 
-const DEFAULT_AUDIO_BITRATE = 256000;
+const DEFAULT_AUDIO_BITRATE = 256_000;
 const DEFAULT_SEND_BUFFER_MS = 16;
 const DEFAULT_RECEIVE_BUFFER_MS = 32;
 const DEFAULT_CAMERA_FPS: VideoFps = 30;
@@ -52,6 +63,7 @@ const DEFAULT_CAMERA_BITRATE = 2_000_000;
 const DEFAULT_SCREEN_FPS: VideoFps = 30;
 const DEFAULT_SCREEN_RESOLUTION: ScreenResolution = "1080p";
 const DEFAULT_SCREEN_BITRATE = 2_500_000;
+const DEFAULT_DAW_BITRATE = 256_000;
 
 export const useMediaSettingsStore = create<MediaSettingsState>((set) => ({
   audioQuality: {
@@ -69,6 +81,9 @@ export const useMediaSettingsStore = create<MediaSettingsState>((set) => ({
     frameRate: DEFAULT_SCREEN_FPS,
     resolution: DEFAULT_SCREEN_RESOLUTION,
     bitrate: DEFAULT_SCREEN_BITRATE,
+  },
+  dawAudio: {
+    bitrate: DEFAULT_DAW_BITRATE,
   },
 
   setAudioBitrate: (bitrate) =>
@@ -91,6 +106,8 @@ export const useMediaSettingsStore = create<MediaSettingsState>((set) => ({
     set((s) => ({ screenShare: { ...s.screenShare, resolution } })),
   setScreenBitrate: (bitrate) =>
     set((s) => ({ screenShare: { ...s.screenShare, bitrate } })),
+  setDawBitrate: (bitrate) =>
+    set((s) => ({ dawAudio: { ...s.dawAudio, bitrate } })),
 }));
 
 export function msToSamples(ms: number, sampleRate: number = 48000): number {

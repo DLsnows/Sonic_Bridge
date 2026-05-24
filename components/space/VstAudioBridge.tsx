@@ -25,8 +25,12 @@ export function VstAudioBridge({
   const participantRef = useRef(localParticipant);
   useEffect(() => { participantRef.current = localParticipant; }, [localParticipant]);
   const triggerReconnect = useVstStore((s) => s.triggerReconnect);
+  const broadcastEnabled = useVstStore((s) => s.broadcastEnabled);
   const vstVolume = useVstStore((s) => s.vstVolume);
   const receiveBufferMs = useMediaSettingsStore((s) => s.audioQuality.receiveBufferMs);
+  const sendBufferMs = useMediaSettingsStore((s) => s.audioQuality.sendBufferMs);
+  const dawBitrate = useMediaSettingsStore((s) => s.dawAudio.bitrate);
+  const publishedTrackRef = useRef<MediaStreamTrack | null>(null);
 
   // Watch for manual reconnect requests
   useEffect(() => {
@@ -48,6 +52,22 @@ export function VstAudioBridge({
       pipelineRef.current.setReceiveBufferSize(samples);
     }
   }, [receiveBufferMs]);
+
+  // Apply send buffer change to audio pipeline
+  useEffect(() => {
+    if (pipelineRef.current) {
+      const samples = msToSamples(sendBufferMs);
+    }
+  }, [sendBufferMs]);
+
+  // Broadcast toggle: unpublish when disabled
+  useEffect(() => {
+    if (!broadcastEnabled && publishedTrackRef.current) {
+      const track = publishedTrackRef.current;
+      participantRef.current.unpublishTrack(track).catch(() => {});
+      publishedTrackRef.current = null;
+    }
+  }, [broadcastEnabled]);
 
   useEffect(() => {
     if (!VstAudioPipeline.isSupported()) {
@@ -75,20 +95,22 @@ export function VstAudioBridge({
 
       pipeline.feedPcm(interleaved, sampleRate, channels, numSamples);
 
-      // Publish audio track to LiveKit once ready
+      // Publish DAW audio as independent channel (not Microphone)
       const store = useVstStore.getState();
       if (
         pipeline.isReady &&
-        !published &&
+        !publishedTrackRef.current &&
         store.broadcastEnabled
       ) {
         const track = pipeline.getMediaStreamTrack();
         if (track) {
           participantRef.current.publishTrack(track, {
             name: "DAW Audio (VST)",
-            source: Track.Source.Microphone,
-          }).then(() => {
-            published = true;
+            source: Track.Source.Unknown,
+            audioBitrate: useMediaSettingsStore.getState().dawAudio.bitrate,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          } as any).then(() => {
+            publishedTrackRef.current = track;
             store.setAudioTrackPublished(true);
           }).catch((e: unknown) => {
             store.setError(
@@ -106,7 +128,7 @@ export function VstAudioBridge({
       bridgeRef.current = null;
       pipelineRef.current?.shutdown();
       pipelineRef.current = null;
-      published = false;
+      publishedTrackRef.current = null;
     };
   }, [projectId, userId, username]);
 

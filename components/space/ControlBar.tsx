@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { Track } from "livekit-client";
 import { useLocalParticipant, useMaybeRoomContext } from "@livekit/components-react";
 import { useRouter } from "next/navigation";
@@ -38,27 +38,40 @@ export function ControlBar({
   async function handleToggleMic() {
     try {
       if (!isMicrophoneEnabled) {
-        const { noiseMode } = useMediaSettingsStore.getState().audioQuality;
+        const { noiseMode, bitrate } = useMediaSettingsStore.getState().audioQuality;
         const pipeline = getMicPipeline();
         const track = await pipeline.start({
           echoCancellation: true,
-          noiseSuppression: noiseMode === 'suppression',
-          voiceIsolation: noiseMode === 'voiceIsolation',
+          noiseSuppression: noiseMode === "suppression",
+          voiceIsolation: noiseMode === "voiceIsolation",
         });
         await localParticipant.publishTrack(track, {
           source: Track.Source.Microphone,
-        });
+          audioBitrate: bitrate,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any);
       } else {
         getMicPipeline().stop();
         const pub = localParticipant.getTrackPublication(Track.Source.Microphone);
         if (pub) { await localParticipant.unpublishTrack(pub.track!); }
       }
-    } catch (e) { console.error('Mic toggle failed:', e); }
+    } catch (e) { console.error("Mic toggle failed:", e); }
   }
 
   async function handleToggleCamera() {
     try {
-      await localParticipant.setCameraEnabled(!isCameraEnabled);
+      if (!isCameraEnabled) {
+        const cam = useMediaSettingsStore.getState().camera;
+        const w = cam.resolution === "720p" ? 1280 : 1920;
+        const h = cam.resolution === "720p" ? 720 : 1080;
+        await localParticipant.setCameraEnabled(true, {
+          resolution: { width: w, height: h, frameRate: cam.frameRate },
+        }, {
+          videoEncoding: { maxBitrate: cam.bitrate },
+        });
+      } else {
+        await localParticipant.setCameraEnabled(false);
+      }
     } catch { /* device access may be denied */ }
   }
 
