@@ -7,7 +7,6 @@ import { signOut } from "next-auth/react";
 import { useSidebarStore, type SidebarProject } from "@/lib/store/sidebar";
 import { Button } from "./ui/Button";
 import { projectHref } from "@/lib/project-utils";
-import { NotificationBellInline } from "./NotificationBell";
 import { useNotificationStore } from "@/lib/store/notification";
 
 const STATUS_DOT: Record<string, string> = {
