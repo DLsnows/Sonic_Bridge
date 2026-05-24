@@ -23,7 +23,9 @@ export class MicPipeline {
   get isRunning(): boolean { return this._isRunning; }
 
   async start(opts: MicPipelineOptions = {}): Promise<MediaStreamTrack> {
-    if (this._isRunning) return this._processedTrack!;
+    if (this._isRunning) {
+      this.stop();
+    }
 
     const constraints: MediaStreamConstraints = {
       audio: {
@@ -86,10 +88,15 @@ export class MicPipeline {
     this.meterDataArray = null;
     this._processedTrack = null;
     this._isRunning = false;
-    this.stream?.getTracks().forEach((t) => t.stop());
-    this.stream = null;
-    this.audioContext?.close();
-    this.audioContext = null;
+    if (this.stream) {
+      this.stream.getTracks().forEach((t) => t.stop());
+      this.stream = null;
+    }
+        if (this.audioContext) {
+      const ctx = this.audioContext;
+      ctx.close();
+      this.audioContext = null;
+    }
     useVstStore.getState().setMicMeterLevel(0);
   }
 
@@ -132,3 +139,5 @@ export function getMicPipeline(): MicPipeline {
   if (!instance) instance = new MicPipeline();
   return instance;
 }
+
+
