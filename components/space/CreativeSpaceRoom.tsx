@@ -147,7 +147,7 @@ export function CreativeSpaceRoom({
         serverUrl={tokenData.wsUrl}
         token={tokenData.token}
         connect={true}
-        audio={true}
+        audio={false}
         video={false}
         onConnected={() => {
           setConnected(true);
