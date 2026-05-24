@@ -6,7 +6,7 @@ import { useNotificationStore } from "@/lib/store/notification";
 export function ProjectUnreadBadge({ projectId }: { projectId: string }) {
   const unreadByProject = useNotificationStore((s) => s.unreadByProject);
 
-  const badge = unreadByProject[projectId]?.total ?? 0;
+  const badge = unreadByProject[projectId] ?? 0;
   if (badge === 0) return null;
 
   return (
@@ -26,11 +26,13 @@ export function ProjectCardWrapper({
   href: string;
   children: React.ReactNode;
 }) {
-  const badge = useNotificationStore((s) => s.unreadByProject[projectId]?.total ?? 0);
+  const recordProjectView = useNotificationStore((s) => s.recordProjectView);
+  const badge = useNotificationStore((s) => s.unreadByProject[projectId] ?? 0);
 
   return (
     <Link
       href={href}
+      onClick={() => { if (badge > 0) recordProjectView(projectId); }}
       className="relative block"
     >
       <ProjectUnreadBadge projectId={projectId} />

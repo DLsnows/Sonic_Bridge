@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useLocalParticipant, useMaybeRoomContext } from "@livekit/components-react";
-import type { AudioCaptureOptions } from "livekit-client";
 import { useRouter } from "next/navigation";
 import { useSpaceStore } from "@/lib/store/space";
 import { useMediaSettingsStore } from "@/lib/store/media-settings";
@@ -44,33 +43,22 @@ export function ControlBar({
   async function handleToggleMic() {
     try {
       if (!isMicrophoneEnabled) {
-        const { noiseMode } = useMediaSettingsStore.getState().audioQuality;
-        const micOptions: AudioCaptureOptions = {
+        const { noiseSuppression, voiceIsolation } = useMediaSettingsStore.getState().audioQuality;
+        const micOptions = {
           ...getMicProcessor().getCaptureOptions(),
+          noiseSuppression,
+          voiceIsolation,
         };
-        if (noiseMode === "suppression") micOptions.noiseSuppression = true;
-        if (noiseMode === "voiceIsolation") micOptions.voiceIsolation = true;
         await localParticipant.setMicrophoneEnabled(true, micOptions);
       } else {
         await localParticipant.setMicrophoneEnabled(false);
       }
-    } catch (e) { console.error("Mic toggle failed:", e); }
+    } catch (e) { console.error(e); }
   }
 
   async function handleToggleCamera() {
     try {
-      if (!isCameraEnabled) {
-        const cam = useMediaSettingsStore.getState().camera;
-        const w = cam.resolution === "720p" ? 1280 : 1920;
-        const h = cam.resolution === "720p" ? 720 : 1080;
-        await localParticipant.setCameraEnabled(true, {
-          resolution: { width: w, height: h, frameRate: cam.frameRate },
-        }, {
-          videoEncoding: { maxBitrate: cam.bitrate },
-        });
-      } else {
-        await localParticipant.setCameraEnabled(false);
-      }
+      await localParticipant.setCameraEnabled(!isCameraEnabled);
     } catch { /* device access may be denied */ }
   }
 

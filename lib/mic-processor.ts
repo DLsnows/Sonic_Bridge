@@ -115,7 +115,7 @@ export class MicProcessor
     return {
       processor: this,
       echoCancellation: true,
-
+      noiseSuppression: true,
       autoGainControl: false,
     };
   }
