@@ -7,6 +7,8 @@ export interface UnreadEntry {
   events: number;
 }
 
+const EMPTY_ENTRY: UnreadEntry = { total: 0, threads: 0, files: 0, events: 0 };
+
 interface NotificationState {
   unreadByProject: Record<string, UnreadEntry>;
   fetchUnreadCounts: () => Promise<void>;
@@ -27,10 +29,10 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   },
 
   recordTabView: (projectId: string, tabKey: string) => {
-    // Optimistic local clear — remove this tab's count immediately
+    // Optimistic local clear
     set((state) => {
       const updated = { ...state.unreadByProject };
-      const entry = { ...updated[projectId] } as UnreadEntry;
+      const entry: UnreadEntry = { ...EMPTY_ENTRY, ...updated[projectId] };
       if (tabKey === "discussion") entry.threads = 0;
       if (tabKey === "files") entry.files = 0;
       if (tabKey === "schedule") entry.events = 0;
@@ -39,13 +41,11 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       else delete updated[projectId];
       return { unreadByProject: updated };
     });
-    // Server sync — updates project_views.last_viewed_at so future polls exclude old content
+    // Server sync — await POST then refresh
     fetch("/api/notifications/view", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ projectId }),
-    }).catch(() => {});
-    // Refresh from server to get accurate counts
-    get().fetchUnreadCounts();
+      body: JSON.stringify({ projectId, tabKey }),
+    }).then(() => get().fetchUnreadCounts()).catch(() => {});
   },
 }));

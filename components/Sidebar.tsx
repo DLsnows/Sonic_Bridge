@@ -119,11 +119,6 @@ export function Sidebar({ username, projects }: { username?: string; projects?: 
         })}
       </nav>
 
-      {/* Notifications */}
-      <div className={`border-t border-[#00FF41]/10 ${collapsed ? "p-2 flex justify-center" : "p-3"}`}>
-        <NotificationBellInline collapsed={collapsed} />
-      </div>
-
       {/* User section */}
       <div className={`p-4 border-t border-[#00FF41]/10 flex items-center ${collapsed ? "justify-center" : "gap-3"}`}>
         <Link
