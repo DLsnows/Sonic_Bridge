@@ -26,7 +26,6 @@ export function Sidebar({ username, projects }: { username?: string; projects?: 
   const setProjects = useSidebarStore((s) => s.setProjects);
   const refreshProjects = useSidebarStore((s) => s.refreshProjects);
   const unreadByProject = useNotificationStore((s) => s.unreadByProject);
-  const recordProjectView = useNotificationStore((s) => s.recordProjectView);
 
   // Initialize store from server props on first render
   useEffect(() => {
@@ -95,12 +94,11 @@ export function Sidebar({ username, projects }: { username?: string; projects?: 
         {displayProjects.filter((p) => p.status !== "archived").map((project) => {
           const href = projectHref(project);
           const isActive = pathname.startsWith(href);
-          const badge = unreadByProject[project.id] ?? 0;
+          const badge = unreadByProject[project.id]?.total ?? 0;
           return (
             <Link
               key={project.id}
               href={href}
-              onClick={() => { if (badge > 0) recordProjectView(project.id); }}
               className={`flex items-center rounded-lg text-sm transition-all duration-200 relative
                 ${collapsed ? "justify-center px-2 py-2" : "gap-2 px-3 py-2"}
                 ${isActive
