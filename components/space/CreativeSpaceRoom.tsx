@@ -13,7 +13,6 @@ import { MicVolumeBridge } from "./MicVolumeBridge";
 import { AudioMixer } from "./AudioMixer";
 import { ParticipantList } from "./ParticipantList";
 import { MediaSettingsPanel } from "./MediaSettingsPanel";
-import { getMicProcessor } from "@/lib/mic-processor";
 
 interface CreativeSpaceRoomProps {
   projectId: string;
@@ -148,13 +147,7 @@ export function CreativeSpaceRoom({
         serverUrl={tokenData.wsUrl}
         token={tokenData.token}
         connect={true}
-        audio={{
-          echoCancellation: true,
-          noiseSuppression: true,
-          voiceIsolation: false,
-          autoGainControl: false,
-          processor: getMicProcessor(),
-        }}
+        audio={false}
         video={false}
         onConnected={() => {
           setConnected(true);
