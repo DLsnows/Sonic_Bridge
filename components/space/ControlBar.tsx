@@ -43,11 +43,8 @@ export function ControlBar({
   async function handleToggleMic() {
     try {
       if (!isMicrophoneEnabled) {
-        const { noiseSuppression, voiceIsolation } = useMediaSettingsStore.getState().audioQuality;
         const micOptions = {
           ...getMicProcessor().getCaptureOptions(),
-          noiseSuppression,
-          voiceIsolation,
         };
         await localParticipant.setMicrophoneEnabled(true, micOptions);
       } else {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMediaSettingsStore, msToSamples, type ScreenFps, type ScreenResolution } from "@/lib/store/media-settings";
+import { useMediaSettingsStore, msToSamples, type VideoFps, type VideoResolution } from "@/lib/store/media-settings";
 import { Modal } from "@/components/ui/Modal";
 
 interface MediaSettingsPanelProps {
@@ -19,13 +19,13 @@ const SCREEN_BITRATE_MIN = 500_000;
 const SCREEN_BITRATE_MAX = 5_000_000;
 const SCREEN_BITRATE_STEP = 250_000;
 
-const FPS_OPTIONS: { label: string; value: ScreenFps }[] = [
+const FPS_OPTIONS: { label: string; value: VideoFps }[] = [
   { label: "15 fps", value: 15 },
   { label: "30 fps", value: 30 },
   { label: "60 fps", value: 60 },
 ];
 
-const RESOLUTION_OPTIONS: { label: string; value: ScreenResolution }[] = [
+const RESOLUTION_OPTIONS: { label: string; value: VideoResolution }[] = [
   { label: "720p (1280×720)", value: "720p" },
   { label: "1080p (1920×1080)", value: "1080p" },
   { label: "Original", value: "original" },
@@ -47,8 +47,8 @@ export function MediaSettingsPanel({ open, onClose }: MediaSettingsPanelProps) {
   const setAudioBitrate = useMediaSettingsStore((s) => s.setAudioBitrate);
   const setSendBufferMs = useMediaSettingsStore((s) => s.setSendBufferMs);
   const setReceiveBufferMs = useMediaSettingsStore((s) => s.setReceiveBufferMs);
-  const setScreenFps = useMediaSettingsStore((s) => s.setScreenFps);
-  const setScreenResolution = useMediaSettingsStore((s) => s.setScreenResolution);
+  const setVideoFps = useMediaSettingsStore((s) => s.setVideoFps);
+  const setVideoResolution = useMediaSettingsStore((s) => s.setVideoResolution);
   const setScreenBitrate = useMediaSettingsStore((s) => s.setScreenBitrate);
 
   return (
@@ -148,7 +148,7 @@ export function MediaSettingsPanel({ open, onClose }: MediaSettingsPanelProps) {
               {FPS_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
-                  onClick={() => setScreenFps(opt.value)}
+                  onClick={() => setVideoFps(opt.value)}
                   className={`flex-1 py-1.5 rounded text-[11px] font-['Share_Tech_Mono',monospace] transition-colors border ${
                     screenShare.frameRate === opt.value
                       ? "bg-[#00F0FF]/15 text-[#00F0FF] border-[#00F0FF]/30"
@@ -170,7 +170,7 @@ export function MediaSettingsPanel({ open, onClose }: MediaSettingsPanelProps) {
               {RESOLUTION_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
-                  onClick={() => setScreenResolution(opt.value)}
+                  onClick={() => setVideoResolution(opt.value)}
                   className={`flex-1 py-1.5 rounded text-[11px] font-['Share_Tech_Mono',monospace] transition-colors border ${
                     screenShare.resolution === opt.value
                       ? "bg-[#00F0FF]/15 text-[#00F0FF] border-[#00F0FF]/30"

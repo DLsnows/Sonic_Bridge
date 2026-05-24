@@ -4,7 +4,8 @@ import { useRemoteParticipants, useMaybeRoomContext, useLocalParticipant } from 
 import { useSpaceStore } from "@/lib/store/space";
 import { useVstStore } from "@/lib/store/vst";
 import { useMediaSettingsStore } from "@/lib/store/media-settings";
-import { getMicProcessor } from "@/lib/mic-processor";
+import { getMicPipeline } from "@/lib/mic-pipeline";
+import { Track } from "livekit-client";
 import { useState, useCallback, useEffect } from "react";
 import { VstVolumeMeter } from "./VstVolumeMeter";
 
@@ -42,25 +43,28 @@ export function AudioMixer() {
   const micMeterLevel = useVstStore((s) => s.micMeterLevel);
   const audioBitrate = useMediaSettingsStore((s) => s.audioQuality.bitrate);
   const setAudioBitrate = useMediaSettingsStore((s) => s.setAudioBitrate);
-  const noiseSuppression = useMediaSettingsStore((s) => s.audioQuality.noiseSuppression);
-  const setNoiseSuppression = useMediaSettingsStore((s) => s.setNoiseSuppression);
-  const voiceIsolation = useMediaSettingsStore((s) => s.audioQuality.voiceIsolation);
-  const setVoiceIsolation = useMediaSettingsStore((s) => s.setVoiceIsolation);
-
-  const room = useMaybeRoomContext();
+  const noiseMode = useMediaSettingsStore((s) => s.audioQuality.noiseMode);
+  const setNoiseMode = useMediaSettingsStore((s) => s.setNoiseMode);
   const { localParticipant, isMicrophoneEnabled } = useLocalParticipant();
 
   useEffect(() => {
-    if (!room || !isMicrophoneEnabled) return;
-    const micOptions = {
-      ...getMicProcessor().getCaptureOptions(),
-      noiseSuppression: noiseSuppression,
-      voiceIsolation: voiceIsolation,
-    };
-    localParticipant.setMicrophoneEnabled(false).then(() => {
-      localParticipant.setMicrophoneEnabled(true, micOptions);
+    if (!isMicrophoneEnabled) return;
+    const nm = useMediaSettingsStore.getState().audioQuality.noiseMode;
+    const pipeline = getMicPipeline();
+    if (!pipeline.isRunning) return;
+    const lp = localParticipant;
+    const pub = lp.getTrackPublication(Track.Source.Microphone);
+    if (pub?.track) lp.unpublishTrack(pub.track).then(() => {
+      pipeline.stop();
+      pipeline.start({
+        echoCancellation: true,
+        noiseSuppression: nm === "suppression",
+        voiceIsolation: nm === "voiceIsolation",
+      }).then((track) => {
+        lp.publishTrack(track, { source: Track.Source.Microphone });
+      }).catch(() => {});
     }).catch(() => {});
-  }, [noiseSuppression, voiceIsolation]);
+  }, [noiseMode]);
 
   const handleRemoteVolumeChange = useCallback(
     (participantIdentity: string, value: number) => {
