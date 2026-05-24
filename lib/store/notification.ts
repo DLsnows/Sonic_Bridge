@@ -34,9 +34,9 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         const adjusted: Record<string, UnreadEntry> = {};
         for (const [pid, entry] of Object.entries(raw)) {
           const e = entry as UnreadEntry;
-          const tv = Math.max(viewed[pid] ?? 0, viewed[`${pid}:discussion`] ?? 0);
-          const fv = Math.max(viewed[pid] ?? 0, viewed[`${pid}:files`] ?? 0);
-          const ev = Math.max(viewed[pid] ?? 0, viewed[`${pid}:schedule`] ?? 0);
+          const tv = viewed[`${pid}:discussion`] ?? 0;
+          const fv = viewed[`${pid}:files`] ?? 0;
+          const ev = viewed[`${pid}:schedule`] ?? 0;
           const threads = tv > 0 ? 0 : e.threads;
           const files = fv > 0 ? 0 : e.files;
           const events = ev > 0 ? 0 : e.events;
@@ -51,7 +51,6 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   recordTabView: (projectId: string, tabKey: string) => {
     const viewed = loadViewed();
     viewed[`${projectId}:${tabKey}`] = Date.now();
-    viewed[projectId] = Date.now();
     saveViewed(viewed);
     get().fetchUnreadCounts();
   },
