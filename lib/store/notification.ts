@@ -19,6 +19,15 @@ export interface UnreadEntry {
   events: number;
 }
 
+const STORAGE_KEY = "notif-dismissed";
+
+function loadDismissed(): Record<string, UnreadEntry> {
+  try { const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : {}; } catch { return {}; }
+}
+function saveDismissed(v: Record<string, UnreadEntry>) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch { /* quota */ }
+}
+
 interface NotificationState {
   notifications: Notification[];
   unreadCount: number;
@@ -80,46 +89,59 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   },
 
   fetchUnreadCounts: async () => {
+    const dismissed = typeof window !== "undefined" ? loadDismissed() : {};
     try {
       const res = await fetch("/api/notifications/unread-counts");
       if (res.ok) {
         const data = await res.json();
-        set({ unreadByProject: data.counts ?? {} });
+        const raw: Record<string, UnreadEntry> = data.counts ?? {};
+        const adjusted: Record<string, UnreadEntry> = {};
+        for (const [pid, entry] of Object.entries(raw)) {
+          const e = entry as UnreadEntry;
+          const d = dismissed[pid] ?? { total: 0, threads: 0, files: 0, events: 0 };
+          const threads = Math.max(0, e.threads - d.threads);
+          const files = Math.max(0, e.files - d.files);
+          const events = Math.max(0, e.events - d.events);
+          const total = threads + files + events;
+          if (total > 0) adjusted[pid] = { total, threads, files, events };
+        }
+        set({ unreadByProject: adjusted });
       }
     } catch (e) { console.error("fetchUnreadCounts failed:", e); }
   },
 
   recordProjectView: (projectId: string) => {
+    const dismissed = loadDismissed();
+    const current = get().unreadByProject[projectId];
+    if (current) dismissed[projectId] = current;
+    saveDismissed(dismissed);
     set((state) => {
       const updated = { ...state.unreadByProject };
       delete updated[projectId];
       return { unreadByProject: updated };
     });
-    fetch("/api/notifications/view", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ projectId }),
-    }).catch(() => {});
+    fetch("/api/notifications/view", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId }) }).catch(() => {});
   },
 
   recordTabView: (projectId: string, tabKey: string) => {
     const key = tabKey === "discussion" ? "threads" : tabKey === "files" ? "files" : tabKey === "schedule" ? "events" : null;
     if (!key) return;
+    const dismissed = loadDismissed();
+    const current = get().unreadByProject[projectId];
+    const entry = dismissed[projectId] ?? { total: 0, threads: 0, files: 0, events: 0 };
+    if (current) entry[key] = current[key];
+    entry.total = entry.threads + entry.files + entry.events;
+    dismissed[projectId] = entry;
+    saveDismissed(dismissed);
     set((state) => {
-      const entry = state.unreadByProject[projectId];
-      if (!entry) return { unreadByProject: state.unreadByProject };
-      const updated = { ...entry, [key]: 0 };
+      const prev = state.unreadByProject[projectId];
+      if (!prev) return state;
+      const updated = { ...prev, [key]: 0 };
       updated.total = updated.threads + updated.files + updated.events;
-      if (updated.total > 0) {
-        return { unreadByProject: { ...state.unreadByProject, [projectId]: updated } };
-      }
+      if (updated.total > 0) return { unreadByProject: { ...state.unreadByProject, [projectId]: updated } };
       const { [projectId]: _, ...rest } = state.unreadByProject;
       return { unreadByProject: rest };
     });
-    fetch("/api/notifications/view", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ projectId }),
-    }).catch(() => {});
+    fetch("/api/notifications/view", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ projectId }) }).catch(() => {});
   },
 }));
