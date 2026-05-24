@@ -1,6 +1,6 @@
 "use client";
 
-import { useRemoteParticipants, useMaybeRoomContext, useLocalParticipant } from "@livekit/components-react";
+import { useRemoteParticipants, useLocalParticipant } from "@livekit/components-react";
 import { useSpaceStore } from "@/lib/store/space";
 import { useVstStore } from "@/lib/store/vst";
 import { useMediaSettingsStore } from "@/lib/store/media-settings";
@@ -80,7 +80,7 @@ export function AudioMixer() {
     }).finally(() => {
       restartingRef.current = false;
     });
-  }, [noiseMode]);
+  }, [noiseMode, isMicrophoneEnabled, localParticipant]);
 
   const handleRemoteVolumeChange = useCallback(
     (participantIdentity: string, value: number) => {

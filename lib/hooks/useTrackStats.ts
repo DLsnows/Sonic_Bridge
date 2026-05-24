@@ -91,8 +91,17 @@ export function useTrackStats(participantIdentity: string): TrackStats {
         const entryType = isLocal ? "outbound-rtp" : "inbound-rtp";
         const result: TrackStats = { ...EMPTY_STATS };
 
-        // If SSRC matching failed (no SSRCs found), fall back to kind-only matching
+        // If SSRC matching failed, fall back to kind-only matching
+        // For screen share differentiation in fallback, get the screen track ID
         const useKindFallback = audioSsrcs.size === 0 && videoSsrcs.size === 0 && screenSsrcs.size === 0;
+        let screenTrackId: string | undefined;
+        if (useKindFallback) {
+          for (const [, pub] of participant.videoTrackPublications) {
+            if (pub.source === Track.Source.ScreenShare) {
+              screenTrackId = pub.trackSid;
+            }
+          }
+        }
 
         for (const [, entry] of report) {
           if (entry.type !== entryType) continue;
@@ -101,9 +110,13 @@ export function useTrackStats(participantIdentity: string): TrackStats {
           const bytes = (e.bytesSent ?? e.bytesReceived) as number | undefined;
           const ts = e.timestamp as number | undefined;
 
-          const matchAudio = useKindFallback ? e.kind === "audio" : audioSsrcs.has(ssrc!) && e.kind === "audio";
-          const matchVideo = useKindFallback ? e.kind === "video" : videoSsrcs.has(ssrc!) && e.kind === "video";
-          const matchScreen = useKindFallback ? e.kind === "video" : screenSsrcs.has(ssrc!) && e.kind === "video";
+          const matchAudio = useKindFallback ? e.kind === "audio" : (audioSsrcs.has(ssrc!) && e.kind === "audio");
+          const matchVideo = useKindFallback
+            ? (e.kind === "video" && !screenTrackId)
+            : (videoSsrcs.has(ssrc!) && e.kind === "video");
+          const matchScreen = useKindFallback
+            ? (e.kind === "video" && !!screenTrackId)
+            : (screenSsrcs.has(ssrc!) && e.kind === "video");
 
           if (matchAudio && bytes !== undefined && ts !== undefined) {
             const br = computeDeltaBitrate(bytes, ts, prevBytesRef.current, `a-${ssrc}`);

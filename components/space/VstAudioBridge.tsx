@@ -28,8 +28,6 @@ export function VstAudioBridge({
   const broadcastEnabled = useVstStore((s) => s.broadcastEnabled);
   const vstVolume = useVstStore((s) => s.vstVolume);
   const receiveBufferMs = useMediaSettingsStore((s) => s.audioQuality.receiveBufferMs);
-  const sendBufferMs = useMediaSettingsStore((s) => s.audioQuality.sendBufferMs);
-  const dawBitrate = useMediaSettingsStore((s) => s.dawAudio.bitrate);
   const publishedTrackRef = useRef<MediaStreamTrack | null>(null);
 
   // Watch for manual reconnect requests
@@ -53,12 +51,6 @@ export function VstAudioBridge({
     }
   }, [receiveBufferMs]);
 
-  // Apply send buffer change to audio pipeline
-  useEffect(() => {
-    if (pipelineRef.current) {
-      const samples = msToSamples(sendBufferMs);
-    }
-  }, [sendBufferMs]);
 
   // Broadcast toggle: unpublish when disabled, re-publish when enabled
   useEffect(() => {
@@ -102,7 +94,6 @@ export function VstAudioBridge({
     const bridge = new VstBridge();
     bridgeRef.current = bridge;
 
-    let published = false;
 
     bridge.onPcmData((interleaved, sampleRate, channels, numSamples) => {
       if (!pipelineRef.current) {
