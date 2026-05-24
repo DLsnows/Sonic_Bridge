@@ -128,7 +128,7 @@ export function MediaSettingsPanel({ open, onClose }: MediaSettingsPanelProps) {
           <SectionHeader>Camera</SectionHeader>
           <div className="mb-3">
             <p className="text-[10px] text-[#A0A0B0] font-['Share_Tech_Mono',monospace] mb-2">Frame Rate</p>
-            <OptionGroup options={FPS_OPTIONS} value={String(camera.frameRate)} onChange={(v) => setCameraFps(Number(v) as VideoFps)} />
+            <OptionGroup options={FPS_OPTIONS} value={camera.frameRate} onChange={(v) => setCameraFps(Number(v) as VideoFps)} />
           </div>
           <div className="mb-3">
             <p className="text-[10px] text-[#A0A0B0] font-['Share_Tech_Mono',monospace] mb-2">Resolution</p>
@@ -144,7 +144,7 @@ export function MediaSettingsPanel({ open, onClose }: MediaSettingsPanelProps) {
           <SectionHeader>Screen Share</SectionHeader>
           <div className="mb-3">
             <p className="text-[10px] text-[#A0A0B0] font-['Share_Tech_Mono',monospace] mb-2">Frame Rate</p>
-            <OptionGroup options={FPS_OPTIONS} value={String(screenShare.frameRate)} onChange={(v) => setScreenFps(Number(v) as VideoFps)} />
+            <OptionGroup options={FPS_OPTIONS} value={screenShare.frameRate} onChange={(v) => setScreenFps(Number(v) as VideoFps)} />
           </div>
           <div className="mb-3">
             <p className="text-[10px] text-[#A0A0B0] font-['Share_Tech_Mono',monospace] mb-2">Resolution</p>
