@@ -151,7 +151,6 @@ export function CreativeSpaceRoom({
         audio={{
           echoCancellation: true,
           noiseSuppression: true,
-          voiceIsolation: false,
           autoGainControl: false,
           processor: getMicProcessor(),
         }}
