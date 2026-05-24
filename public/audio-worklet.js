@@ -87,8 +87,15 @@ class VstAudioProcessor extends AudioWorkletProcessor {
     const { channels, frames, buffers } = msg;
     this.channels = Math.max(this.channels, channels);
 
+    // If buffer is full, drain old data to make room (keep latency at target)
+    if (frames > this.ringCapacity - this.available) {
+      const toDrain = frames - (this.ringCapacity - this.available);
+      this.readPos = (this.readPos + toDrain) % this.ringCapacity;
+      this.available = Math.max(0, this.available - toDrain);
+    }
+
     const framesToWrite = Math.min(frames, this.ringCapacity - this.available);
-    if (framesToWrite <= 0) return; // buffer full, drop frame
+    if (framesToWrite <= 0) return;
 
     for (let ch = 0; ch < Math.min(channels, this.ringBuffer.length); ch++) {
       const rb = this.ringBuffer[ch];
