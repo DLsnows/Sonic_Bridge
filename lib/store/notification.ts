@@ -111,10 +111,19 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   },
 
   recordProjectView: (projectId: string) => {
-    const dismissed = loadDismissed();
+    // Dismiss everything for this project
     const current = get().unreadByProject[projectId];
-    if (current) dismissed[projectId] = current;
-    saveDismissed(dismissed);
+    if (current) {
+      const dismissed = loadDismissed();
+      const d = dismissed[projectId] ?? { total: 0, threads: 0, files: 0, events: 0 };
+      dismissed[projectId] = {
+        threads: d.threads + current.threads,
+        files: d.files + current.files,
+        events: d.events + current.events,
+        total: d.total + current.total,
+      };
+      saveDismissed(dismissed);
+    }
     set((state) => {
       const updated = { ...state.unreadByProject };
       delete updated[projectId];
@@ -126,13 +135,16 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   recordTabView: (projectId: string, tabKey: string) => {
     const key = tabKey === "discussion" ? "threads" : tabKey === "files" ? "files" : tabKey === "schedule" ? "events" : null;
     if (!key) return;
-    const dismissed = loadDismissed();
+    // Accumulate dismissed count using the DISPLAYED count
     const current = get().unreadByProject[projectId];
-    const entry = dismissed[projectId] ?? { total: 0, threads: 0, files: 0, events: 0 };
-    if (current) entry[key] = current[key];
-    entry.total = entry.threads + entry.files + entry.events;
-    dismissed[projectId] = entry;
+    if (!current?.[key]) return;
+    const dismissed = loadDismissed();
+    const d = dismissed[projectId] ?? { total: 0, threads: 0, files: 0, events: 0 };
+    d[key] += current[key];
+    d.total = d.threads + d.files + d.events;
+    dismissed[projectId] = d;
     saveDismissed(dismissed);
+    // Optimistic clear
     set((state) => {
       const prev = state.unreadByProject[projectId];
       if (!prev) return state;
