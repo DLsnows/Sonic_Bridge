@@ -7,7 +7,6 @@ import { signOut } from "next-auth/react";
 import { useSidebarStore, type SidebarProject } from "@/lib/store/sidebar";
 import { Button } from "./ui/Button";
 import { projectHref } from "@/lib/project-utils";
-import { NotificationBellInline } from "./NotificationBell";
 import { useNotificationStore } from "@/lib/store/notification";
 
 const STATUS_DOT: Record<string, string> = {
@@ -26,7 +25,14 @@ export function Sidebar({ username, projects }: { username?: string; projects?: 
   const setProjects = useSidebarStore((s) => s.setProjects);
   const refreshProjects = useSidebarStore((s) => s.refreshProjects);
   const unreadByProject = useNotificationStore((s) => s.unreadByProject);
-  const recordProjectView = useNotificationStore((s) => s.recordProjectView);
+  const fetchUnreadCounts = useNotificationStore((s) => s.fetchUnreadCounts);
+
+  // Poll for unread counts
+  useEffect(() => {
+    fetchUnreadCounts();
+    const interval = setInterval(fetchUnreadCounts, 30000);
+    return () => clearInterval(interval);
+  }, [fetchUnreadCounts]);
 
   // Initialize store from server props on first render
   useEffect(() => {
@@ -95,12 +101,12 @@ export function Sidebar({ username, projects }: { username?: string; projects?: 
         {displayProjects.filter((p) => p.status !== "archived").map((project) => {
           const href = projectHref(project);
           const isActive = pathname.startsWith(href);
-          const badge = unreadByProject[project.id] ?? 0;
+          const badge = unreadByProject[project.id]?.total ?? 0;
           return (
             <Link
               key={project.id}
               href={href}
-              onClick={() => { if (badge > 0) recordProjectView(project.id); }}
+              onClick={() => {}}
               className={`flex items-center rounded-lg text-sm transition-all duration-200 relative
                 ${collapsed ? "justify-center px-2 py-2" : "gap-2 px-3 py-2"}
                 ${isActive
@@ -120,11 +126,6 @@ export function Sidebar({ username, projects }: { username?: string; projects?: 
           );
         })}
       </nav>
-
-      {/* Notifications */}
-      <div className={`border-t border-[#00FF41]/10 ${collapsed ? "p-2 flex justify-center" : "p-3"}`}>
-        <NotificationBellInline collapsed={collapsed} />
-      </div>
 
       {/* User section */}
       <div className={`p-4 border-t border-[#00FF41]/10 flex items-center ${collapsed ? "justify-center" : "gap-3"}`}>
