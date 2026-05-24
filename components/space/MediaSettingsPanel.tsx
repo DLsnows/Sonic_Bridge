@@ -1,6 +1,6 @@
 "use client";
 
-import { useMediaSettingsStore, msToSamples, type ScreenFps, type ScreenResolution } from "@/lib/store/media-settings";
+import { useMediaSettingsStore, msToSamples, type VideoFps, type VideoResolution, type ScreenResolution, type NoiseMode } from "@/lib/store/media-settings";
 import { Modal } from "@/components/ui/Modal";
 
 interface MediaSettingsPanelProps {
@@ -19,7 +19,7 @@ const SCREEN_BITRATE_MIN = 500_000;
 const SCREEN_BITRATE_MAX = 5_000_000;
 const SCREEN_BITRATE_STEP = 250_000;
 
-const FPS_OPTIONS: { label: string; value: ScreenFps }[] = [
+const FPS_OPTIONS: { label: string; value: VideoFps }[] = [
   { label: "15 fps", value: 15 },
   { label: "30 fps", value: 30 },
   { label: "60 fps", value: 60 },
