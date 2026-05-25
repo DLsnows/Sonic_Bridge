@@ -31,6 +31,9 @@ export function VstAudioBridge({
   const publishedTrackRef = useRef<MediaStreamTrack | null>(null);
   const pendingPublishRef = useRef(false);
   const tryPublishRef = useRef<() => void>(() => {});
+  // Monotonic token. Incremented on every disable, used to invalidate any
+  // publish currently mid-flight when the user toggles off → on → off rapidly.
+  const inFlightTokenRef = useRef(0);
 
   // Watch for manual reconnect requests
   useEffect(() => {
@@ -60,6 +63,9 @@ export function VstAudioBridge({
   // re-enable sees a fresh state; pendingPublishRef de-dups in-flight publishes.
   useEffect(() => {
     if (!broadcastEnabled) {
+      // Invalidate any publish currently in flight; its .then handler will see
+      // the token mismatch and quietly unpublish the track instead of leaking.
+      inFlightTokenRef.current += 1;
       const track = publishedTrackRef.current;
       if (track) {
         // Clear synchronously so an immediate re-enable doesn't see a stale ref.
@@ -100,16 +106,50 @@ export function VstAudioBridge({
         pendingPublishRef.current = false;
         return;
       }
+      // Capture the current token. If the disable path bumps it before our
+      // publish resolves, we'll know to unpublish the track quietly rather
+      // than leaking it as a zombie publication.
+      const token = inFlightTokenRef.current;
+      // Set ref synchronously so a disable arriving while publishTrack is in
+      // flight can find the track. (Without this, the disable path sees null
+      // and skips unpublish; when our .then() finally sets the ref, the UI
+      // shows off but the track is live in the room — caught by Claude review.)
+      publishedTrackRef.current = track;
       participantRef.current.publishTrack(track, {
         name: "DAW Audio (VST)",
         source: Track.Source.Unknown,
         audioBitrate: useMediaSettingsStore.getState().dawAudio.bitrate,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any).then(() => {
-        publishedTrackRef.current = track;
+        if (inFlightTokenRef.current !== token) {
+          // Superseded — a disable bumped the token. Unpublish to avoid leak.
+          participantRef.current.unpublishTrack(track).catch(() => {});
+          return;
+        }
+        if (!useVstStore.getState().broadcastEnabled) {
+          // Belt-and-braces: token check above should cover this, but if
+          // somehow the store changed without a disable-path run, clean up.
+          participantRef.current.unpublishTrack(track).catch(() => {});
+          if (publishedTrackRef.current === track) {
+            publishedTrackRef.current = null;
+          }
+          useVstStore.getState().setAudioTrackPublished(false);
+          return;
+        }
         useVstStore.getState().setAudioTrackPublished(true);
-      }).catch(() => {}).finally(() => {
-        pendingPublishRef.current = false;
+      }).catch(() => {
+        // Publish itself failed. Roll back the synchronous ref if it still
+        // points at this attempt (a later cycle may have replaced it).
+        if (publishedTrackRef.current === track) {
+          publishedTrackRef.current = null;
+          useVstStore.getState().setAudioTrackPublished(false);
+        }
+      }).finally(() => {
+        // Only release pending if we're still the current attempt. A later
+        // tryPublish on a new token has its own pending flag flow.
+        if (inFlightTokenRef.current === token) {
+          pendingPublishRef.current = false;
+        }
       });
     };
     tryPublishRef.current = tryPublish;
