@@ -7,9 +7,18 @@ export class VstAudioPipeline {
   private ready = false;
   private destroyed = false;
   private gainNode: GainNode | null = null;
+  private readyCbs: Array<() => void> = [];
 
   get isReady() {
     return this.ready;
+  }
+
+  onReady(cb: () => void) {
+    if (this.ready) {
+      cb();
+      return;
+    }
+    this.readyCbs.push(cb);
   }
 
   static isSupported() {
@@ -49,6 +58,9 @@ export class VstAudioPipeline {
     this.gainNode.connect(this.destination);
 
     this.ready = true;
+    const cbs = this.readyCbs;
+    this.readyCbs = [];
+    for (const cb of cbs) cb();
   }
 
   // Feed interleaved PCM directly — deinterleave and send to AudioWorklet
@@ -115,6 +127,7 @@ export class VstAudioPipeline {
   }
 
   shutdown() {
+    this.readyCbs = [];
     this.destroyed = true;
     this.ready = false;
 
