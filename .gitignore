@@ -173,3 +173,5 @@ next-env.d.ts
 .superpowers/
 pluginval/
 pluginval.zip
+
+.worktrees/
