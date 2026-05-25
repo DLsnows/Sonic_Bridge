@@ -1,12 +1,11 @@
 import { db } from "@/lib/db";
-import { projectViews } from "@/lib/db/schema";
+import { sql } from "drizzle-orm";
 
 export async function upsertProjectView(userId: string, projectId: string) {
-  await db
-    .insert(projectViews)
-    .values({ userId, projectId, lastViewedAt: new Date() })
-    .onConflictDoUpdate({
-      target: [projectViews.userId, projectViews.projectId],
-      set: { lastViewedAt: new Date() },
-    });
+  await db.execute(sql`
+    INSERT INTO project_views (user_id, project_id, last_viewed_at)
+    VALUES (${userId}, ${projectId}, NOW())
+    ON CONFLICT (user_id, project_id)
+    DO UPDATE SET last_viewed_at = NOW()
+  `);
 }
