@@ -87,6 +87,17 @@ export class VstAudioPipeline {
     return this.destination?.stream.getAudioTracks()[0] ?? null;
   }
 
+  // Replace destination to get a fresh track (needed for re-publish after unpublish)
+  refreshTrack(): MediaStreamTrack | null {
+    if (!this.audioContext || !this.gainNode || !this.workletNode || this.destroyed) return null;
+    // Disconnect old destination
+    this.gainNode.disconnect();
+    // Create new destination and connect
+    this.destination = this.audioContext.createMediaStreamDestination();
+    this.gainNode.connect(this.destination);
+    return this.destination.stream.getAudioTracks()[0];
+  }
+
   setVolume(volume: number) {
     if (this.gainNode && this.audioContext) {
       const clamped = Math.max(0, Math.min(2, volume));

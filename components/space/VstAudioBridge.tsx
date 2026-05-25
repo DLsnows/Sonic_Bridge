@@ -69,8 +69,8 @@ export function VstAudioBridge({
       // Small delay to ensure unpublish completed, then try to publish on next PCM frame
       const timer = setTimeout(() => {
         if (!publishedTrackRef.current && pipelineRef.current?.isReady) {
-          // Force a new PCM frame to trigger re-publish
-          const track = pipelineRef.current.getMediaStreamTrack();
+          // Replace destination to get a fresh track for re-publish
+          const track = pipelineRef.current.refreshTrack();
           if (track) {
             participantRef.current.publishTrack(track, {
               name: "DAW Audio (VST)",
