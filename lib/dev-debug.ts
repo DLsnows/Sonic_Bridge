@@ -10,6 +10,7 @@ import type {
 } from "livekit-client";
 import { useVstStore } from "@/lib/store/vst";
 import { useMediaSettingsStore } from "@/lib/store/media-settings";
+import { getMicPipeline } from "@/lib/mic-pipeline";
 
 export function isDebugEnabled(): boolean {
   if (process.env.NODE_ENV === "development") return true;
@@ -55,6 +56,19 @@ export interface PublicationSnapshot {
   muted: boolean | undefined;
   enabled: boolean | undefined;
   readyState: string | undefined;
+}
+
+export interface MicGraphState {
+  ok: boolean;
+  reason?: string;
+}
+
+export function snapshotMicGraph(): MicGraphState {
+  try {
+    return getMicPipeline().verifyAudioGraph();
+  } catch (e) {
+    return { ok: false, reason: e instanceof Error ? e.message : "verify threw" };
+  }
 }
 
 export function snapshotPublications(lp: LocalParticipant): PublicationSnapshot[] {

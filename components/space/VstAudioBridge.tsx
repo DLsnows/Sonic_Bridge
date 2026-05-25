@@ -65,8 +65,19 @@ export function VstAudioBridge({
         // Clear synchronously so an immediate re-enable doesn't see a stale ref.
         publishedTrackRef.current = null;
         useVstStore.getState().setAudioTrackPublished(false);
-        participantRef.current.unpublishTrack(track).catch(() => {});
+        participantRef.current.unpublishTrack(track).catch((e: unknown) => {
+          // Unpublish failed; LiveKit may still consider the track published.
+          // Surface to the user so they can manually recover (toggle again / reload).
+          const msg = e instanceof Error ? e.message : String(e);
+          console.error("[vst-bridge] unpublishTrack failed; track may still be live:", msg);
+          useVstStore.getState().setError(
+            "Failed to fully stop broadcast — try toggling again or reload if the issue persists.",
+          );
+        });
       }
+      // Reset any pending publish that might be in flight (e.g. user toggled
+      // off before the deferred onReady-driven publish landed).
+      pendingPublishRef.current = false;
       return;
     }
 
@@ -103,14 +114,20 @@ export function VstAudioBridge({
     };
     tryPublishRef.current = tryPublish;
 
-    pendingPublishRef.current = true;
+    // Only flag in-flight if we actually have somewhere to register —
+    // otherwise the PCM callback's `!pendingPublishRef` guard would see
+    // a true ref before any onReady was registered, and the publish would
+    // deadlock forever (caught by Claude /review on PR #173).
     if (pipelineRef.current?.isReady) {
+      pendingPublishRef.current = true;
       tryPublish();
     } else if (pipelineRef.current) {
+      pendingPublishRef.current = true;
       pipelineRef.current.onReady(tryPublish);
     }
-    // else: pipeline not yet created (no PCM received yet). The onPcmData
-    // callback will create it and register onReady → tryPublishRef.current.
+    // else: pipeline not yet created (no PCM received yet). Leave
+    // pendingPublishRef false so the onPcmData callback can pick it up
+    // via onReady once it creates the pipeline.
   }, [broadcastEnabled]);
 
   useEffect(() => {

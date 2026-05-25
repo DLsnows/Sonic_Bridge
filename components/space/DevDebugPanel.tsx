@@ -5,7 +5,9 @@ import { useLocalParticipant } from "@livekit/components-react";
 import {
   initDevDebug,
   isDebugEnabled,
+  snapshotMicGraph,
   snapshotPublications,
+  type MicGraphState,
   type PublicationSnapshot,
 } from "@/lib/dev-debug";
 
@@ -16,6 +18,7 @@ const getServerSnapshot = () => false;
 export function DevDebugPanel() {
   const { localParticipant } = useLocalParticipant();
   const [snap, setSnap] = useState<PublicationSnapshot[]>([]);
+  const [mic, setMic] = useState<MicGraphState>({ ok: false, reason: "init" });
   const [open, setOpen] = useState(true);
   const enabled = useSyncExternalStore(subscribeNoop, getClientSnapshot, getServerSnapshot);
 
@@ -29,7 +32,9 @@ export function DevDebugPanel() {
     const update = () => {
       const s = snapshotPublications(localParticipant);
       setSnap(s);
-      console.log("[dev-debug][publications]", s);
+      const m = snapshotMicGraph();
+      setMic(m);
+      console.log("[dev-debug][publications]", s, "mic-graph:", m);
     };
     update();
     const events: string[] = [
@@ -112,6 +117,9 @@ export function DevDebugPanel() {
         >
           x
         </button>
+      </div>
+      <div style={{ marginBottom: 4, paddingBottom: 4, borderBottom: "1px dashed #044" }}>
+        mic-graph: <span style={{ color: mic.ok ? "#0f0" : "#f80" }}>{mic.ok ? "ok" : (mic.reason ?? "broken")}</span>
       </div>
       {snap.length === 0 && <div>(no publications)</div>}
       {snap.map((p, i) => (
