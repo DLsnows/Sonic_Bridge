@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useLocalParticipant } from "@livekit/components-react";
 import {
   initDevDebug,
@@ -9,16 +9,19 @@ import {
   type PublicationSnapshot,
 } from "@/lib/dev-debug";
 
+const subscribeNoop = () => () => {};
+const getClientSnapshot = () => isDebugEnabled();
+const getServerSnapshot = () => false;
+
 export function DevDebugPanel() {
   const { localParticipant } = useLocalParticipant();
   const [snap, setSnap] = useState<PublicationSnapshot[]>([]);
   const [open, setOpen] = useState(true);
-  const [enabled, setEnabled] = useState(false);
+  const enabled = useSyncExternalStore(subscribeNoop, getClientSnapshot, getServerSnapshot);
 
   useEffect(() => {
-    setEnabled(isDebugEnabled());
-    initDevDebug();
-  }, []);
+    if (enabled) initDevDebug();
+  }, [enabled]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -26,7 +29,6 @@ export function DevDebugPanel() {
     const update = () => {
       const s = snapshotPublications(localParticipant);
       setSnap(s);
-      // eslint-disable-next-line no-console
       console.log("[dev-debug][publications]", s);
     };
     update();

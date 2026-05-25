@@ -70,7 +70,6 @@ export class MicPipeline {
     // Auto-resume if browser suspends the context (e.g., due to a competing AudioContext).
     const ctx = this.audioContext!;
     const onStateChange = () => {
-      // eslint-disable-next-line no-console
       console.warn("[mic-pipeline] AudioContext state:", ctx.state);
       if (ctx.state === "suspended" && this._isRunning) {
         ctx.resume().catch(() => {});
@@ -82,15 +81,12 @@ export class MicPipeline {
     // Watch the underlying capture track for browser-driven mute / end.
     this.sourceTrack = sourceTrack;
     const onMute = () => {
-      // eslint-disable-next-line no-console
       console.warn("[mic-pipeline] source track MUTED");
     };
     const onUnmute = () => {
-      // eslint-disable-next-line no-console
       console.warn("[mic-pipeline] source track UNMUTED");
     };
     const onEnded = () => {
-      // eslint-disable-next-line no-console
       console.error("[mic-pipeline] source track ENDED — pipeline broken");
     };
     sourceTrack.addEventListener("mute", onMute);

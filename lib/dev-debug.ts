@@ -33,14 +33,12 @@ export function initDevDebug() {
       if (s[k] !== prev[k]) changed[k as string] = { from: prev[k], to: s[k] };
     }
     if (Object.keys(changed).length) {
-      // eslint-disable-next-line no-console
       console.log("[dev-debug][vstStore]", changed);
     }
   });
 
   useMediaSettingsStore.subscribe((s, prev) => {
     if (JSON.stringify(s) !== JSON.stringify(prev)) {
-      // eslint-disable-next-line no-console
       console.log("[dev-debug][mediaSettings]", {
         audioQuality: s.audioQuality,
         dawAudio: s.dawAudio,
