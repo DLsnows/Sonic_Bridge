@@ -55,15 +55,15 @@ interface MediaSettingsState {
 }
 
 const DEFAULT_AUDIO_BITRATE = 256_000;
-const DEFAULT_SEND_BUFFER_MS = 16;
-const DEFAULT_RECEIVE_BUFFER_MS = 32;
+const DEFAULT_SEND_BUFFER_MS = 200;
+const DEFAULT_RECEIVE_BUFFER_MS = 200;
 const DEFAULT_CAMERA_FPS: VideoFps = 30;
 const DEFAULT_CAMERA_RESOLUTION: VideoResolution = "1080p";
 const DEFAULT_CAMERA_BITRATE = 2_000_000;
 const DEFAULT_SCREEN_FPS: VideoFps = 30;
 const DEFAULT_SCREEN_RESOLUTION: ScreenResolution = "1080p";
 const DEFAULT_SCREEN_BITRATE = 2_500_000;
-const DEFAULT_DAW_BITRATE = 256_000;
+const DEFAULT_DAW_BITRATE = 510_000;
 
 export const useMediaSettingsStore = create<MediaSettingsState>((set) => ({
   audioQuality: {
