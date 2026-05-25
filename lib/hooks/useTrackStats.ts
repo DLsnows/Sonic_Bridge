@@ -91,15 +91,20 @@ export function useTrackStats(participantIdentity: string): TrackStats {
         const entryType = isLocal ? "outbound-rtp" : "inbound-rtp";
         const result: TrackStats = { ...EMPTY_STATS };
 
-        // If SSRC matching failed, fall back to kind-only matching
-        // For screen share differentiation in fallback, get the screen track ID
+        // If SSRC matching failed, fall back to kind matching with per-track
+        // MediaStreamTrack.id comparison so camera vs screen-share entries are
+        // routed correctly when both are active. The WebRTC stats entry has a
+        // `trackIdentifier` field that matches MediaStreamTrack.id.
         const useKindFallback = audioSsrcs.size === 0 && videoSsrcs.size === 0 && screenSsrcs.size === 0;
-        let screenTrackId: string | undefined;
+        const cameraTrackIds = new Set<string>();
+        const screenTrackIds = new Set<string>();
         if (useKindFallback) {
           for (const [, pub] of participant.videoTrackPublications) {
-            if (pub.source === Track.Source.ScreenShare) {
-              screenTrackId = pub.trackSid;
-            }
+            const t = (pub as { track?: { mediaStreamTrack?: MediaStreamTrack } }).track;
+            const id = t?.mediaStreamTrack?.id;
+            if (!id) continue;
+            if (pub.source === Track.Source.ScreenShare) screenTrackIds.add(id);
+            else cameraTrackIds.add(id);
           }
         }
 
@@ -109,13 +114,14 @@ export function useTrackStats(participantIdentity: string): TrackStats {
           const ssrc = e.ssrc as number | undefined;
           const bytes = (e.bytesSent ?? e.bytesReceived) as number | undefined;
           const ts = e.timestamp as number | undefined;
+          const trackId = e.trackIdentifier as string | undefined;
 
           const matchAudio = useKindFallback ? e.kind === "audio" : (audioSsrcs.has(ssrc!) && e.kind === "audio");
           const matchVideo = useKindFallback
-            ? (e.kind === "video" && !screenTrackId)
+            ? (e.kind === "video" && trackId !== undefined && cameraTrackIds.has(trackId))
             : (videoSsrcs.has(ssrc!) && e.kind === "video");
           const matchScreen = useKindFallback
-            ? (e.kind === "video" && !!screenTrackId)
+            ? (e.kind === "video" && trackId !== undefined && screenTrackIds.has(trackId))
             : (screenSsrcs.has(ssrc!) && e.kind === "video");
 
           if (matchAudio && bytes !== undefined && ts !== undefined) {
