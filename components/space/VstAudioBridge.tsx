@@ -29,6 +29,8 @@ export function VstAudioBridge({
   const vstVolume = useVstStore((s) => s.vstVolume);
   const receiveBufferMs = useMediaSettingsStore((s) => s.audioQuality.receiveBufferMs);
   const publishedTrackRef = useRef<MediaStreamTrack | null>(null);
+  const pendingPublishRef = useRef(false);
+  const tryPublishRef = useRef<() => void>(() => {});
 
   // Watch for manual reconnect requests
   useEffect(() => {
@@ -52,40 +54,63 @@ export function VstAudioBridge({
   }, [receiveBufferMs]);
 
 
-  // Broadcast toggle: unpublish when disabled, re-publish when enabled
+  // Broadcast toggle: unpublish when disabled, re-publish when enabled.
+  // Single source of truth — PCM callback only feeds PCM and notifies via onReady.
+  // Race-safe: publishedTrackRef is cleared synchronously on disable so a rapid
+  // re-enable sees a fresh state; pendingPublishRef de-dups in-flight publishes.
   useEffect(() => {
-    if (!broadcastEnabled && publishedTrackRef.current) {
+    if (!broadcastEnabled) {
       const track = publishedTrackRef.current;
-      participantRef.current.unpublishTrack(track).then(() => {
+      if (track) {
+        // Clear synchronously so an immediate re-enable doesn't see a stale ref.
         publishedTrackRef.current = null;
         useVstStore.getState().setAudioTrackPublished(false);
-      }).catch(() => {
-        // Force cleanup even on failure
-        publishedTrackRef.current = null;
-        useVstStore.getState().setAudioTrackPublished(false);
+        participantRef.current.unpublishTrack(track).catch(() => {});
+      }
+      return;
+    }
+
+    if (publishedTrackRef.current || pendingPublishRef.current) return;
+
+    const tryPublish = () => {
+      if (!useVstStore.getState().broadcastEnabled) {
+        // Broadcast went off again while we waited — do nothing.
+        pendingPublishRef.current = false;
+        return;
+      }
+      const pipeline = pipelineRef.current;
+      if (!pipeline?.isReady) return; // will be retried via onPcmData → onReady
+      if (publishedTrackRef.current) {
+        pendingPublishRef.current = false;
+        return;
+      }
+      const track = pipeline.refreshTrack();
+      if (!track) {
+        pendingPublishRef.current = false;
+        return;
+      }
+      participantRef.current.publishTrack(track, {
+        name: "DAW Audio (VST)",
+        source: Track.Source.Unknown,
+        audioBitrate: useMediaSettingsStore.getState().dawAudio.bitrate,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any).then(() => {
+        publishedTrackRef.current = track;
+        useVstStore.getState().setAudioTrackPublished(true);
+      }).catch(() => {}).finally(() => {
+        pendingPublishRef.current = false;
       });
+    };
+    tryPublishRef.current = tryPublish;
+
+    pendingPublishRef.current = true;
+    if (pipelineRef.current?.isReady) {
+      tryPublish();
+    } else if (pipelineRef.current) {
+      pipelineRef.current.onReady(tryPublish);
     }
-    if (broadcastEnabled && !publishedTrackRef.current) {
-      // Small delay to ensure unpublish completed, then try to publish on next PCM frame
-      const timer = setTimeout(() => {
-        if (!publishedTrackRef.current && pipelineRef.current?.isReady) {
-          // Replace destination to get a fresh track for re-publish
-          const track = pipelineRef.current.refreshTrack();
-          if (track) {
-            participantRef.current.publishTrack(track, {
-              name: "DAW Audio (VST)",
-              source: Track.Source.Unknown,
-              audioBitrate: useMediaSettingsStore.getState().dawAudio.bitrate,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            } as any).then(() => {
-              publishedTrackRef.current = track;
-              useVstStore.getState().setAudioTrackPublished(true);
-            }).catch(() => {});
-          }
-        }
-      }, 500);
-      return () => clearTimeout(timer);
-    }
+    // else: pipeline not yet created (no PCM received yet). The onPcmData
+    // callback will create it and register onReady → tryPublishRef.current.
   }, [broadcastEnabled]);
 
   useEffect(() => {
@@ -113,29 +138,16 @@ export function VstAudioBridge({
 
       pipeline.feedPcm(interleaved, sampleRate, channels, numSamples);
 
-      // Publish DAW audio as independent channel (not Microphone)
-      const store = useVstStore.getState();
+      // If broadcast is enabled and we haven't published yet (e.g. broadcast
+      // toggled on before pipeline existed), schedule a publish via onReady.
+      // Pipeline is already ready at this point, so onReady fires synchronously.
       if (
-        pipeline.isReady &&
         !publishedTrackRef.current &&
-        store.broadcastEnabled
+        !pendingPublishRef.current &&
+        useVstStore.getState().broadcastEnabled
       ) {
-        const track = pipeline.getMediaStreamTrack();
-        if (track) {
-          participantRef.current.publishTrack(track, {
-            name: "DAW Audio (VST)",
-            source: Track.Source.Unknown,
-            audioBitrate: useMediaSettingsStore.getState().dawAudio.bitrate,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          } as any).then(() => {
-            publishedTrackRef.current = track;
-            store.setAudioTrackPublished(true);
-          }).catch((e: unknown) => {
-            store.setError(
-              `Failed to publish audio track: ${e instanceof Error ? e.message : "Unknown error"}`,
-            );
-          });
-        }
+        pendingPublishRef.current = true;
+        pipeline.onReady(() => tryPublishRef.current());
       }
     });
 
