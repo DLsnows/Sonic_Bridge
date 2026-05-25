@@ -80,7 +80,7 @@ export function AudioMixer() {
     }).finally(() => {
       restartingRef.current = false;
     });
-  }, [noiseMode, isMicrophoneEnabled, localParticipant]);
+  }, [noiseMode]);
 
   const handleRemoteVolumeChange = useCallback(
     (participantIdentity: string, value: number) => {

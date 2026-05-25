@@ -56,9 +56,14 @@ export function VstAudioBridge({
   useEffect(() => {
     if (!broadcastEnabled && publishedTrackRef.current) {
       const track = publishedTrackRef.current;
-      participantRef.current.unpublishTrack(track).catch(() => {});
-      publishedTrackRef.current = null;
-      useVstStore.getState().setAudioTrackPublished(false);
+      participantRef.current.unpublishTrack(track).then(() => {
+        publishedTrackRef.current = null;
+        useVstStore.getState().setAudioTrackPublished(false);
+      }).catch(() => {
+        // Force cleanup even on failure
+        publishedTrackRef.current = null;
+        useVstStore.getState().setAudioTrackPublished(false);
+      });
     }
     if (broadcastEnabled && !publishedTrackRef.current) {
       // Small delay to ensure unpublish completed, then try to publish on next PCM frame
