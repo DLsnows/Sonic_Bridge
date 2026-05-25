@@ -13,6 +13,7 @@ import { MicVolumeBridge } from "./MicVolumeBridge";
 import { AudioMixer } from "./AudioMixer";
 import { ParticipantList } from "./ParticipantList";
 import { MediaSettingsPanel } from "./MediaSettingsPanel";
+import { DevDebugPanel } from "./DevDebugPanel";
 
 interface CreativeSpaceRoomProps {
   projectId: string;
@@ -228,6 +229,9 @@ export function CreativeSpaceRoom({
           open={mediaSettingsOpen}
           onClose={() => setMediaSettingsOpen(false)}
         />
+
+        {/* Dev-only diagnostic panel (NODE_ENV gate inside the component) */}
+        <DevDebugPanel />
       </LiveKitRoom>
     </div>
   );
