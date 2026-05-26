@@ -8,7 +8,7 @@ import { getMicPipeline } from "@/lib/mic-pipeline";
 import { Track } from "livekit-client";
 import type { RemoteAudioTrack, RemoteParticipant } from "livekit-client";
 import { useState, useCallback, useEffect, useRef } from "react";
-import { useTrackAudioLevel } from "@/lib/hooks/useTrackAudioLevel";
+import { useTrackAudioLevelDb } from "@/lib/hooks/useTrackAudioLevel";
 import { VstVolumeMeter } from "./VstVolumeMeter";
 
 const sliderClass =
@@ -20,10 +20,23 @@ const sliderClass =
   "[&::-moz-range-thumb]:bg-[#00F0FF] [&::-moz-range-thumb]:border-0 " +
   "[&::-moz-range-track]:bg-transparent";
 
-function micMeterLevelColor(level: number): string {
-  if (level > 0.75) return "#FF4444";
-  if (level > 0.5) return "#FFB800";
-  if (level > 0.05) return "#00FF41";
+// dBFS scale: floor at -60 dB (silence), ceiling at +5 dB so post-0 dBFS
+// overshoot is still visible (~7.7% of the bar above the 0 dB mark).
+const METER_DB_FLOOR = -60;
+const METER_DB_CEILING = 5;
+const METER_DB_RANGE = METER_DB_CEILING - METER_DB_FLOOR;
+
+function dbToPercent(db: number): number {
+  if (!isFinite(db) || db <= METER_DB_FLOOR) return 0;
+  const clamped = Math.min(db, METER_DB_CEILING);
+  return ((clamped - METER_DB_FLOOR) / METER_DB_RANGE) * 100;
+}
+
+function micMeterDbColor(db: number): string {
+  if (!isFinite(db) || db <= METER_DB_FLOOR) return "#00F0FF";
+  if (db > -3) return "#FF4444";
+  if (db > -12) return "#FFB800";
+  if (db > -24) return "#00FF41";
   return "#00F0FF";
 }
 
@@ -54,7 +67,9 @@ export function AudioMixer() {
 
   const micPub = localParticipant?.getTrackPublication(Track.Source.Microphone);
   const micTrack = micPub?.audioTrack;
-  const liveMicLevel = useTrackAudioLevel(micTrack);
+  const liveMicDb = useTrackAudioLevelDb(micTrack);
+  const liveMicPercent = dbToPercent(liveMicDb);
+  const liveMicColor = micMeterDbColor(liveMicDb);
 
   const restartingRef = useRef(false);
 
@@ -149,9 +164,9 @@ export function AudioMixer() {
               <div
                 className="h-full rounded-full transition-all duration-75"
                 style={{
-                  width: `${liveMicLevel * 100}%`,
-                  backgroundColor: micMeterLevelColor(liveMicLevel),
-                  boxShadow: `0 0 6px ${micMeterLevelColor(liveMicLevel)}40`,
+                  width: `${liveMicPercent}%`,
+                  backgroundColor: liveMicColor,
+                  boxShadow: `0 0 6px ${liveMicColor}40`,
                 }}
               />
             </div>
@@ -295,8 +310,9 @@ function RemoteParticipantRow({
   const pubs = Array.from(participant.audioTrackPublications.values());
   const micPub = pubs.find((p) => p.source === Track.Source.Microphone);
   const audioTrack = micPub?.audioTrack as RemoteAudioTrack | undefined;
-  const level = useTrackAudioLevel(audioTrack);
-  const meterColor = micMeterLevelColor(level);
+  const db = useTrackAudioLevelDb(audioTrack);
+  const percent = dbToPercent(db);
+  const meterColor = micMeterDbColor(db);
 
   return (
     <div className="space-y-1">
@@ -312,7 +328,7 @@ function RemoteParticipantRow({
         <div
           className="h-full rounded-full transition-all duration-75"
           style={{
-            width: `${level * 100}%`,
+            width: `${percent}%`,
             backgroundColor: meterColor,
             boxShadow: `0 0 6px ${meterColor}40`,
           }}
