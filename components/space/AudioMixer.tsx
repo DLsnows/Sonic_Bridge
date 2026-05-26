@@ -6,7 +6,7 @@ import { useVstStore } from "@/lib/store/vst";
 import { useMediaSettingsStore } from "@/lib/store/media-settings";
 import { getMicPipeline } from "@/lib/mic-pipeline";
 import { Track } from "livekit-client";
-import type { LocalAudioTrack, RemoteAudioTrack, RemoteParticipant } from "livekit-client";
+import type { RemoteAudioTrack, RemoteParticipant } from "livekit-client";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useTrackAudioLevel } from "@/lib/hooks/useTrackAudioLevel";
 import { VstVolumeMeter } from "./VstVolumeMeter";
@@ -53,7 +53,7 @@ export function AudioMixer() {
   const { localParticipant, isMicrophoneEnabled } = useLocalParticipant();
 
   const micPub = localParticipant?.getTrackPublication(Track.Source.Microphone);
-  const micTrack = micPub?.audioTrack as LocalAudioTrack | undefined;
+  const micTrack = micPub?.audioTrack;
   const liveMicLevel = useTrackAudioLevel(micTrack);
 
   const restartingRef = useRef(false);
@@ -293,7 +293,7 @@ function RemoteParticipantRow({
   onVolumeChange: (identity: string, value: number) => void;
 }) {
   const pubs = Array.from(participant.audioTrackPublications.values());
-  const micPub = pubs.find((p) => p.source === Track.Source.Microphone) ?? pubs[0];
+  const micPub = pubs.find((p) => p.source === Track.Source.Microphone);
   const audioTrack = micPub?.track as RemoteAudioTrack | undefined;
   const level = useTrackAudioLevel(audioTrack);
   const meterColor = micMeterLevelColor(level);
