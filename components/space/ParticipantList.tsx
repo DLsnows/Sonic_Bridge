@@ -7,6 +7,21 @@ import {
 } from "@livekit/components-react";
 import type { Participant } from "livekit-client";
 import { useTrackStats } from "@/lib/hooks/useTrackStats";
+import { useVstStore } from "@/lib/store/vst";
+
+function DawIndicator() {
+  const dawActive = useVstStore((s) => s.audioTrackPublished);
+  return (
+    <span
+      className="w-2 h-2 rounded-full transition-colors duration-200"
+      style={{
+        backgroundColor: dawActive ? "#B44DFF" : "#A0A0B0",
+        boxShadow: dawActive ? "0 0 4px rgba(180,77,255,0.4)" : undefined,
+      }}
+      title={dawActive ? "DAW audio active" : "No DAW audio"}
+    />
+  );
+}
 
 interface ParticipantListProps {
   userId: string;
@@ -118,6 +133,10 @@ function ParticipantRow({
             }}
             title={isScreenOn ? "Screen sharing" : "Not sharing"}
           />
+          {/* DAW audio */}
+          {isLocal && (
+            <DawIndicator />
+          )}
         </div>
       </div>
 
@@ -232,6 +251,13 @@ export function ParticipantList({ userId: _ }: ParticipantListProps) {
             style={{ backgroundColor: "#00F0FF" }}
           />
           Screen
+        </span>
+        <span className="flex items-center gap-1">
+          <span
+            className="w-1.5 h-1.5 rounded-full"
+            style={{ backgroundColor: "#B44DFF" }}
+          />
+          DAW
         </span>
       </div>
     </div>

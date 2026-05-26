@@ -18,6 +18,9 @@ export class MicPipeline {
   private _isRunning = false;
   private meterDataArray: Uint8Array<ArrayBuffer> | null = null;
   private meterSmoothingFactor = 0.3;
+  private sourceTrack: MediaStreamTrack | null = null;
+  private contextStateUnsub: (() => void) | null = null;
+  private trackEventUnsubs: Array<() => void> = [];
 
   get processedTrack(): MediaStreamTrack | null { return this._processedTrack; }
   get isRunning(): boolean { return this._isRunning; }
@@ -40,6 +43,7 @@ export class MicPipeline {
     this.stream = await navigator.mediaDevices.getUserMedia(constraints);
 
     this.audioContext = new AudioContext();
+    await this.audioContext.resume();
     const sourceTrack = this.stream.getAudioTracks()[0];
     this.sourceNode = this.audioContext.createMediaStreamSource(
       new MediaStream([sourceTrack]),
@@ -63,6 +67,37 @@ export class MicPipeline {
     this._isRunning = true;
     this.startMeterLoop();
 
+    // Auto-resume if browser suspends the context (e.g., due to a competing AudioContext).
+    const ctx = this.audioContext!;
+    const onStateChange = () => {
+      console.warn("[mic-pipeline] AudioContext state:", ctx.state);
+      if (ctx.state === "suspended" && this._isRunning) {
+        ctx.resume().catch(() => {});
+      }
+    };
+    ctx.addEventListener("statechange", onStateChange);
+    this.contextStateUnsub = () => ctx.removeEventListener("statechange", onStateChange);
+
+    // Watch the underlying capture track for browser-driven mute / end.
+    this.sourceTrack = sourceTrack;
+    const onMute = () => {
+      console.warn("[mic-pipeline] source track MUTED");
+    };
+    const onUnmute = () => {
+      console.warn("[mic-pipeline] source track UNMUTED");
+    };
+    const onEnded = () => {
+      console.error("[mic-pipeline] source track ENDED — pipeline broken");
+    };
+    sourceTrack.addEventListener("mute", onMute);
+    sourceTrack.addEventListener("unmute", onUnmute);
+    sourceTrack.addEventListener("ended", onEnded);
+    this.trackEventUnsubs.push(
+      () => sourceTrack.removeEventListener("mute", onMute),
+      () => sourceTrack.removeEventListener("unmute", onUnmute),
+      () => sourceTrack.removeEventListener("ended", onEnded),
+    );
+
     return this._processedTrack;
   }
 
@@ -74,6 +109,19 @@ export class MicPipeline {
         this.audioContext.currentTime + 0.05,
       );
     }
+  }
+
+  verifyAudioGraph(): { ok: boolean; reason?: string } {
+    if (!this._isRunning) return { ok: false, reason: "not running" };
+    if (!this.audioContext) return { ok: false, reason: "no audioContext" };
+    if (this.audioContext.state !== "running") return { ok: false, reason: `audioContext state=${this.audioContext.state}` };
+    if (!this.sourceNode || !this.gainNode || !this.destination) return { ok: false, reason: "graph nodes missing" };
+    if (!this._processedTrack) return { ok: false, reason: "no processed track" };
+    if (this._processedTrack.readyState !== "live") return { ok: false, reason: `processed track readyState=${this._processedTrack.readyState}` };
+    if (this._processedTrack.muted) return { ok: false, reason: "processed track muted" };
+    if (this.sourceTrack && this.sourceTrack.readyState !== "live") return { ok: false, reason: `source track readyState=${this.sourceTrack.readyState}` };
+    if (this.sourceTrack?.muted) return { ok: false, reason: "source track muted" };
+    return { ok: true };
   }
 
   stop() {
@@ -88,6 +136,11 @@ export class MicPipeline {
     this.meterDataArray = null;
     this._processedTrack = null;
     this._isRunning = false;
+    this.contextStateUnsub?.();
+    this.contextStateUnsub = null;
+    for (const fn of this.trackEventUnsubs) fn();
+    this.trackEventUnsubs = [];
+    this.sourceTrack = null;
     if (this.stream) {
       this.stream.getTracks().forEach((t) => t.stop());
       this.stream = null;

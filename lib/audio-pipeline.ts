@@ -7,9 +7,18 @@ export class VstAudioPipeline {
   private ready = false;
   private destroyed = false;
   private gainNode: GainNode | null = null;
+  private readyCbs: Array<() => void> = [];
 
   get isReady() {
     return this.ready;
+  }
+
+  onReady(cb: () => void) {
+    if (this.ready) {
+      cb();
+      return;
+    }
+    this.readyCbs.push(cb);
   }
 
   static isSupported() {
@@ -26,6 +35,7 @@ export class VstAudioPipeline {
     this.channels = channels;
 
     this.audioContext = new AudioContext({ sampleRate });
+    await this.audioContext.resume();
 
     // Register AudioWorklet processor from public/
     await this.audioContext.audioWorklet.addModule("/audio-worklet.js");
@@ -48,6 +58,9 @@ export class VstAudioPipeline {
     this.gainNode.connect(this.destination);
 
     this.ready = true;
+    const cbs = this.readyCbs;
+    this.readyCbs = [];
+    for (const cb of cbs) cb();
   }
 
   // Feed interleaved PCM directly — deinterleave and send to AudioWorklet
@@ -86,6 +99,17 @@ export class VstAudioPipeline {
     return this.destination?.stream.getAudioTracks()[0] ?? null;
   }
 
+  // Replace destination to get a fresh track (needed for re-publish after unpublish)
+  refreshTrack(): MediaStreamTrack | null {
+    if (!this.audioContext || !this.gainNode || !this.workletNode || this.destroyed) return null;
+    // Disconnect old destination
+    this.gainNode.disconnect();
+    // Create new destination and connect
+    this.destination = this.audioContext.createMediaStreamDestination();
+    this.gainNode.connect(this.destination);
+    return this.destination.stream.getAudioTracks()[0];
+  }
+
   setVolume(volume: number) {
     if (this.gainNode && this.audioContext) {
       const clamped = Math.max(0, Math.min(2, volume));
@@ -103,6 +127,7 @@ export class VstAudioPipeline {
   }
 
   shutdown() {
+    this.readyCbs = [];
     this.destroyed = true;
     this.ready = false;
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRemoteParticipants, useMaybeRoomContext, useLocalParticipant } from "@livekit/components-react";
+import { useRemoteParticipants, useLocalParticipant } from "@livekit/components-react";
 import { useSpaceStore } from "@/lib/store/space";
 import { useVstStore } from "@/lib/store/vst";
 import { useMediaSettingsStore } from "@/lib/store/media-settings";
@@ -41,10 +41,14 @@ export function AudioMixer() {
   const micVolume = useVstStore((s) => s.micVolume);
   const setMicVolume = useVstStore((s) => s.setMicVolume);
   const micMeterLevel = useVstStore((s) => s.micMeterLevel);
-  const audioBitrate = useMediaSettingsStore((s) => s.audioQuality.bitrate);
-  const setAudioBitrate = useMediaSettingsStore((s) => s.setAudioBitrate);
   const noiseMode = useMediaSettingsStore((s) => s.audioQuality.noiseMode);
   const setNoiseMode = useMediaSettingsStore((s) => s.setNoiseMode);
+  const dawBitrate = useMediaSettingsStore((s) => s.dawAudio.bitrate);
+  const setDawBitrate = useMediaSettingsStore((s) => s.setDawBitrate);
+  const sendBufferMs = useMediaSettingsStore((s) => s.audioQuality.sendBufferMs);
+  const setSendBufferMs = useMediaSettingsStore((s) => s.setSendBufferMs);
+  const receiveBufferMs = useMediaSettingsStore((s) => s.audioQuality.receiveBufferMs);
+  const setReceiveBufferMs = useMediaSettingsStore((s) => s.setReceiveBufferMs);
   const { localParticipant, isMicrophoneEnabled } = useLocalParticipant();
 
   const restartingRef = useRef(false);
@@ -193,27 +197,37 @@ export function AudioMixer() {
           </div>
         </div>
 
-        {/* Opus Bitrate (LiveKit encoder) */}
+        {/* DAW Bitrate */}
         <div className="space-y-1 pt-2 border-t border-[#00F0FF]/10">
           <div className="flex items-center justify-between">
             <span className="text-[10px] text-[#A0A0B0] font-['Share_Tech_Mono',monospace]">
-              Opus Bitrate
+              DAW Bitrate
             </span>
             <span className="text-[10px] text-[#F0F0F0] tabular-nums">
-              {Math.round(audioBitrate / 1000)} kbps
+              {Math.round(dawBitrate / 1000)} kbps
             </span>
           </div>
-          <input
-            type="range"
-            min="192000"
-            max="640000"
-            step="32000"
-            value={audioBitrate}
-            onChange={(e) => setAudioBitrate(parseInt(e.target.value))}
+          <input type="range" min="192000" max="510000" step="2000" value={dawBitrate}
+            onChange={(e) => setDawBitrate(parseInt(e.target.value))}
             className={sliderClass}
-            style={{
-              background: `linear-gradient(to right, rgba(0,240,255,0.25) ${((audioBitrate - 192000) / (640000 - 192000)) * 100}%, rgba(255,255,255,0.1) ${((audioBitrate - 192000) / (640000 - 192000)) * 100}%)`,
-            }}
+            style={{ background: `linear-gradient(to right, rgba(0,240,255,0.25) ${((dawBitrate - 192000) / (510000 - 192000)) * 100}%, rgba(255,255,255,0.1) ${((dawBitrate - 192000) / (510000 - 192000)) * 100}%)` }}
+          />
+        </div>
+
+        {/* DAW Send Buffer */}
+        <div className="space-y-1 pt-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-[#A0A0B0] font-['Share_Tech_Mono',monospace]">
+              DAW Send Buffer
+            </span>
+            <span className="text-[10px] text-[#F0F0F0] tabular-nums">
+              {sendBufferMs}ms
+            </span>
+          </div>
+          <input type="range" min="8" max="2048" step="8" value={sendBufferMs}
+            onChange={(e) => setSendBufferMs(parseInt(e.target.value))}
+            className={sliderClass}
+            style={{ background: `linear-gradient(to right, rgba(0,240,255,0.25) ${(sendBufferMs / 2048) * 100}%, rgba(255,255,255,0.1) ${(sendBufferMs / 2048) * 100}%)` }}
           />
         </div>
 
@@ -222,6 +236,23 @@ export function AudioMixer() {
           <h4 className="font-['Share_Tech_Mono',monospace] text-[10px] text-[#00F0FF]/60 uppercase tracking-wider border-b border-[#00F0FF]/10 pb-1">
             Outputs
           </h4>
+
+        {/* Receive Buffer (all audio) */}
+        <div className="space-y-1 pb-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-[#A0A0B0] font-['Share_Tech_Mono',monospace]">
+              Receive Buffer
+            </span>
+            <span className="text-[10px] text-[#F0F0F0] tabular-nums">
+              {receiveBufferMs}ms
+            </span>
+          </div>
+          <input type="range" min="8" max="2048" step="8" value={receiveBufferMs}
+            onChange={(e) => setReceiveBufferMs(parseInt(e.target.value))}
+            className={sliderClass}
+            style={{ background: `linear-gradient(to right, rgba(0,240,255,0.25) ${(receiveBufferMs / 2048) * 100}%, rgba(255,255,255,0.1) ${(receiveBufferMs / 2048) * 100}%)` }}
+          />
+        </div>
 
           {!hasRemoteAudio && (
             <p className="text-[10px] text-[#A0A0B0] text-center py-2">
