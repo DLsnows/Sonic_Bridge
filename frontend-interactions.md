@@ -90,17 +90,6 @@ No custom ID field — only name and description.
 | **Project item** (per project) | Link | Navigate to `/projects/[id]`. Shows colored status dot and project name. Shows red unread notification badge if present. Clicking clears unread count for that project. |
 | Status dot | Display | Colored dot indicating project status: gray=Not Started, green=In Progress, amber=Paused, cyan=Pending Release, red=Archived |
 
-### Notification Bell
-
-| Element | Type | Function |
-|---------|------|----------|
-| **Notification bell** 🔔 | Toggle button | Open/close notification dropdown. Shows red badge with unread count. Polls every 30s. |
-| **Mark all read** | Button (inside dropdown) | Marks all notifications read via PATCH `/api/notifications` + PATCH `/api/notifications/view` |
-| Notification item | Clickable row | Navigate to the referenced item (post/event/file) via query param. Marks that single notification as read if persistent type. |
-| **✓** (per notification) | Button | Mark individual notification as read without navigating |
-
-**Notification types:** new_post, new_reply, reply_to_user, new_event, new_file — each with distinct icon and label.
-
 ### User Section
 
 | Element | Type | Function |
@@ -171,17 +160,23 @@ No custom ID field — only name and description.
 | **Edit** | Button (ghost, owner only) | Shows inline edit form pre-filled |
 | **Cancel Edit** | Button (ghost) | Hides inline edit form |
 | **Delete** | Button (ghost, owner/admin) | Browser confirm → DELETE request, removes post + all descendants |
-| **AI Format** | Button (ghost, content > 20 chars) | POST `/api/projects/[id]/ai-format`, creates AI-formatted reply. Error with settings link if not configured |
-| Reply Edit/Delete | Buttons (ghost, owner/admin) | Same as thread but per reply |
+| **AI Format** | Button (ghost) | Only on posts with content > 20 chars AND `!isAiGenerated`. POST `/api/projects/[id]/ai-format`, creates AI-formatted reply. Error with settings link if not configured |
+| Reply Edit/Delete | Buttons (ghost, owner/admin) | Same as thread but per reply. Reply **Reply** button also available on all replies |
+| **AI** badge | Display (inline, on AI-generated posts) | Orange "AI" badge next to "(edited)" marker when `isAiGenerated` is true |
 
 ### PostForm (Thread / Reply / Edit)
+
+Uses `@uiw/react-md-editor` with dark theme and split live preview (`preview="live"`).
 
 | Element | Type | Function |
 |---------|------|----------|
 | Title input | Text field (thread mode only) | Max 200 chars |
-| Content textarea | Textarea | Markdown supported, max 10000 chars |
-| **Cancel** | Button | Close form |
-| **Post Thread** / **Reply** / **Save** | Submit button | Label changes by mode |
+| **+ Cite File** | Toggle button | Shows file picker dropdown to insert Markdown citation links. Only when `availableFiles` present |
+| File picker item | Button | Click to insert `[filename](/projects/[id]/files?file=id)` citation at cursor |
+| MDEditor | Markdown editor | Split view: left=edit, right=live rendered preview. Max 10000 chars. Height 250px (thread) / 200px (reply/edit) |
+| **Draft restored** | Display | Appears when unsaved draft restored from localStorage (draft auto-saves every 300ms) |
+| **Cancel** | Button | Close form, discard draft |
+| **Post Thread** / **Reply** / **Save** | Submit button | Label changes by mode. Clears draft on success |
 
 ---
 
@@ -493,17 +488,21 @@ Replaces old `ParticipantGrid`. Two display modes: Grid and Spotlight.
 | Element | Type | Function |
 |---------|------|----------|
 | Header **✕** | Button | Close panel |
-| **Local Microphone** level bar | Display | Color by level: blue→green→yellow→red |
+| **Local Microphone** level bar | Real-time level meter | Color by audio level: blue(quiet)→green→yellow→red(loud). Driven by `micMeterLevel` from mic pipeline |
 | **Local Microphone** Gain | Range slider | 0–200%, step 1% |
-| **DAW Audio (VST)** meter | `VstVolumeMeter` | Only shown when connected + published |
+| **DAW Audio (VST)** meter | `VstVolumeMeter` | Real-time L/R/Peak levels. Only shown when connected + published |
 | **DAW Audio (VST)** Volume | Range slider | 0–200%, step 1% |
-| **Opus Bitrate** (LiveKit encoder) | Range slider | 192–640 kbps, step 32 kbps |
+| **DAW Bitrate** | Range slider | 192–510 kbps, step 2 kbps |
+| **DAW Send Buffer** | Range slider | 8–2048ms, step 8ms |
 
 **Outputs section:**
 
 | Element | Type | Function |
 |---------|------|----------|
+| **Receive Buffer** | Range slider | 8–2048ms, step 8ms. Affects all received audio |
 | "No other participants" | Display | When no remote audio |
+| Remote participant name + % | Display | |
+| Remote participant level bar | Visual bar | Colored fill proportional to current volume setting (acts as level indicator) |
 | Remote participant Volume | Range slider (per person) | 0–200%, step 1% |
 
 ---
