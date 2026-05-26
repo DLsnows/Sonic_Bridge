@@ -294,7 +294,7 @@ function RemoteParticipantRow({
 }) {
   const pubs = Array.from(participant.audioTrackPublications.values());
   const micPub = pubs.find((p) => p.source === Track.Source.Microphone);
-  const audioTrack = micPub?.track as RemoteAudioTrack | undefined;
+  const audioTrack = micPub?.audioTrack as RemoteAudioTrack | undefined;
   const level = useTrackAudioLevel(audioTrack);
   const meterColor = micMeterLevelColor(level);
 

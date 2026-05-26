@@ -9,7 +9,12 @@ const FFT_SIZE = 256;
 let sharedCtx: AudioContext | null = null;
 function getSharedAudioContext(): AudioContext {
   if (!sharedCtx || sharedCtx.state === "closed") {
-    sharedCtx = new AudioContext();
+    const ctx = new AudioContext();
+    // Safari/Chrome may auto-suspend backgrounded tabs — re-resume on wake.
+    ctx.addEventListener("statechange", () => {
+      if (ctx.state === "suspended") ctx.resume().catch(() => {});
+    });
+    sharedCtx = ctx;
   }
   if (sharedCtx.state === "suspended") {
     sharedCtx.resume().catch(() => {});
