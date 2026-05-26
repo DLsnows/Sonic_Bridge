@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import type { LocalAudioTrack, RemoteAudioTrack } from "livekit-client";
 
-const SMOOTHING = 0.3;
-const FFT_SIZE = 256;
+const FFT_SIZE = 1024;
+// Visual decay rate (dB/sec) applied when current peak is lower than held value.
+// Attack is instantaneous (any new peak >= current snaps up immediately).
+const DECAY_DB_PER_SEC = 25;
 
 let sharedCtx: AudioContext | null = null;
 function getSharedAudioContext(): AudioContext {
@@ -22,14 +24,16 @@ function getSharedAudioContext(): AudioContext {
   return sharedCtx;
 }
 
-export function useTrackAudioLevel(
+/**
+ * Returns a short-time peak dBFS level for a livekit audio track.
+ * 0 dB = digital full-scale; -Infinity = silence; positive values are possible
+ * when the source has post-gain headroom (e.g. mic gain > 1).
+ */
+export function useTrackAudioLevelDb(
   track: LocalAudioTrack | RemoteAudioTrack | undefined | null,
 ): number {
-  const [level, setLevel] = useState(0);
+  const [db, setDb] = useState(-Infinity);
 
-  // Depend on both the livekit track wrapper AND the underlying MediaStreamTrack:
-  // LiveKit may swap the MST on device-change/noise-mode-toggle without replacing
-  // the wrapper, and without this dep the analyser would stay on the dead MST.
   const mst = track?.mediaStreamTrack;
 
   useEffect(() => {
@@ -39,11 +43,11 @@ export function useTrackAudioLevel(
     const source = ctx.createMediaStreamSource(new MediaStream([mst]));
     const analyser = ctx.createAnalyser();
     analyser.fftSize = FFT_SIZE;
-    analyser.smoothingTimeConstant = 0.4;
     source.connect(analyser);
 
-    const data = new Uint8Array(analyser.fftSize);
-    let smoothed = 0;
+    const data = new Float32Array(analyser.fftSize);
+    let smoothedDb = -Infinity;
+    let lastTickMs = performance.now();
     let rafId: number | null = null;
     let cancelled = false;
 
@@ -53,15 +57,28 @@ export function useTrackAudioLevel(
         cancelled = true;
         return;
       }
-      analyser.getByteTimeDomainData(data);
-      let sumSq = 0;
+      analyser.getFloatTimeDomainData(data);
+
+      let peak = 0;
       for (let i = 0; i < data.length; i++) {
-        const n = (data[i] - 128) / 128;
-        sumSq += n * n;
+        const v = data[i];
+        const a = v < 0 ? -v : v;
+        if (a > peak) peak = a;
       }
-      const rms = Math.sqrt(sumSq / data.length);
-      smoothed = SMOOTHING * rms + (1 - SMOOTHING) * smoothed;
-      setLevel(smoothed);
+      const newDb = peak > 0 ? 20 * Math.log10(peak) : -Infinity;
+
+      const now = performance.now();
+      const dtSec = Math.max(0, (now - lastTickMs) / 1000);
+      lastTickMs = now;
+
+      // Peak-meter ballistics: instant attack, linear-dB decay.
+      if (newDb >= smoothedDb || !isFinite(smoothedDb)) {
+        smoothedDb = newDb;
+      } else {
+        smoothedDb = Math.max(newDb, smoothedDb - DECAY_DB_PER_SEC * dtSec);
+      }
+
+      setDb(smoothedDb);
       rafId = requestAnimationFrame(tick);
     };
     rafId = requestAnimationFrame(tick);
@@ -74,5 +91,5 @@ export function useTrackAudioLevel(
     };
   }, [track, mst]);
 
-  return level;
+  return db;
 }
