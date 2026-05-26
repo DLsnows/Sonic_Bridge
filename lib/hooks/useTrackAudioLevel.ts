@@ -49,6 +49,10 @@ export function useTrackAudioLevel(
 
     const tick = () => {
       if (cancelled) return;
+      if (mst.readyState !== "live") {
+        cancelled = true;
+        return;
+      }
       analyser.getByteTimeDomainData(data);
       let sumSq = 0;
       for (let i = 0; i < data.length; i++) {
