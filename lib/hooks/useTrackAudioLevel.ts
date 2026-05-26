@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { LocalAudioTrack, RemoteAudioTrack } from "livekit-client";
 
 const SMOOTHING = 0.3;
@@ -26,8 +26,6 @@ export function useTrackAudioLevel(
   track: LocalAudioTrack | RemoteAudioTrack | undefined | null,
 ): number {
   const [level, setLevel] = useState(0);
-  const mountedRef = useRef(true);
-  useEffect(() => () => { mountedRef.current = false; }, []);
 
   // Depend on both the livekit track wrapper AND the underlying MediaStreamTrack:
   // LiveKit may swap the MST on device-change/noise-mode-toggle without replacing
@@ -59,7 +57,7 @@ export function useTrackAudioLevel(
       }
       const rms = Math.sqrt(sumSq / data.length);
       smoothed = SMOOTHING * rms + (1 - SMOOTHING) * smoothed;
-      if (mountedRef.current) setLevel(smoothed);
+      setLevel(smoothed);
       rafId = requestAnimationFrame(tick);
     };
     rafId = requestAnimationFrame(tick);
