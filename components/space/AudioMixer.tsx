@@ -32,6 +32,26 @@ function dbToPercent(db: number): number {
   return ((clamped - METER_DB_FLOOR) / METER_DB_RANGE) * 100;
 }
 
+const TICK_MINUS_3_PERCENT = dbToPercent(-3);
+const TICK_0_PERCENT = dbToPercent(0);
+
+function MeterDangerTicks() {
+  return (
+    <>
+      <div
+        className="absolute top-0 h-full w-px bg-[#FFB800] pointer-events-none"
+        style={{ left: `${TICK_MINUS_3_PERCENT}%` }}
+        title="-3 dB"
+      />
+      <div
+        className="absolute top-0 h-full w-px bg-[#FF4444] pointer-events-none"
+        style={{ left: `${TICK_0_PERCENT}%` }}
+        title="0 dB"
+      />
+    </>
+  );
+}
+
 function micMeterDbColor(db: number): string {
   if (!isFinite(db) || db <= METER_DB_FLOOR) return "#00F0FF";
   if (db > -3) return "#FF4444";
@@ -169,6 +189,7 @@ export function AudioMixer() {
                   boxShadow: `0 0 6px ${liveMicColor}40`,
                 }}
               />
+              <MeterDangerTicks />
             </div>
             <input
               type="range"
@@ -324,7 +345,7 @@ function RemoteParticipantRow({
           {Math.round(vol * 100)}%
         </span>
       </div>
-      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden relative">
         <div
           className="h-full rounded-full transition-all duration-75"
           style={{
@@ -333,6 +354,7 @@ function RemoteParticipantRow({
             boxShadow: `0 0 6px ${meterColor}40`,
           }}
         />
+        <MeterDangerTicks />
       </div>
       <input
         type="range"
