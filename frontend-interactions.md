@@ -502,7 +502,7 @@ Replaces old `ParticipantGrid`. Two display modes: Grid and Spotlight.
 | **Receive Buffer** | Range slider | 8–2048ms, step 8ms. Affects all received audio |
 | "No other participants" | Display | When no remote audio |
 | Remote participant name + % | Display | |
-| Remote participant level bar | Visual bar | Colored fill proportional to current volume setting (acts as level indicator) |
+| Remote participant level bar | Real-time level meter | Color by audio level: blue→green→yellow→red. Driven by `useTrackAudioLevel` per remote audio track |
 | Remote participant Volume | Range slider (per person) | 0–200%, step 1% |
 
 ---
