@@ -3,7 +3,7 @@
 > Complete inventory of every interactive element across all pages.
 > Use this as a checklist when refactoring to ensure no functionality is lost.
 >
-> **Last updated:** 2026-05-23 (against branch `fix/notification-pipeline`)
+> **Last updated:** 2026-05-25 (branch `dev`)
 
 ---
 
@@ -339,20 +339,240 @@ No custom ID field — only name and description.
 
 ## 11. Creative Space (`/projects/[id]/space`)
 
-> **⚠️ TO BE REWRITTEN** — The Creative Space page is undergoing major restructuring.
-> The interaction inventory below may be outdated. Re-audit this page after the redesign.
+### Page Layout
 
-### Known current elements (pre-restructure):
-- TopBar with back navigation
-- LiveKit room connection (token fetch from `/api/projects/[id]/space/token`)
-- Control bar (floating): mic toggle, camera toggle, screen share, video watch pause, audio mixer, media settings, leave button
-- Device selectors for microphone and camera
-- Media quality settings modal (Opus bitrate, send/receive buffer, screen share fps/resolution/bitrate)
-- Chat panel with unread badge, message send
-- Participant grid (video tiles) and participant list (with status indicators)
-- VST/DAW audio bridge panel (connection status, reconnect, broadcast toggle, volume meters)
-- Audio mixer panel (per-channel volume sliders for local mic, DAW, remote participants)
-- Connection error screen with Retry button
+```
+┌──────────────┬──────────────────────────────┬──────────────┐
+│  DAW 面板    │       主区域 (Spotlight)       │ 成员列表     │
+│  (w-72)      │   - 视频网格 / 聚光灯模式      │              │
+│              │   - RoomAudioRenderer         │  [聊天按钮]  │
+├──────────────┴──────────────────────────────┴──────────────┤
+│              浮动控制栏 (底部居中)                            │
+└────────────────────────────────────────────────────────────┘
+```
+
+Page has 3 render states: Loading (spinner), Error (retry), Connected (full UI).
+
+### Connection Error Screen
+
+| Element | Type | Function |
+|---------|------|----------|
+| ⚠ icon + "Connection Failed" | Display | |
+| Error message | Display | |
+| **Retry** | Button | Abort current request, re-fetch LiveKit token |
+
+### DAW Audio Bridge Panel (left sidebar, fixed w-72)
+
+**Disconnected / Error state:**
+
+| Element | Type | Function |
+|---------|------|----------|
+| Status LED | Display | Green=Connected, Yellow=Connecting, Gray=Disconnected, Red=Error |
+| Plugin name + version | Display | |
+| Error message | Display (red bg) | `lastError` text |
+| **Reconnect** | Button (full width) | Retry VST WebSocket connection |
+| Port input | Number input | WebSocket port number |
+| **Connect** | Button | Save port to store, trigger reconnect |
+
+**Connected state:**
+
+| Element | Type | Function |
+|---------|------|----------|
+| **Level** meter (`VstVolumeMeter`) | Display | Real-time L/R/Peak levels (dBFS) |
+| **Audio** info | Display | Sample Rate (kHz), Channels |
+| **Broadcast to Room** | Checkbox | Toggle publishing DAW audio to LiveKit room |
+| Published status | Display | Green=Published, Yellow=Publishing |
+
+### Main Area — SpotlightView
+
+Replaces old `ParticipantGrid`. Two display modes: Grid and Spotlight.
+
+**Empty state (no tracks):**
+
+| Element | Type | Function |
+|---------|------|----------|
+| Bandwidth saving prompt | Display | When `videoWatchEnabled=false`: 🔋 + "Video paused" |
+| Waiting prompt | Display | Normal: ◈ + "Waiting for collaborators..." |
+
+**Grid mode (≤2 tracks or spotlight not active):**
+
+| Element | Type | Function |
+|---------|------|----------|
+| Track tile | `ParticipantTile` | Participant video / screen share |
+| **Double-click tile** | Gesture | Enter spotlight mode for that track (≥3 tracks only) |
+
+**Spotlight mode (≥3 tracks, spotlight active):**
+
+| Element | Type | Function |
+|---------|------|----------|
+| Main spotlight tile | `ParticipantTile` (large) | Focused track |
+| Identity label | Display (bottom-left overlay) | Participant name (+ "— Screen" if screen share) |
+| **Exit Spotlight** | Button (top-right overlay) | Return to grid mode |
+| Thumbnail strip | Clickable thumbnails | Click to switch spotlight focus |
+
+**Auto behavior:** Screen share starts → auto-spotlight that screen share. Screen share ends → auto-exit spotlight. Spotlight track disappears (participant leaves) → auto-exit.
+
+### Participant List (right sidebar, upper)
+
+| Element | Type | Function |
+|---------|------|----------|
+| **People** header + count | Display | |
+| Participant avatar | Display | Initial letter, green glow pulse when speaking |
+| Participant name + "You" tag | Display | Purple "You" badge for local user |
+| Status dots (4) | Display | Mic: Green=On/Red=Off, Cam: Green=On/Red=Off, Screen: Blue=On/Gray=Off, DAW: Purple=Active/Gray=Off (self only) |
+| Stats row | Display | Audio bitrate, video resolution+fps+bitrate, screen share resolution+fps+bitrate |
+| Footer legend | Display | Mic / Cam / Screen / DAW color key |
+
+### Chat Panel (right sidebar, lower)
+
+| Element | Type | Function |
+|---------|------|----------|
+| **💬 Chat button** | Toggle | Open/close chat panel. Blue unread count badge (99+) when closed and new messages arrive |
+| **✕** | Button | Close chat panel |
+| Message list | Scrollable (auto-scroll) | Own messages blue bg right-aligned, others gray bg left-aligned |
+| Sender + time | Display | Per message |
+| Message input | Text input | |
+| **Send** | Submit | Send LiveKit chat message. Disabled when empty or sending (shows "...") |
+
+### Floating Control Bar (bottom center, fixed)
+
+| # | Icon | Type | Function |
+|---|------|------|----------|
+| 1 | 🎤/🔇 | Mic toggle | On: start mic pipeline (echoCancellation + noiseSuppression/voiceIsolation) → publish track. Off: stop pipeline → unpublish. Green=On, Red=Off |
+| 2 | ▼ | Device selector | Open `DeviceSelector` popup (audioinput devices) |
+| 3 | 📹/📷 | Camera toggle | `setCameraEnabled(!isCameraEnabled)`. Green=On, Red=Off |
+| 4 | ▼ | Device selector | Open `DeviceSelector` popup (videoinput devices) |
+| 5 | 🖥 | Screen share toggle | Uses media-settings store config (resolution/fps). Blue=Sharing, Gray=Off |
+| 6 | 👁/👁‍🗨 | Video watch toggle | Pause/resume video subscription to save bandwidth. Gray=On, Amber=Bandwidth saving |
+| 7 | 🎚 | Mixer toggle | Open/close `AudioMixer` panel. Blue=Open, Gray=Closed |
+| 8 | ⚙ | Media settings toggle | Open/close `MediaSettingsPanel` modal. Blue=Open, Gray=Closed |
+| — | | Separator | |
+| 9 | Green/Red dot | Connection status | "Live" (green pulse) / "Off" (red) |
+| 10 | **Leave** | Button | `router.push(/projects/[id])` |
+
+### DeviceSelector Popup
+
+| Element | Type | Function |
+|---------|------|----------|
+| Header | Display | "Input Device" / "Camera" |
+| "Loading devices..." | Display | Enumerating |
+| Device list item | Button | Switch active device via `room.switchActiveDevice()` |
+| **Cancel** | Button | Close popup |
+
+### MediaSettingsPanel Modal
+
+**Microphone section:**
+
+| Element | Type | Range/Options |
+|---------|------|---------------|
+| **Opus Bitrate** | Range slider | 192–640 kbps, step 32 kbps |
+| **Send Buffer** | Range slider | 8–2048ms, step 8ms |
+| **Receive Buffer** | Range slider | 8–2048ms, step 8ms |
+| **Noise Reduction** | Toggle buttons (3) | Off (white) / Suppression (green) / Voice Iso (Chrome) (purple). Switching auto-restarts mic pipeline |
+
+**Camera section:**
+
+| Element | Type | Options |
+|---------|------|---------|
+| **Frame Rate** | Toggle buttons (3) | 15 / 30 / 60 fps |
+| **Resolution** | Toggle buttons (2) | 720p / 1080p |
+| **Bitrate** | Range slider | 0.5–5 Mbps, step 250 kbps |
+
+**Screen Share section:**
+
+| Element | Type | Options |
+|---------|------|---------|
+| **Frame Rate** | Toggle buttons (3) | 15 / 30 / 60 fps |
+| **Resolution** | Toggle buttons (3) | 720p / 1080p / Original |
+| **Bitrate** | Range slider | 0.5–5 Mbps, step 250 kbps |
+
+### AudioMixer Panel (floating, top-center)
+
+**Inputs section:**
+
+| Element | Type | Function |
+|---------|------|----------|
+| Header **✕** | Button | Close panel |
+| **Local Microphone** level bar | Display | Color by level: blue→green→yellow→red |
+| **Local Microphone** Gain | Range slider | 0–200%, step 1% |
+| **DAW Audio (VST)** meter | `VstVolumeMeter` | Only shown when connected + published |
+| **DAW Audio (VST)** Volume | Range slider | 0–200%, step 1% |
+| **Opus Bitrate** (LiveKit encoder) | Range slider | 192–640 kbps, step 32 kbps |
+
+**Outputs section:**
+
+| Element | Type | Function |
+|---------|------|----------|
+| "No other participants" | Display | When no remote audio |
+| Remote participant Volume | Range slider (per person) | 0–200%, step 1% |
+
+---
+
+## 12. Notification System (cross-cutting)
+
+> No notification bell or dropdown. Uses sidebar polling + per-project/per-tab badges.
+
+### Architecture
+
+```
+GET  /api/notifications/unread-counts  →  store.unreadByProject
+POST /api/notifications/view           →  update lastViewedAt (server)
+```
+
+### UnreadEntry Structure
+```
+{ total: number; threads: number; files: number; events: number }
+```
+- `total` = threads + files + events (used by sidebar + project cards)
+- Sub-counts used by individual tab badges
+
+### Dismissed Mechanism (localStorage)
+- Key: `"notif-dismissed"`, persists `{ [projectId]: UnreadEntry }`
+- Server count minus dismissed = displayed count (clamped to ≥0)
+- Survives page refresh and browser restart
+
+### Notification Types
+
+| type | Source | Persistent? |
+|------|--------|-------------|
+| `new_post` | New thread in discussionPosts | Yes (notifications table) |
+| `new_reply` | New reply in discussionPosts | No (source-table query) |
+| `reply_to_user` | Someone replied to your post | Yes (notifications table) |
+| `new_event` | New schedule event | No (source-table query) |
+| `new_file` | New file upload | No (source-table query) |
+
+### Component Positions
+
+**Sidebar — project item badge:**
+
+| Element | Type | Function |
+|---------|------|----------|
+| Red badge on project link | Display | Shows `unreadByProject[projectId].total`. Polls every 30s via `fetchUnreadCounts()` |
+
+**Dashboard — ProjectCardWrapper:**
+
+| Element | Type | Function |
+|---------|------|----------|
+| Red badge on project card | Display | Shows `unreadByProject[projectId].total` |
+
+**Project Overview — NavCardLink (4 nav cards):**
+
+| Element | Type | Function |
+|---------|------|----------|
+| Discussion card badge | Display | Shows `unreadByProject[projectId].threads`. Click clears via `recordTabView(projectId, "discussion")` |
+| Files card badge | Display | Shows `unreadByProject[projectId].files`. Click clears via `recordTabView(projectId, "files")` |
+| Schedule card badge | Display | Shows `unreadByProject[projectId].events`. Click clears via `recordTabView(projectId, "schedule")` |
+| Creative Space card | No badge | |
+
+### User Interactions
+
+| # | Interaction | Trigger | Result |
+|---|-------------|---------|--------|
+| 1 | Enter project | Sidebar project / Dashboard card click | `recordProjectView`: dismiss ALL notifications for that project |
+| 2 | Enter Discussion tab | NavCardLink (Discussion) click | `recordTabView`: dismiss only threads badge |
+| 3 | Enter Files tab | NavCardLink (Files) click | `recordTabView`: dismiss only files badge |
+| 4 | Enter Schedule tab | NavCardLink (Schedule) click | `recordTabView`: dismiss only events badge |
+| 5 | Poll refresh | Sidebar 30s interval | `fetchUnreadCounts`: refresh all unread counts, subtract dismissed |
 
 ---
 
@@ -395,12 +615,12 @@ No custom ID field — only name and description.
 - Own account (double confirm → sign out)
 
 ### Notifications (cross-cutting)
-- Bell icon with unread badge (polls every 30s)
-- Dropdown list with type icons and timestamps
-- Per-item mark-read or navigate
-- Mark all read
-- Per-project unread badges on sidebar and project cards
-- Clear project unread on view
+- Sidebar 30s polling for unread counts (no bell/dropdown)
+- Per-project unread badges on sidebar and dashboard cards (total)
+- Per-tab badges on nav cards (threads/files/events) via NavCardLink
+- localStorage dismissed mechanism persists across sessions
+- `recordProjectView`: clear all notifications for a project on enter
+- `recordTabView`: clear only specific tab notifications on tab enter
 
 ### Project Status (cross-cutting)
 - 5 statuses: Not Started, In Progress, Paused, Pending Release, Archived
@@ -413,6 +633,5 @@ No custom ID field — only name and description.
 - Folder tree expand/collapse
 - Thread expand/collapse
 - Inactive projects section expand/collapse
-- Notification dropdown open/close
 - API key show/hide
 - Audio playback (play/pause, seek, volume)
