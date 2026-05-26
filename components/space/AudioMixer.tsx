@@ -8,6 +8,8 @@ import { getMicPipeline } from "@/lib/mic-pipeline";
 import { Track } from "livekit-client";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { VstVolumeMeter } from "./VstVolumeMeter";
+import { useTrackAudioLevel } from "@/lib/hooks/useTrackAudioLevel";
+import type { LocalAudioTrack } from "livekit-client";
 
 const sliderClass =
   "w-full h-1.5 appearance-none bg-white/10 rounded-full outline-none cursor-pointer " +
@@ -40,7 +42,6 @@ export function AudioMixer() {
   const meterPeak = useVstStore((s) => s.meterPeak);
   const micVolume = useVstStore((s) => s.micVolume);
   const setMicVolume = useVstStore((s) => s.setMicVolume);
-  const micMeterLevel = useVstStore((s) => s.micMeterLevel);
   const noiseMode = useMediaSettingsStore((s) => s.audioQuality.noiseMode);
   const setNoiseMode = useMediaSettingsStore((s) => s.setNoiseMode);
   const dawBitrate = useMediaSettingsStore((s) => s.dawAudio.bitrate);
@@ -50,6 +51,10 @@ export function AudioMixer() {
   const receiveBufferMs = useMediaSettingsStore((s) => s.audioQuality.receiveBufferMs);
   const setReceiveBufferMs = useMediaSettingsStore((s) => s.setReceiveBufferMs);
   const { localParticipant, isMicrophoneEnabled } = useLocalParticipant();
+
+  const micPub = localParticipant?.getTrackPublication(Track.Source.Microphone);
+  const micTrack = micPub?.audioTrack as LocalAudioTrack | undefined;
+  const liveMicLevel = useTrackAudioLevel(micTrack);
 
   const restartingRef = useRef(false);
 
@@ -144,9 +149,9 @@ export function AudioMixer() {
               <div
                 className="h-full rounded-full transition-all duration-75"
                 style={{
-                  width: `${micMeterLevel * 100}%`,
-                  backgroundColor: micMeterLevelColor(micMeterLevel),
-                  boxShadow: `0 0 6px ${micMeterLevelColor(micMeterLevel)}40`,
+                  width: `${liveMicLevel * 100}%`,
+                  backgroundColor: micMeterLevelColor(liveMicLevel),
+                  boxShadow: `0 0 6px ${micMeterLevelColor(liveMicLevel)}40`,
                 }}
               />
             </div>
