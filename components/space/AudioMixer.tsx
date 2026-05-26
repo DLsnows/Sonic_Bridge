@@ -6,7 +6,9 @@ import { useVstStore } from "@/lib/store/vst";
 import { useMediaSettingsStore } from "@/lib/store/media-settings";
 import { getMicPipeline } from "@/lib/mic-pipeline";
 import { Track } from "livekit-client";
+import type { RemoteAudioTrack, RemoteParticipant } from "livekit-client";
 import { useState, useCallback, useEffect, useRef } from "react";
+import { useTrackAudioLevel } from "@/lib/hooks/useTrackAudioLevel";
 import { VstVolumeMeter } from "./VstVolumeMeter";
 import { useTrackAudioLevel } from "@/lib/hooks/useTrackAudioLevel";
 import type { LocalAudioTrack } from "livekit-client";
@@ -268,48 +270,68 @@ export function AudioMixer() {
           {remoteParticipants.map((participant) => {
             if (participant.audioTrackPublications.size === 0) return null;
             const vol = volumes[participant.identity] ?? 1;
-
             return (
-              <div key={participant.identity} className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-[#F0F0F0] font-['Share_Tech_Mono',monospace] truncate max-w-[160px]">
-                    {participant.name || participant.identity}
-                  </span>
-                  <span className="text-[10px] text-[#A0A0B0] tabular-nums">
-                    {Math.round(vol * 100)}%
-                  </span>
-                </div>
-                <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-75"
-                    style={{
-                      width: `${vol * 50}%`,
-                      backgroundColor: "#00F0FF",
-                    }}
-                  />
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="2"
-                  step="0.01"
-                  value={vol}
-                  onChange={(e) =>
-                    handleRemoteVolumeChange(
-                      participant.identity,
-                      parseFloat(e.target.value),
-                    )
-                  }
-                  className={sliderClass}
-                  style={{
-                    background: `linear-gradient(to right, rgba(0,240,255,0.25) ${vol * 50}%, rgba(255,255,255,0.1) ${vol * 50}%)`,
-                  }}
-                />
-              </div>
+              <RemoteParticipantRow
+                key={participant.identity}
+                participant={participant}
+                vol={vol}
+                onVolumeChange={handleRemoteVolumeChange}
+              />
             );
           })}
         </div>
       </div>
+    </div>
+  );
+}
+
+function RemoteParticipantRow({
+  participant,
+  vol,
+  onVolumeChange,
+}: {
+  participant: RemoteParticipant;
+  vol: number;
+  onVolumeChange: (identity: string, value: number) => void;
+}) {
+  const pubs = Array.from(participant.audioTrackPublications.values());
+  const micPub = pubs.find((p) => p.source === Track.Source.Microphone) ?? pubs[0];
+  const audioTrack = micPub?.track as RemoteAudioTrack | undefined;
+  const level = useTrackAudioLevel(audioTrack);
+  const meterColor = micMeterLevelColor(level);
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] text-[#F0F0F0] font-['Share_Tech_Mono',monospace] truncate max-w-[160px]">
+          {participant.name || participant.identity}
+        </span>
+        <span className="text-[10px] text-[#A0A0B0] tabular-nums">
+          {Math.round(vol * 100)}%
+        </span>
+      </div>
+      <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-75"
+          style={{
+            width: `${level * 100}%`,
+            backgroundColor: meterColor,
+            boxShadow: `0 0 6px ${meterColor}40`,
+          }}
+        />
+      </div>
+      <input
+        type="range"
+        min="0"
+        max="2"
+        step="0.01"
+        value={vol}
+        onChange={(e) => onVolumeChange(participant.identity, parseFloat(e.target.value))}
+        className={sliderClass}
+        style={{
+          background: `linear-gradient(to right, rgba(0,240,255,0.25) ${vol * 50}%, rgba(255,255,255,0.1) ${vol * 50}%)`,
+        }}
+      />
     </div>
   );
 }
