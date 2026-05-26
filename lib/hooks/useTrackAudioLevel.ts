@@ -12,15 +12,9 @@ export function useTrackAudioLevel(
   const [level, setLevel] = useState(0);
 
   useEffect(() => {
-    if (!track) {
-      setLevel(0);
-      return;
-    }
+    if (!track) return;
     const mst = track.mediaStreamTrack;
-    if (!mst || mst.readyState !== "live") {
-      setLevel(0);
-      return;
-    }
+    if (!mst || mst.readyState !== "live") return;
 
     const ctx = new AudioContext();
     const source = ctx.createMediaStreamSource(new MediaStream([mst]));

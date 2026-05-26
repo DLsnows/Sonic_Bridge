@@ -6,12 +6,10 @@ import { useVstStore } from "@/lib/store/vst";
 import { useMediaSettingsStore } from "@/lib/store/media-settings";
 import { getMicPipeline } from "@/lib/mic-pipeline";
 import { Track } from "livekit-client";
-import type { RemoteAudioTrack, RemoteParticipant } from "livekit-client";
+import type { LocalAudioTrack, RemoteAudioTrack, RemoteParticipant } from "livekit-client";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useTrackAudioLevel } from "@/lib/hooks/useTrackAudioLevel";
 import { VstVolumeMeter } from "./VstVolumeMeter";
-import { useTrackAudioLevel } from "@/lib/hooks/useTrackAudioLevel";
-import type { LocalAudioTrack } from "livekit-client";
 
 const sliderClass =
   "w-full h-1.5 appearance-none bg-white/10 rounded-full outline-none cursor-pointer " +
