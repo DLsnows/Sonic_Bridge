@@ -47,6 +47,7 @@ const iconColors: Record<string, string> = {
 
 export function FileList({ files, loading, projectId, onDelete, onDownload, onOpenPlayer }: FileListProps) {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [draggingFileId, setDraggingFileId] = useState<string | null>(null);
   const [playingFileId, setPlayingFileId] = useState<string | null>(null);
   const [audioLoading, setAudioLoading] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
@@ -239,7 +240,19 @@ export function FileList({ files, loading, projectId, onDelete, onDownload, onOp
             const icon = fileIcon(file.mimeType);
             const colorClass = iconColors[icon] ?? "text-[#A0A0B0]";
             return (
-              <tr key={file.id} className="border-b border-white/5 hover:bg-white/[0.03] transition-colors">
+              <tr
+                key={file.id}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData("application/x-sb-file", file.id);
+                  e.dataTransfer.effectAllowed = "move";
+                  setDraggingFileId(file.id);
+                }}
+                onDragEnd={() => setDraggingFileId(null)}
+                className={`border-b border-white/5 hover:bg-white/[0.03] transition-colors cursor-grab ${
+                  draggingFileId === file.id ? "opacity-50" : ""
+                }`}
+              >
                 <td className="py-2.5 px-3">
                   <div className="flex items-center gap-2">
                     <span className={`font-['Share_Tech_Mono',monospace] text-[10px] ${colorClass}`}>{icon}</span>
