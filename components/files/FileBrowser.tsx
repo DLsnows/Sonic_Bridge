@@ -90,7 +90,7 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
 
   const handleMoveFile = useCallback(
     async (fileId: string, targetFolderId: string | null) => {
-      const previous = files;
+      const previous = [...files];
       const moved = previous.find((f) => f.id === fileId);
       if (!moved) return;
       if ((moved.folderId ?? null) === targetFolderId) return;

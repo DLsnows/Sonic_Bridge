@@ -45,11 +45,11 @@ function BreadcrumbSegment({
     if (isDropTarget) setIsDropTarget(false);
   };
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
     setIsDropTarget(false);
     if (!onMoveFile) return;
     const fileId = e.dataTransfer.getData(SB_FILE_MIME);
     if (!fileId) return;
-    e.preventDefault();
     if (id === currentFolderId) return;
     onMoveFile(fileId, id);
   };

@@ -65,11 +65,11 @@ export function FolderTree({ folders, currentFolderId, onSelect, onRename, onDel
       if (isDropTarget) setIsDropTarget(false);
     };
     const handleDrop = (e: React.DragEvent<HTMLButtonElement>) => {
+      e.preventDefault();
       setIsDropTarget(false);
       if (!onMoveFile) return;
       const fileId = e.dataTransfer.getData(SB_FILE_MIME);
       if (!fileId) return;
-      e.preventDefault();
       if (node.id === currentFolderId) return;
       onMoveFile(fileId, node.id);
     };
