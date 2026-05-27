@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { files } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { authenticate } from "@/lib/api-auth";
 import { deleteFile, normalizeKey } from "@/lib/storage";
+import { createHash } from "crypto";
 
 export const maxDuration = 300;
 
@@ -77,9 +78,39 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   const { id, fileId } = await params;
   const authResult = await authenticate(request, id);
   if (authResult instanceof Response) return authResult;
-  const [file] = await db.select().from(files).where(and(eq(files.id, fileId), eq(files.projectId, id))).limit(1);
+
+  const challengeHeader = request.headers.get("x-delete-challenge");
+  if (!challengeHeader) {
+    return NextResponse.json({ error: "challenge_required" }, { status: 401 });
+  }
+
+  const hashed = createHash("sha256").update(challengeHeader).digest("hex");
+
+  // Atomically claim the challenge. The WHERE clause guarantees only one
+  // concurrent request can mark it used and receive a row back.
+  const claim = await db.execute<{ id: string }>(
+    sql`UPDATE delete_challenges
+        SET used_at = now()
+        WHERE challenge_hash = ${hashed}
+          AND user_id = ${authResult.userId}
+          AND used_at IS NULL
+          AND expires_at > now()
+        RETURNING id`,
+  );
+
+  if (claim.rows.length === 0) {
+    return NextResponse.json({ error: "challenge_invalid" }, { status: 401 });
+  }
+
+  const [file] = await db
+    .select()
+    .from(files)
+    .where(and(eq(files.id, fileId), eq(files.projectId, id)))
+    .limit(1);
   if (!file) return NextResponse.json({ error: "File not found" }, { status: 404 });
+
   await deleteFile(file.storageKey);
   await db.delete(files).where(eq(files.id, fileId));
   return NextResponse.json({ success: true });
 }
+
