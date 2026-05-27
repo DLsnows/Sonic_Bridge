@@ -32,6 +32,11 @@ vi.mock("@/lib/storage", () => ({
   normalizeKey: vi.fn((k: string) => k),
 }));
 
+const state2 = vi.hoisted(() => ({
+  fileExists: true,
+  executeCalls: 0,
+}));
+
 vi.mock("@/lib/db", () => {
   function makeSelectChain(rows: unknown[]) {
     const chain = {
@@ -49,18 +54,23 @@ vi.mock("@/lib/db", () => {
         const idx = state.selectCallIndex++;
         if (idx === 0) return makeSelectChain([{ id: state.PROJECT_ID }]);
         if (idx === 1) return makeSelectChain([{ role: "member" }]);
-        return makeSelectChain([
-          {
-            id: state.FILE_ID,
-            projectId: state.PROJECT_ID,
-            storageKey: "11111111/file.bin",
-            name: "f",
-            size: 1,
-            mimeType: "application/octet-stream",
-          },
-        ]);
+        return makeSelectChain(
+          state2.fileExists
+            ? [
+                {
+                  id: state.FILE_ID,
+                  projectId: state.PROJECT_ID,
+                  storageKey: "11111111/file.bin",
+                  name: "f",
+                  size: 1,
+                  mimeType: "application/octet-stream",
+                },
+              ]
+            : [],
+        );
       }),
       execute: vi.fn(async () => {
+        state2.executeCalls++;
         if (state.claimAvailable) {
           state.claimAvailable = false;
           return { rows: [{ id: "claim-id" }] };
@@ -79,6 +89,8 @@ beforeEach(() => {
   state.sessionMock = {
     user: { id: USER_ID, username: "tester" },
   };
+  state2.fileExists = true;
+  state2.executeCalls = 0;
 });
 
 function makeReq(headers: Record<string, string> = {}): NextRequest {
@@ -100,6 +112,36 @@ describe("File DELETE challenge enforcement", () => {
     expect(res.status).toBe(401);
     const body = await res.json();
     expect(body.error).toBe("challenge_required");
+  });
+
+  it("returns 404 for an unknown fileId without consuming the challenge", async () => {
+    state.claimAvailable = true;
+    state2.fileExists = false;
+
+    const { DELETE } = await import(
+      "@/app/api/projects/[id]/files/[fileId]/route"
+    );
+
+    const first = await DELETE(
+      makeReq({ "X-Delete-Challenge": CHALLENGE_RAW }),
+      { params: Promise.resolve({ id: PROJECT_ID, fileId: FILE_ID }) },
+    );
+    expect(first.status).toBe(404);
+    // The atomic claim UPDATE must NOT have run on the not-found path.
+    expect(state2.executeCalls).toBe(0);
+    // And the challenge must remain usable.
+    expect(state.claimAvailable).toBe(true);
+
+    // Second attempt with a valid fileId reuses the SAME challenge and succeeds.
+    state.selectCallIndex = 0;
+    state2.fileExists = true;
+
+    const second = await DELETE(
+      makeReq({ "X-Delete-Challenge": CHALLENGE_RAW }),
+      { params: Promise.resolve({ id: PROJECT_ID, fileId: FILE_ID }) },
+    );
+    expect(second.status).toBe(200);
+    expect(state2.executeCalls).toBe(1);
   });
 
   it("returns 200 on first use of a valid challenge and 401 challenge_invalid on reuse", async () => {

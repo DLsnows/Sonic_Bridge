@@ -79,6 +79,16 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   const authResult = await authenticate(request, id);
   if (authResult instanceof Response) return authResult;
 
+  // Look up the file FIRST so a missing/foreign file returns 404 without
+  // consuming the user's delete challenge. Otherwise a typo'd fileId would
+  // burn the one-shot claim and force the user to re-verify their password.
+  const [file] = await db
+    .select()
+    .from(files)
+    .where(and(eq(files.id, fileId), eq(files.projectId, id)))
+    .limit(1);
+  if (!file) return NextResponse.json({ error: "File not found" }, { status: 404 });
+
   const challengeHeader = request.headers.get("x-delete-challenge");
   if (!challengeHeader) {
     return NextResponse.json({ error: "challenge_required" }, { status: 401 });
@@ -101,13 +111,6 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   if (claim.rows.length === 0) {
     return NextResponse.json({ error: "challenge_invalid" }, { status: 401 });
   }
-
-  const [file] = await db
-    .select()
-    .from(files)
-    .where(and(eq(files.id, fileId), eq(files.projectId, id)))
-    .limit(1);
-  if (!file) return NextResponse.json({ error: "File not found" }, { status: 404 });
 
   await deleteFile(file.storageKey);
   await db.delete(files).where(eq(files.id, fileId));
