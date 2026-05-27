@@ -62,10 +62,10 @@ export default async function SettingsPage({
 
         <GlassPanel>
           <h3 className="font-['Share_Tech_Mono',monospace] text-sm text-[#00FF41] mb-4">
-            API Access
+            CLI Access
           </h3>
           <p className="text-sm text-[#A0A0B0] mb-4">
-            Generate an API token for automated file management via AI agents or scripts.
+            Generate a token to use the <strong>sonicbridge</strong> CLI from AI agents or scripts. See <code>docs/cli/install-for-agents.md</code> for setup.
           </p>
           <GenerateToken />
         </GlassPanel>
