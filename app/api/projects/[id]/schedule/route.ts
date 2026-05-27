@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { scheduleEvents, projectMembers, users } from "@/lib/db/schema";
+import { scheduleEvents, users } from "@/lib/db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { z } from "zod";
 import { resolveProjectId } from "@/lib/project-utils";
+import { authenticate } from "@/lib/api-auth";
 
 const dateParamSchema = z.string().refine((s) => !isNaN(Date.parse(s)), "Invalid date");
 
@@ -20,28 +20,13 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { id: rawId } = await params;
+  const authResult = await authenticate(request, rawId);
+  if (authResult instanceof Response) return authResult;
 
-  const { id } = await params;
-  const projectId = await resolveProjectId(id);
+  const projectId = await resolveProjectId(rawId);
   if (!projectId) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
-  }
-  const userId = session.user.id as string;
-
-  const [membership] = await db
-    .select()
-    .from(projectMembers)
-    .where(
-      and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)),
-    )
-    .limit(1);
-
-  if (!membership) {
-    return NextResponse.json({ error: "Not a member" }, { status: 403 });
   }
 
   const url = new URL(request.url);
@@ -84,36 +69,22 @@ export async function GET(
     .where(and(...conditions))
     .orderBy(scheduleEvents.startTime);
 
-  return NextResponse.json({ events, myRole: membership.role });
+  return NextResponse.json({ events, myRole: authResult.membership.role });
 }
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { id: rawId } = await params;
+  const authResult = await authenticate(request, rawId);
+  if (authResult instanceof Response) return authResult;
 
-  const { id } = await params;
-  const projectId = await resolveProjectId(id);
+  const projectId = await resolveProjectId(rawId);
   if (!projectId) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
-  const userId = session.user.id as string;
-
-  const [membership] = await db
-    .select()
-    .from(projectMembers)
-    .where(
-      and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)),
-    )
-    .limit(1);
-
-  if (!membership) {
-    return NextResponse.json({ error: "Not a member" }, { status: 403 });
-  }
+  const userId = authResult.userId;
 
   let body: unknown;
   try {

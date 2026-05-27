@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { discussionPosts, projectMembers, users } from "@/lib/db/schema";
+import { discussionPosts, users } from "@/lib/db/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { resolveProjectId } from "@/lib/project-utils";
+import { authenticate } from "@/lib/api-auth";
 
 const editPostSchema = z.object({
   content: z.string().min(1).max(10000),
@@ -14,32 +14,15 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; postId: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { id: rawId, postId } = await params;
+  const authResult = await authenticate(request, rawId);
+  if (authResult instanceof Response) return authResult;
 
-  const { id, postId } = await params;
-  const projectId = await resolveProjectId(id);
+  const projectId = await resolveProjectId(rawId);
   if (!projectId) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
-  const userId = session.user.id as string;
-
-  const [membership] = await db
-    .select()
-    .from(projectMembers)
-    .where(
-      and(
-        eq(projectMembers.projectId, projectId),
-        eq(projectMembers.userId, userId),
-      ),
-    )
-    .limit(1);
-
-  if (!membership) {
-    return NextResponse.json({ error: "Not a member" }, { status: 403 });
-  }
+  const userId = authResult.userId;
 
   const [post] = await db
     .select()
@@ -69,11 +52,14 @@ export async function PATCH(
     );
   }
 
+  const isAiGenerated = post.isAiGenerated || authResult.isToken;
+
   const [updated] = await db
     .update(discussionPosts)
     .set({
       content: parsed.data.content,
       isEdited: true,
+      isAiGenerated,
       updatedAt: new Date(),
     })
     .where(eq(discussionPosts.id, postId))
@@ -89,6 +75,7 @@ export async function PATCH(
       content: discussionPosts.content,
       parentId: discussionPosts.parentId,
       isEdited: discussionPosts.isEdited,
+      isAiGenerated: discussionPosts.isAiGenerated,
       createdAt: discussionPosts.createdAt,
       updatedAt: discussionPosts.updatedAt,
     })
@@ -104,32 +91,15 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; postId: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { id: rawId, postId } = await params;
+  const authResult = await authenticate(request, rawId);
+  if (authResult instanceof Response) return authResult;
 
-  const { id, postId } = await params;
-  const projectId = await resolveProjectId(id);
+  const projectId = await resolveProjectId(rawId);
   if (!projectId) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
-  const userId = session.user.id as string;
-
-  const [membership] = await db
-    .select()
-    .from(projectMembers)
-    .where(
-      and(
-        eq(projectMembers.projectId, projectId),
-        eq(projectMembers.userId, userId),
-      ),
-    )
-    .limit(1);
-
-  if (!membership) {
-    return NextResponse.json({ error: "Not a member" }, { status: 403 });
-  }
+  const userId = authResult.userId;
 
   const [post] = await db
     .select()
@@ -147,7 +117,7 @@ export async function DELETE(
   }
 
   const isOwner = post.userId === userId;
-  const isAdmin = membership.role === "admin";
+  const isAdmin = authResult.membership.role === "admin";
 
   if (!isOwner && !isAdmin) {
     return NextResponse.json(
