@@ -65,12 +65,19 @@ export class Progress {
   finish(message?: string): void {
     if (this.done) return;
     this.done = true;
-    if (!this.enabled) return;
     if (this.total && this.transferred < this.total) {
       this.transferred = this.total;
     }
-    this.render();
-    if (message) this.stream.write(`\r${message.padEnd(60, " ")}\n`);
-    else this.stream.write("\n");
+    if (this.enabled) {
+      // Interactive: overwrite the in-place progress line with the final
+      // state, then emit the completion message on its own line.
+      this.render();
+      if (message) this.stream.write(`\r${message.padEnd(60, " ")}\n`);
+      else this.stream.write("\n");
+      return;
+    }
+    // Non-TTY (CI, pipes, redirected streams): we never emitted intermediate
+    // progress lines, but the caller's completion message must still surface.
+    if (message) this.stream.write(`${message}\n`);
   }
 }

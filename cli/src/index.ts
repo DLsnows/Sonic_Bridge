@@ -1,6 +1,9 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
+import { realpathSync } from "node:fs";
+import path from "node:path";
 
 import {
   isFirstRun,
@@ -181,19 +184,20 @@ export async function main(argv: string[] = process.argv): Promise<void> {
 }
 
 // Invoke only when run as a script (not when imported by tests).
+// `import.meta.url` is an absolute file:// URL, but `process.argv[1]` can be
+// relative (e.g. `./dist/index.js`) or a symlink (e.g. under `npm link`).
+// Resolve both sides to real, absolute paths before comparing — otherwise the
+// CLI silently exits with code 0 and produces no output.
 const invokedAsScript = (() => {
   try {
     if (!process.argv[1]) return false;
-    // import.meta.url is a file:// URL; compare against argv[1] path.
-    const url = new URL(import.meta.url);
-    const filePath = decodeURIComponent(url.pathname);
-    const normalized =
-      process.platform === "win32" && filePath.startsWith("/")
-        ? filePath.slice(1)
-        : filePath;
-    return process.argv[1].replace(/\\/g, "/") === normalized.replace(/\\/g, "/");
+    const modulePath = realpathSync(fileURLToPath(import.meta.url));
+    const invokedPath = realpathSync(path.resolve(process.argv[1]));
+    return modulePath === invokedPath;
   } catch {
-    return true;
+    // If either path can't be resolved (e.g. ENOENT on a stale argv[1]),
+    // don't run main — let the importer drive.
+    return false;
   }
 })();
 

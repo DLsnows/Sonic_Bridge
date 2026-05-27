@@ -55,6 +55,12 @@ export async function loadConfig(): Promise<CliConfig | null> {
   } catch (err) {
     const e = err as NodeJS.ErrnoException;
     if (e.code === "ENOENT") return null;
+    // Corrupt JSON or unreadable file — surface a warning so the user knows
+    // their settings aren't being honored, then fall back to a fresh config.
+    const msg = e.message ?? String(err);
+    process.stderr.write(
+      `sonicbridge: warning — could not parse config at ${p}: ${msg}\n`,
+    );
     return null;
   }
 }

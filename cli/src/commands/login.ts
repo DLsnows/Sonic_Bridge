@@ -60,10 +60,15 @@ export async function runLogin(flags: LoginFlags): Promise<void> {
       baseUrl,
       token,
     });
+    // When the user logs in to a *different* server, any stored activeProject
+    // belongs to the old server and would cause /api/projects/<stale-id>/...
+    // requests to fail (or worse, hit an unrelated project on the new host).
+    // Carry it over only when the baseUrl is unchanged.
     const cfg: CliConfig = {
-      ...existing,
       baseUrl,
       token,
+      activeProject:
+        existing.baseUrl === baseUrl ? existing.activeProject : undefined,
     };
     await saveConfig(cfg);
     console.log(
