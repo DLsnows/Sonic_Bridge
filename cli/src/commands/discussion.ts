@@ -310,6 +310,7 @@ export async function runDiscussionReply(
     if (err instanceof ApiError && err.status === 404) {
       console.error(pc.red(`Parent post ${parentPostId} not found.`));
       process.exit(1);
+      return;
     }
     console.error(pc.red(formatApiError(err)));
     process.exit(1);

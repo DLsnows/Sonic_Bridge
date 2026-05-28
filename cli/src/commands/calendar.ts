@@ -279,10 +279,12 @@ export async function runCalendarEdit(
         ),
       );
       process.exit(1);
+      return;
     }
     if (err instanceof ApiError && err.status === 404) {
       console.error(pc.red(`Event ${eventId} not found.`));
       process.exit(1);
+      return;
     }
     console.error(pc.red(formatApiError(err)));
     process.exit(1);
@@ -309,10 +311,12 @@ export async function runCalendarRm(
         ),
       );
       process.exit(1);
+      return;
     }
     if (err instanceof ApiError && err.status === 404) {
       console.error(pc.red(`Event ${eventId} not found.`));
       process.exit(1);
+      return;
     }
     console.error(pc.red(formatApiError(err)));
     process.exit(1);
