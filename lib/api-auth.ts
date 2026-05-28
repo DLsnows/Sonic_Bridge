@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { users, projectMembers } from "@/lib/db/schema";
@@ -29,10 +30,10 @@ export interface UserAuthResult {
 export async function authenticate(
   request: Request,
   projectIdOrCustomId: string,
-): Promise<AuthResult | Response> {
+): Promise<AuthResult | NextResponse> {
   const projectId = await resolveProjectId(projectIdOrCustomId);
   if (!projectId) {
-    return Response.json({ error: "Project not found" }, { status: 404 });
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
   const authHeader = request.headers.get("authorization");
@@ -48,7 +49,7 @@ export async function authenticate(
       .limit(1);
 
     if (!user) {
-      return Response.json({ error: "Invalid API token" }, { status: 401 });
+      return NextResponse.json({ error: "Invalid API token" }, { status: 401 });
     }
 
     const [membership] = await db
@@ -63,7 +64,7 @@ export async function authenticate(
       .limit(1);
 
     if (!membership) {
-      return Response.json(
+      return NextResponse.json(
         { error: "Not a member of this project" },
         { status: 403 },
       );
@@ -79,7 +80,7 @@ export async function authenticate(
 
   const session = await auth();
   if (!session?.user) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const userId = session.user.id;
@@ -96,7 +97,7 @@ export async function authenticate(
     .limit(1);
 
   if (!membership) {
-    return Response.json({ error: "Not a member" }, { status: 403 });
+    return NextResponse.json({ error: "Not a member" }, { status: 403 });
   }
 
   return {
@@ -113,7 +114,7 @@ export async function authenticate(
  */
 export async function authenticateUser(
   request: Request,
-): Promise<UserAuthResult | Response> {
+): Promise<UserAuthResult | NextResponse> {
   const authHeader = request.headers.get("authorization");
 
   if (authHeader?.startsWith("Bearer sb_")) {
@@ -127,7 +128,7 @@ export async function authenticateUser(
       .limit(1);
 
     if (!user) {
-      return Response.json({ error: "Invalid API token" }, { status: 401 });
+      return NextResponse.json({ error: "Invalid API token" }, { status: 401 });
     }
 
     return {
@@ -140,7 +141,7 @@ export async function authenticateUser(
 
   const session = await auth();
   if (!session?.user) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const userId = session.user.id;
@@ -153,7 +154,7 @@ export async function authenticateUser(
     .limit(1);
 
   if (!user) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   return {

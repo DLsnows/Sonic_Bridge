@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { users, deleteChallenges } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, lt, or, isNotNull } from "drizzle-orm";
 import { compare } from "bcryptjs";
 import { randomBytes, createHash } from "crypto";
 import { z } from "zod";
@@ -48,12 +48,16 @@ function resetRate(userId: string) {
   rateMap.delete(userId);
 }
 
-// Export for tests
-export const __test = {
-  rateMap,
-  RATE_LIMIT_WINDOW_MS,
-  RATE_LIMIT_MAX_FAILS,
-};
+// Export for tests — gated so production builds cannot reach the rate-map even
+// if this module is imported by accident.
+export const __test =
+  process.env.NODE_ENV === "test"
+    ? {
+        rateMap,
+        RATE_LIMIT_WINDOW_MS,
+        RATE_LIMIT_MAX_FAILS,
+      }
+    : undefined;
 
 export async function POST(request: NextRequest) {
   // Security: this endpoint is session-only — a leaked Bearer token must NOT
@@ -108,6 +112,15 @@ export async function POST(request: NextRequest) {
   const rawChallenge = `ch_${randomBytes(32).toString("hex")}`;
   const hashed = createHash("sha256").update(rawChallenge).digest("hex");
   const expiresAt = new Date(Date.now() + CHALLENGE_TTL_MS);
+
+  // Best-effort cleanup of expired/used challenges to bound table growth.
+  // Failures here must not impact the request, so swallow the error.
+  await db
+    .delete(deleteChallenges)
+    .where(
+      or(lt(deleteChallenges.expiresAt, new Date()), isNotNull(deleteChallenges.usedAt)),
+    )
+    .catch(() => {});
 
   await db.insert(deleteChallenges).values({
     userId,
