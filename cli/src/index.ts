@@ -26,6 +26,18 @@ import {
   runFoldersMkdir,
   runFoldersRm,
 } from "./commands/folders.js";
+import {
+  runCalendarAdd,
+  runCalendarEdit,
+  runCalendarLs,
+  runCalendarRm,
+} from "./commands/calendar.js";
+import {
+  runDiscussionLs,
+  runDiscussionPost,
+  runDiscussionRead,
+  runDiscussionReply,
+} from "./commands/discussion.js";
 import { runHelp } from "./commands/help.js";
 
 const require = createRequire(import.meta.url);
@@ -158,10 +170,104 @@ function buildProgram(): Command {
       await runFoldersRm(folderId, opts);
     });
 
+  // -- calendar
+  const calendar = program
+    .command("calendar")
+    .description("Manage project calendar events");
+  calendar
+    .command("add")
+    .description("Create a calendar event")
+    .requiredOption("--title <t>", "Event title")
+    .requiredOption("--start <date>", "ISO 8601 or local `YYYY-MM-DD HH:mm`")
+    .requiredOption("--end <date>", "ISO 8601 or local `YYYY-MM-DD HH:mm`")
+    .option("--desc <d>", "Event description")
+    .option(
+      "--type <type>",
+      "meeting | production | release | other",
+      "other",
+    )
+    .option("--project <p>", "Project id or customId")
+    .option("--json", "Output JSON")
+    .action(async (opts) => {
+      await runCalendarAdd(opts);
+    });
+  calendar
+    .command("ls")
+    .description("List events in a date range (default: next 30 days)")
+    .option("--from <date>", "Window start (ISO or local `YYYY-MM-DD HH:mm`)")
+    .option("--to <date>", "Window end (ISO or local `YYYY-MM-DD HH:mm`)")
+    .option("--project <p>", "Project id or customId")
+    .option("--json", "Output JSON")
+    .action(async (opts) => {
+      await runCalendarLs(opts);
+    });
+  calendar
+    .command("edit <eventId>")
+    .description("Edit an existing event (creator or admin only)")
+    .option("--title <t>", "New title")
+    .option("--start <date>", "New start (ISO or local)")
+    .option("--end <date>", "New end (ISO or local)")
+    .option("--desc <d>", "New description")
+    .option("--type <type>", "meeting | production | release | other")
+    .option("--project <p>", "Project id or customId")
+    .option("--json", "Output JSON")
+    .action(async (eventId: string, opts) => {
+      await runCalendarEdit(eventId, opts);
+    });
+  calendar
+    .command("rm <eventId>")
+    .description("Delete a calendar event (creator or admin only)")
+    .option("--project <p>", "Project id or customId")
+    .action(async (eventId: string, opts) => {
+      await runCalendarRm(eventId, opts);
+    });
+
+  // -- discussion
+  const discussion = program
+    .command("discussion")
+    .description("Browse + post to project discussion threads");
+  discussion
+    .command("ls")
+    .description("List discussion threads")
+    .option("--project <p>", "Project id or customId")
+    .option("--json", "Output JSON")
+    .action(async (opts) => {
+      await runDiscussionLs(opts);
+    });
+  discussion
+    .command("read <postId>")
+    .description("Print a thread (root or a reply id) as a tree")
+    .option("--project <p>", "Project id or customId")
+    .option("--json", "Output JSON")
+    .action(async (postId: string, opts) => {
+      await runDiscussionRead(postId, opts);
+    });
+  discussion
+    .command("post")
+    .description("Start a new discussion thread")
+    .requiredOption("--title <t>", "Thread title")
+    .requiredOption("--content <c>", "Thread body (use `-` to read from stdin)")
+    .option("--project <p>", "Project id or customId")
+    .option("--json", "Output JSON")
+    .action(async (opts) => {
+      await runDiscussionPost(opts);
+    });
+  discussion
+    .command("reply <postId>")
+    .description("Reply to an existing thread or post")
+    .requiredOption("--content <c>", "Reply body (use `-` to read from stdin)")
+    .option("--project <p>", "Project id or customId")
+    .option("--json", "Output JSON")
+    .action(async (postId: string, opts) => {
+      await runDiscussionReply(postId, opts);
+    });
+
   // -- help
   program
     .command("help [topic]")
-    .description("Rich help text per topic (login, project, files, folders)")
+    .description(
+      "Rich help text per topic (login, project, files, folders, calendar, discussion)",
+    )
     .action((topic: string | undefined) => {
       runHelp(topic);
     });

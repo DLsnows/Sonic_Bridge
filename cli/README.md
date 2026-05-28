@@ -28,6 +28,8 @@ sonicbridge project use <idOrCustomId>
 # 4. Try it:
 sonicbridge files ls
 sonicbridge files upload ./my-mix.wav
+sonicbridge calendar add --title "Mix review" --start "2026-06-01 10:00" --end "2026-06-01 11:00"
+sonicbridge discussion post --title "Mix v2 notes" --content "Bumped bass by 1.5 dB."
 ```
 
 ### Unattended / CI use
@@ -50,9 +52,13 @@ history and `/proc/<pid>/cmdline`, which would leak the bearer.
 | project | `project ls`, `project use <id>` |
 | files | `files ls`, `files upload <path>`, `files download <id>`, `files mv <id> --to <folderId\|root>`, `files rm <id>` |
 | folders | `folders ls [folderId]`, `folders mkdir <name>`, `folders rm <folderId>` |
+| calendar | `calendar add`, `calendar ls`, `calendar edit <eventId>`, `calendar rm <eventId>` |
+| discussion | `discussion ls`, `discussion read <postId>`, `discussion post`, `discussion reply <postId>` |
 | help | `help [topic]` |
 
-Calendar and discussion commands ship in a follow-up release.
+Calendar dates accept ISO 8601 or local `YYYY-MM-DD HH:mm`. Every discussion
+write made through a CLI token is stamped `isAiGenerated=true` server-side; the
+CLI surfaces this with an `[AI]` badge in `discussion ls` and `read` output.
 
 ## Documentation
 
