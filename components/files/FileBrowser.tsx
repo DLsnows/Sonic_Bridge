@@ -115,11 +115,19 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
           } catch {
             // body wasn't JSON; keep default message
           }
-          setFiles(previous);
+          setFiles((prev) => {
+            if (prev.some((f) => f.id === fileId)) return prev;
+            const movedFile = previous.find((f) => f.id === fileId);
+            return movedFile ? [...prev, movedFile] : prev;
+          });
           alert(message);
         }
       } catch (err) {
-        setFiles(previous);
+        setFiles((prev) => {
+          if (prev.some((f) => f.id === fileId)) return prev;
+          const movedFile = previous.find((f) => f.id === fileId);
+          return movedFile ? [...prev, movedFile] : prev;
+        });
         alert(
           err instanceof Error ? err.message : "Move failed: network error",
         );
