@@ -28,10 +28,12 @@ Real-time music production collaboration platform. Stream DAW audio through a VS
 
 ### File Management
 - **Upload Files** — drag-and-drop or browse, multi-file upload with size limits per type (Audio 500MB, Archives 5GB, Video 500MB, Other 100MB)
+- **Drag-and-drop file moves** — drag a file onto a folder in the tree or breadcrumb to move it; optimistic UI with server PATCH
 - **Folder Organization** — create, rename, delete folders with nested hierarchy
 - **Breadcrumb Navigation** — traverse folder structure
 - **Inline Audio Player** — play/pause, seek bar with time display, volume slider with mute toggle
 - **Download & Delete** — download any file, delete with confirmation
+- **CLI access** — manage files, folders, calendar, and discussion from a terminal or AI agent via the [`sonicbridge` CLI](./docs/cli/README.md)
 
 ### Schedule / Calendar
 - **Month View Calendar** — navigate months, click days to filter events
