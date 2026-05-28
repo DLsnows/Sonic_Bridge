@@ -320,9 +320,19 @@ The thread will appear with an `[AI]` badge, which is correct — an AI agent po
 
 ### Get tomorrow's calendar
 
+GNU date (Linux / Git Bash on Windows):
+
 ```sh
 TOMORROW=$(date -u -d '+1 day' +%Y-%m-%dT00:00:00Z)
 DAY_AFTER=$(date -u -d '+2 day' +%Y-%m-%dT00:00:00Z)
+sonicbridge calendar ls --from "$TOMORROW" --to "$DAY_AFTER" --json
+```
+
+BSD date (macOS) — `-d '+1 day'` doesn't exist; use `-v+1d`:
+
+```sh
+TOMORROW=$(date -u -v+1d +%Y-%m-%dT00:00:00Z)
+DAY_AFTER=$(date -u -v+2d +%Y-%m-%dT00:00:00Z)
 sonicbridge calendar ls --from "$TOMORROW" --to "$DAY_AFTER" --json
 ```
 
@@ -334,16 +344,23 @@ sonicbridge discussion ls --json | jq '.[] | select(.isAiGenerated == true)'
 
 ### Bulk-empty a folder before deleting it (human-in-the-loop)
 
+`folders ls <folderId>` only lists **files** inside that folder, not sub-folders. To delete a folder you must remove both files AND any sub-folders first, otherwise `folders rm` fails with 409 `folder_not_empty`.
+
 ```sh
-# 1) List the folder contents
+# 1) List files inside the target folder
 sonicbridge folders ls <folderId> --json
 
-# 2) For each file id, prompt the human and delete
+# 2) Identify sub-folders from the project-wide tree (parentId == <folderId>)
+sonicbridge folders ls --json | jq -r --arg p "<folderId>" '.folders[] | select(.parentId == $p) | .id'
+
+# 3) For each sub-folder, recurse into this same pattern (delete its contents, then itself)
+
+# 4) Delete each file (password prompt per delete)
 for fid in $(sonicbridge folders ls <folderId> --json | jq -r '.files[].id'); do
-  sonicbridge files rm "$fid"   # password prompt per delete
+  sonicbridge files rm "$fid"
 done
 
-# 3) Now the folder is empty:
+# 5) Now the folder is empty:
 sonicbridge folders rm <folderId>
 ```
 
