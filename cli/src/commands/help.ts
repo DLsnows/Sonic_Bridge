@@ -1,4 +1,6 @@
 import pc from "picocolors";
+import { CALENDAR_HELP } from "./calendar.js";
+import { DISCUSSION_HELP } from "./discussion.js";
 
 interface Topic {
   name: string;
@@ -70,6 +72,8 @@ const TOPICS: Record<string, Topic> = {
       "--project.",
     ].join("\n"),
   },
+  calendar: CALENDAR_HELP,
+  discussion: DISCUSSION_HELP,
 };
 
 const HEADER = [
@@ -83,9 +87,11 @@ const HEADER = [
   "  sonicbridge project use <id>               Set the active project",
   "  sonicbridge files ls|upload|download|mv|rm Manage project files",
   "  sonicbridge folders ls|mkdir|rm            Manage folders",
+  "  sonicbridge calendar add|ls|edit|rm        Manage calendar events",
+  "  sonicbridge discussion ls|read|post|reply  Read and post in discussions",
   "  sonicbridge help <topic>                   Detailed help for a topic",
   "",
-  "Topics: login, project, files, folders",
+  "Topics: login, project, files, folders, calendar, discussion",
   "",
   "Pass --help to any subcommand for its full flag list.",
 ].join("\n");
