@@ -161,7 +161,7 @@ export async function PATCH(
     updates.name = parsed.data.name;
   }
 
-  await db.update(files).set(updates).where(eq(files.id, fileId));
+  await db.update(files).set(updates).where(and(eq(files.id, fileId), eq(files.projectId, projectId)));
 
   const [updated] = await db
     .select({
@@ -177,7 +177,7 @@ export async function PATCH(
     })
     .from(files)
     .innerJoin(users, eq(files.uploadedBy, users.id))
-    .where(eq(files.id, fileId))
+    .where(and(eq(files.id, fileId), eq(files.projectId, projectId)))
     .limit(1);
 
   return NextResponse.json({ file: updated });

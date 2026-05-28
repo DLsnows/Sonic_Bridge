@@ -52,7 +52,6 @@ function BreadcrumbSegment({
     if (!onMoveFile) return;
     const fileId = e.dataTransfer.getData(SB_FILE_MIME);
     if (!fileId) return;
-    if (id === currentFolderId) return;
     onMoveFile(fileId, id);
   };
 

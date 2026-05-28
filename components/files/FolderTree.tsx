@@ -72,7 +72,6 @@ export function FolderTree({ folders, currentFolderId, onSelect, onRename, onDel
       if (!onMoveFile) return;
       const fileId = e.dataTransfer.getData(SB_FILE_MIME);
       if (!fileId) return;
-      if (node.id === currentFolderId) return;
       onMoveFile(fileId, node.id);
     };
 
