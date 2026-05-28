@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { FolderTree } from "./FolderTree";
 import { FileList } from "./FileList";
 import { UploadZone } from "./UploadZone";
@@ -24,6 +24,10 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
   const [showUpload, setShowUpload] = useState(false);
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [playerFile, setPlayerFile] = useState<FileItem | null>(null);
+  // Per-file in-flight rename guard. A second rename on the same file is
+  // refused until the first PATCH resolves, so a failure-then-success race
+  // can't replace a successful rename with a stale rollback.
+  const renamingRef = useRef<Set<string>>(new Set());
 
   const fetchFiles = useCallback(async (folderId: string | null) => {
     setLoading(true);
@@ -95,6 +99,79 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
     a.click();
     document.body.removeChild(a);
   };
+
+  const handleRenameFile = useCallback(
+    async (fileId: string, newName: string) => {
+      // Serialize per-file: refuse a second rename while one is in-flight.
+      if (renamingRef.current.has(fileId)) return;
+      const target = files.find((f) => f.id === fileId);
+      if (!target) return;
+      if (target.name === newName) return;
+      const previousName = target.name;
+      renamingRef.current.add(fileId);
+
+      // Optimistic update.
+      setFiles((prev) =>
+        prev.map((f) => (f.id === fileId ? { ...f, name: newName } : f)),
+      );
+
+      try {
+        const res = await fetch(
+          `/api/projects/${projectId}/files/${fileId}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: newName }),
+          },
+        );
+        if (!res.ok) {
+          // Roll back the optimistic state — but only if the current state
+          // still reflects OUR optimistic write. If another rename succeeded
+          // in the meantime (shouldn't happen with the renamingRef guard
+          // above, but belt-and-suspenders), don't stomp it.
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.id === fileId && f.name === newName
+                ? { ...f, name: previousName }
+                : f,
+            ),
+          );
+          if (res.status === 422) {
+            try {
+              const data = (await res.json()) as {
+                error?: string;
+                currentExt?: string;
+                newExt?: string;
+              };
+              if (data?.error === "extension_change_not_allowed") {
+                const cur = data.currentExt ? `.${data.currentExt}` : "(none)";
+                const nxt = data.newExt ? `.${data.newExt}` : "(none)";
+                alert(`Extension cannot be changed (${cur} → ${nxt})`);
+                return;
+              }
+            } catch {
+              // fall through to generic
+            }
+          }
+          alert(`Rename failed (HTTP ${res.status})`);
+        }
+      } catch (err) {
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.id === fileId && f.name === newName
+              ? { ...f, name: previousName }
+              : f,
+          ),
+        );
+        alert(
+          err instanceof Error ? err.message : "Rename failed: network error",
+        );
+      } finally {
+        renamingRef.current.delete(fileId);
+      }
+    },
+    [files, projectId],
+  );
 
   const handleRenameFolder = (folderId: string, currentName: string) => {
     const newName = prompt("New folder name:", currentName);
@@ -193,7 +270,7 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
             </h3>
             <Button size="sm" variant="primary" onClick={() => setShowUpload(true)}>Upload Files</Button>
           </div>
-          <FileList files={files} loading={loading} projectId={projectId} onDelete={handleDelete} onDownload={handleDownload} onOpenPlayer={(file) => setPlayerFile(file)} />
+          <FileList files={files} loading={loading} projectId={projectId} onDelete={handleDelete} onDownload={handleDownload} onRename={handleRenameFile} onOpenPlayer={(file) => setPlayerFile(file)} />
         </div>
       </main>
       {showUpload && <UploadZone projectId={projectId} folderId={currentFolderId} onComplete={handleUploadComplete} onClose={() => setShowUpload(false)} />}

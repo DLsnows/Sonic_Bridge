@@ -39,11 +39,13 @@ describe("calendar commander parsing", () => {
       runFilesUpload: vi.fn(),
       runFilesDownload: vi.fn(),
       runFilesMv: vi.fn(),
+      runFilesRename: vi.fn(),
       runFilesRm: vi.fn(),
     }));
     vi.doMock("../commands/folders.js", () => ({
       runFoldersLs: vi.fn(),
       runFoldersMkdir: vi.fn(),
+      runFoldersRename: vi.fn(),
       runFoldersRm: vi.fn(),
     }));
     vi.doMock("../commands/login.js", () => ({ runLogin: vi.fn() }));

@@ -18,12 +18,14 @@ import {
   runFilesDownload,
   runFilesLs,
   runFilesMv,
+  runFilesRename,
   runFilesRm,
   runFilesUpload,
 } from "./commands/files.js";
 import {
   runFoldersLs,
   runFoldersMkdir,
+  runFoldersRename,
   runFoldersRm,
 } from "./commands/folders.js";
 import {
@@ -147,6 +149,14 @@ function buildProgram(): Command {
     .action(async (fileId: string, opts) => {
       await runFilesRm(fileId, opts);
     });
+  files
+    .command("rename <fileId> <newName>")
+    .description("Rename a file (extension must stay the same)")
+    .option("--project <p>", "Project id or customId")
+    .option("--json", "Output JSON")
+    .action(async (fileId: string, newName: string, opts) => {
+      await runFilesRename(fileId, newName, opts);
+    });
 
   // -- folders
   const folders = program
@@ -175,6 +185,14 @@ function buildProgram(): Command {
     .option("--project <p>", "Project id or customId")
     .action(async (folderId: string, opts) => {
       await runFoldersRm(folderId, opts);
+    });
+  folders
+    .command("rename <folderId> <newName>")
+    .description("Rename a folder")
+    .option("--project <p>", "Project id or customId")
+    .option("--json", "Output JSON")
+    .action(async (folderId: string, newName: string, opts) => {
+      await runFoldersRename(folderId, newName, opts);
     });
 
   // -- calendar

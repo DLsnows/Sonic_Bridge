@@ -66,6 +66,18 @@ export interface FilesFlags {
   to?: string;
 }
 
+// Disallow path separators and ASCII control characters in user-supplied
+// file names. Mirrors the server-side `FILE_NAME_FORBIDDEN_RE`.
+// eslint-disable-next-line no-control-regex
+const CLIENT_NAME_FORBIDDEN_RE = /[\\/\x00-\x1f\x7f]/;
+
+function extOf(name: string): string {
+  const idx = name.lastIndexOf(".");
+  // idx <= 0: either no dot, or a leading-dot dotfile (e.g. ".gitignore").
+  // Both → empty extension, matching the server's rule.
+  return idx <= 0 ? "" : name.slice(idx + 1).toLowerCase();
+}
+
 function formatBytes(n: number): string {
   if (!Number.isFinite(n) || n < 0) return "0 B";
   const units = ["B", "KB", "MB", "GB", "TB"];
@@ -445,6 +457,113 @@ export async function runFilesRm(
       opts,
     );
     console.log(pc.green(`Deleted ${resolvedName} (${resolvedId}).`));
+  } catch (err) {
+    console.error(pc.red(formatApiError(err)));
+    process.exit(1);
+  }
+}
+
+export async function runFilesRename(
+  fileId: string,
+  newName: string,
+  flags: FilesFlags,
+): Promise<void> {
+  const cfg = await loadConfig();
+  try {
+    const projectId = resolveActiveProject(cfg, flags.project);
+
+    // Client-side validation: catch obvious problems before the server.
+    // The server has the final say (max 255 chars, FILE_NAME_FORBIDDEN_RE,
+    // extension lock); these checks just give the user a snappy error for
+    // the cases that don't need a round-trip.
+    if (!newName || newName.length === 0) {
+      console.error(pc.red("New name cannot be empty."));
+      process.exit(1);
+      return;
+    }
+    if (newName.length > 200) {
+      console.error(pc.red("New name is too long (max 200 chars)."));
+      process.exit(1);
+      return;
+    }
+    if (CLIENT_NAME_FORBIDDEN_RE.test(newName)) {
+      console.error(
+        pc.red("Invalid name — no path separators or control characters."),
+      );
+      process.exit(1);
+      return;
+    }
+
+    // Resolve 8-char prefix → full UUID + current name.
+    let resolvedId: string;
+    let oldName: string;
+    try {
+      const match = await resolveByPrefix(
+        fileId,
+        () => fetchAllFilesInProject(projectId),
+        "file",
+      );
+      resolvedId = match.id;
+      oldName = match.name;
+    } catch (err) {
+      if (err instanceof Error && /No file matches|prefix.*ambiguous/.test(err.message)) {
+        console.error(pc.red(err.message));
+        process.exit(1);
+        return;
+      }
+      throw err;
+    }
+
+    // Extension sanity check (warn only — let the server be the source of
+    // truth via its 422 response).
+    const currentExt = extOf(oldName);
+    const newExt = extOf(newName);
+    if (currentExt !== newExt) {
+      const note = currentExt
+        ? `Warning: extension differs (.${currentExt} → ${newExt ? `.${newExt}` : "(none)"}). Server may reject.`
+        : `Warning: original has no extension; new name does. Server may reject.`;
+      process.stderr.write(pc.yellow(`${note}\n`));
+    }
+
+    // Send the PATCH; surface 422 with a friendly extension message.
+    try {
+      const result = await apiFetch<{ file: { id: string; name: string } }>(
+        `/api/projects/${encodeURIComponent(projectId)}/files/${encodeURIComponent(resolvedId)}`,
+        { method: "PATCH", body: { name: newName } },
+      );
+
+      if (wantsJson(flags)) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+      }
+      const prefix = resolvedId.slice(0, 8);
+      console.log(
+        pc.green(`Renamed ${oldName} → ${result.file.name} (id: ${prefix}).`),
+      );
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 422) {
+        const body = err.body as
+          | { error?: string; currentExt?: string; newExt?: string }
+          | null;
+        if (body?.error === "extension_change_not_allowed") {
+          const cur = body.currentExt ? `.${body.currentExt}` : "(none)";
+          const nxt = body.newExt ? `.${body.newExt}` : "(none)";
+          console.error(
+            pc.red(
+              `Extension cannot be changed (${cur} → ${nxt}). Use the same extension as the original.`,
+            ),
+          );
+          process.exit(1);
+          return;
+        }
+      }
+      if (err instanceof ApiError && err.status === 404) {
+        console.error(pc.red(`File ${resolvedId} not found.`));
+        process.exit(1);
+        return;
+      }
+      throw err;
+    }
   } catch (err) {
     console.error(pc.red(formatApiError(err)));
     process.exit(1);

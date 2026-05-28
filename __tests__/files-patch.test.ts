@@ -420,4 +420,42 @@ describe("PATCH /api/projects/[id]/files/[fileId]", () => {
     expect(json.error).toBe("Invalid input");
     expect(store.files[0].name).toBe("track.wav");
   });
+
+  test("rename within same extension succeeds (mix.wav -> mix-final.wav)", async () => {
+    // Re-seed the file with a known name so we don't depend on the default seed.
+    store.files[0].name = "mix.wav";
+    const PATCH = await loadPatch();
+    const res = await PATCH(buildRequest({ name: "mix-final.wav" }), { params });
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as { file: { name: string } };
+    expect(json.file.name).toBe("mix-final.wav");
+    expect(store.files[0].name).toBe("mix-final.wav");
+  });
+
+  test("422 extension_change_not_allowed when extension differs (mix.wav -> mix.mp3)", async () => {
+    store.files[0].name = "mix.wav";
+    const PATCH = await loadPatch();
+    const res = await PATCH(buildRequest({ name: "mix.mp3" }), { params });
+    expect(res.status).toBe(422);
+    const json = (await res.json()) as {
+      error: string;
+      currentExt: string;
+      newExt: string;
+    };
+    expect(json.error).toBe("extension_change_not_allowed");
+    expect(json.currentExt).toBe("wav");
+    expect(json.newExt).toBe("mp3");
+    // File should not have been renamed.
+    expect(store.files[0].name).toBe("mix.wav");
+  });
+
+  test("rename succeeds when neither name has an extension (README -> READMEv2)", async () => {
+    store.files[0].name = "README";
+    const PATCH = await loadPatch();
+    const res = await PATCH(buildRequest({ name: "READMEv2" }), { params });
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as { file: { name: string } };
+    expect(json.file.name).toBe("READMEv2");
+    expect(store.files[0].name).toBe("READMEv2");
+  });
 });

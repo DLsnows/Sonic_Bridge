@@ -136,6 +136,30 @@ export async function PATCH(
     return NextResponse.json({ error: "File not found" }, { status: 404 });
   }
 
+  // Extension lock: renaming may not change the file extension. The MIME
+  // type was set at upload and downstream consumers (web preview, DAW
+  // import) depend on it remaining consistent with the name suffix. Compare
+  // case-insensitively. A name with no dot is treated as having an empty
+  // extension; rename within "no extension" is permitted (e.g. "README" ->
+  // "READMEv2") as long as the new name also lacks a dot.
+  if (parsed.data.name !== undefined) {
+    const extractExt = (name: string): string => {
+      const idx = name.lastIndexOf(".");
+      // idx === -1: no dot. idx === 0: leading dot only (e.g. ".gitignore",
+      // ".env") — these are dotfiles with no extension, not "gitignore"-ext
+      // files. Both cases → empty extension.
+      return idx <= 0 ? "" : name.slice(idx + 1).toLowerCase();
+    };
+    const currentExt = extractExt(existing.name);
+    const newExt = extractExt(parsed.data.name);
+    if (currentExt !== newExt) {
+      return NextResponse.json(
+        { error: "extension_change_not_allowed", currentExt, newExt },
+        { status: 422 },
+      );
+    }
+  }
+
   const updates: { folderId?: string | null; name?: string } = {};
 
   if (Object.prototype.hasOwnProperty.call(parsed.data, "folderId")) {

@@ -8,6 +8,11 @@ import {
 } from "../api.js";
 import { loadConfig } from "../config.js";
 import { renderTable } from "../util/table.js";
+import { resolveByPrefix } from "../util/resolve-id.js";
+
+// Disallow path separators and ASCII control characters in folder names.
+// eslint-disable-next-line no-control-regex
+const FOLDER_NAME_FORBIDDEN_RE = /[\\/\x00-\x1f\x7f]/;
 
 interface Folder {
   id: string;
@@ -176,6 +181,87 @@ export async function runFoldersRm(
         process.exit(1);
       }
     }
+    console.error(pc.red(formatApiError(err)));
+    process.exit(1);
+  }
+}
+
+async function fetchAllFolders(projectId: string): Promise<Folder[]> {
+  const res = await apiFetch<FoldersListResponse>(
+    `/api/projects/${encodeURIComponent(projectId)}/folders`,
+  );
+  return res.folders;
+}
+
+export async function runFoldersRename(
+  folderId: string,
+  newName: string,
+  flags: FoldersFlags,
+): Promise<void> {
+  const cfg = await loadConfig();
+  try {
+    const projectId = resolveActiveProject(cfg, flags.project);
+
+    // Client-side validation. Server enforces max 200 via zod.
+    if (!newName || newName.length === 0) {
+      console.error(pc.red("New name cannot be empty."));
+      process.exit(1);
+      return;
+    }
+    if (newName.length > 200) {
+      console.error(pc.red("New name is too long (max 200 chars)."));
+      process.exit(1);
+      return;
+    }
+    if (FOLDER_NAME_FORBIDDEN_RE.test(newName)) {
+      console.error(
+        pc.red("Invalid name — no path separators or control characters."),
+      );
+      process.exit(1);
+      return;
+    }
+
+    // Resolve 8-char prefix → full UUID.
+    let resolvedId: string;
+    try {
+      const match = await resolveByPrefix(
+        folderId,
+        () => fetchAllFolders(projectId),
+        "folder",
+      );
+      resolvedId = match.id;
+    } catch (err) {
+      if (err instanceof Error && /No folder matches|prefix.*ambiguous/.test(err.message)) {
+        console.error(pc.red(err.message));
+        process.exit(1);
+        return;
+      }
+      throw err;
+    }
+
+    try {
+      const result = await apiFetch<{ folder: Folder }>(
+        `/api/projects/${encodeURIComponent(projectId)}/folders/${encodeURIComponent(resolvedId)}`,
+        { method: "PATCH", body: { name: newName } },
+      );
+
+      if (wantsJson(flags)) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+      }
+      const prefix = resolvedId.slice(0, 8);
+      console.log(
+        pc.green(`Renamed folder → ${result.folder.name} (id: ${prefix}).`),
+      );
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) {
+        console.error(pc.red(`Folder ${resolvedId} not found.`));
+        process.exit(1);
+        return;
+      }
+      throw err;
+    }
+  } catch (err) {
     console.error(pc.red(formatApiError(err)));
     process.exit(1);
   }
