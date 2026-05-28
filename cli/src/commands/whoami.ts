@@ -1,7 +1,6 @@
 import pc from "picocolors";
 import { apiFetch, formatApiError, wantsJson } from "../api.js";
 import { loadConfig } from "../config.js";
-import { renderTable } from "../util/table.js";
 
 interface MeResponse {
   user: { id: string; username: string; email: string; avatar?: string | null };
@@ -27,37 +26,30 @@ export async function runWhoami(flags: WhoamiFlags): Promise<void> {
   try {
     const me = await apiFetch<MeResponse>("/api/user/me");
     if (wantsJson(flags)) {
-      console.log(JSON.stringify(me, null, 2));
+      // Machine-readable output keeps the `projects` array for back-compat
+      // with any agent already piping `whoami --json`. Prefer
+      // `project ls --json` for new integrations.
+      const payload = {
+        user: me.user,
+        projects: me.projects ?? [],
+        activeProject: cfg?.activeProject ?? null,
+      };
+      console.log(JSON.stringify(payload, null, 2));
       return;
     }
-    console.log(`${pc.bold("Username:")} ${me.user.username}`);
-    console.log(`${pc.bold("Email:   ")} ${me.user.email}`);
-    if (me.projects && me.projects.length > 0) {
-      console.log("");
-      console.log(pc.bold("Projects:"));
-      const activeId = cfg.activeProject?.id;
-      const rows = me.projects.map((p) => ({
-        active: p.id === activeId ? "*" : "",
-        id: p.id,
-        customId: p.customId ?? "",
-        name: p.name,
-        role: p.role,
-      }));
+    console.log(
+      `Logged in as ${pc.bold(me.user.username)} (${me.user.email})`,
+    );
+    const active = cfg?.activeProject;
+    if (active?.id) {
+      const prefix = active.id.slice(0, 8);
       console.log(
-        renderTable(
-          [
-            { header: " ", key: "active", maxWidth: 1 },
-            { header: "id", key: "id" },
-            { header: "customId", key: "customId" },
-            { header: "name", key: "name" },
-            { header: "role", key: "role" },
-          ],
-          rows,
-        ),
+        `Active project: ${pc.bold(active.name ?? active.id)} (${prefix})`,
       );
-    } else {
-      console.log(pc.dim("(no project memberships)"));
     }
+    console.log(
+      `Run \`${pc.cyan("sonicbridge project ls")}\` to see your projects.`,
+    );
   } catch (err) {
     console.error(pc.red(formatApiError(err)));
     process.exit(1);
