@@ -1,0 +1,14 @@
+# Vercel builds the Next.js app at the repo root. Subprojects with their own
+# package.json / build pipelines must be excluded so Vercel does not try to
+# resolve their dependencies or pick them up as alternate workspaces.
+
+# Standalone Node CLI (sonicbridge) — has its own package.json and tsconfig.
+cli/
+
+# CLI documentation — never needed by the web build.
+docs/cli/
+
+# Native plugin sources — irrelevant to the web app.
+vst-plugin/
+pluginval/
+pluginval.zip

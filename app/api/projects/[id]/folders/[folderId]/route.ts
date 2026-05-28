@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { folders, files as filesTable } from "@/lib/db/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { folders } from "@/lib/db/schema";
+import { eq, and, sql } from "drizzle-orm";
 import { authenticate } from "@/lib/api-auth";
-import { deleteFile } from "@/lib/storage";
 import { z } from "zod";
 
 const renameSchema = z.object({
@@ -66,37 +65,26 @@ export async function DELETE(
     return NextResponse.json({ error: "Folder not found" }, { status: 404 });
   }
 
-  const allFolders = await db
-    .select()
-    .from(folders)
-    .where(eq(folders.projectId, id));
-
-  const descendantIds = new Set<string>();
-  function collectDescendants(parentId: string) {
-    for (const f of allFolders) {
-      if (f.parentId === parentId && !descendantIds.has(f.id)) {
-        descendantIds.add(f.id);
-        collectDescendants(f.id);
-      }
-    }
-  }
-  collectDescendants(folderId);
-
-  const allAffectedIds = [folderId, ...descendantIds];
-
-  const affectedFiles = await db
-    .select({ storageKey: filesTable.storageKey })
-    .from(filesTable)
-    .where(inArray(filesTable.folderId, allAffectedIds));
-
-  await Promise.allSettled(
-    affectedFiles.map((f) => deleteFile(f.storageKey)),
+  // Refuse to delete non-empty folders. The user must clear direct children
+  // (files + subfolders) before the folder itself can be removed. This
+  // replaces the previous recursive cascade behaviour.
+  const countsResult = await db.execute<{
+    fileCount: number;
+    subfolderCount: number;
+  }>(
+    sql`SELECT
+      (SELECT COUNT(*)::int FROM files WHERE folder_id = ${folderId}) AS "fileCount",
+      (SELECT COUNT(*)::int FROM folders WHERE parent_id = ${folderId}) AS "subfolderCount"`,
   );
+  const counts = countsResult.rows[0];
+  const fileCount = Number(counts?.fileCount ?? 0);
+  const subfolderCount = Number(counts?.subfolderCount ?? 0);
 
-  if (descendantIds.size > 0) {
-    await db
-      .delete(folders)
-      .where(inArray(folders.id, [...descendantIds]));
+  if (fileCount > 0 || subfolderCount > 0) {
+    return NextResponse.json(
+      { error: "folder_not_empty" },
+      { status: 409 },
+    );
   }
 
   await db.delete(folders).where(eq(folders.id, folderId));

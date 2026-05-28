@@ -55,8 +55,26 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
   const handleFolderCreated = async () => { setShowCreateFolder(false); await refreshFolders(); };
   const handleUploadComplete = () => { setShowUpload(false); fetchFiles(currentFolderId); };
   const handleDelete = async (fileId: string) => {
-    const res = await fetch(`/api/projects/${projectId}/files/${fileId}`, { method: "DELETE" });
+    // File deletion now requires a fresh password-derived challenge token.
+    const password = prompt("Confirm your password to delete this file:");
+    if (!password) return;
+    const verify = await fetch(`/api/user/verify-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    if (!verify.ok) {
+      if (verify.status === 429) alert("Too many failed attempts. Try again later.");
+      else alert("Password verification failed");
+      return;
+    }
+    const { challenge } = await verify.json();
+    const res = await fetch(`/api/projects/${projectId}/files/${fileId}`, {
+      method: "DELETE",
+      headers: { "X-Delete-Challenge": challenge },
+    });
     if (res.ok) fetchFiles(currentFolderId);
+    else alert(`Failed to delete file (HTTP ${res.status})`);
   };
   const handleDownload = async (fileId: string, fileName: string) => {
     try {
@@ -137,15 +155,23 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
   );
 
   const handleDeleteFolder = (folderId: string, folderName: string) => {
-    if (!confirm(`Delete folder "${folderName}" and all its contents?`)) return;
+    // Folder DELETE no longer cascades: the user must empty the folder first.
+    if (!confirm(`Delete empty folder "${folderName}"?`)) return;
     fetch(`/api/projects/${projectId}/folders/${folderId}`, { method: "DELETE" })
-      .then((res) => {
+      .then(async (res) => {
         if (res.ok) {
           if (currentFolderId === folderId) setCurrentFolderId(null);
           refreshFolders();
           fetchFiles(null);
+          return;
         }
-      });
+        if (res.status === 409) {
+          alert(`Folder is not empty. Please delete its files and subfolders first.`);
+          return;
+        }
+        alert(`Failed to delete folder (HTTP ${res.status})`);
+      })
+      .catch(() => alert("Failed to delete folder: Network error"));
   };
 
   return (
