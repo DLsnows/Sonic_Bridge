@@ -15,9 +15,16 @@ interface FolderTreeProps {
   onSelect: (folderId: string | null) => void;
   onRename: (folderId: string, currentName: string) => void;
   onDelete: (folderId: string, folderName: string) => void;
+  onMoveFile?: (fileId: string, targetFolderId: string | null) => void;
 }
 
-export function FolderTree({ folders, currentFolderId, onSelect, onRename, onDelete }: FolderTreeProps) {
+const SB_FILE_MIME = "application/x-sb-file";
+
+function dataTransferHasFile(dt: DataTransfer): boolean {
+  return Array.from(dt.types).includes(SB_FILE_MIME);
+}
+
+export function FolderTree({ folders, currentFolderId, onSelect, onRename, onDelete, onMoveFile }: FolderTreeProps) {
   function buildTree(parentId: string | null): TreeNode[] {
     const children = folders.filter((f) => f.parentId === parentId);
     return children.map((f) => ({
@@ -46,13 +53,38 @@ export function FolderTree({ folders, currentFolderId, onSelect, onRename, onDel
     const isCurrent = currentFolderId === node.id;
     const hasChildren = node.children.length > 0;
     const [expanded, setExpanded] = useState(node.id === null || isAncestor(node.id));
+    const [isDropTarget, setIsDropTarget] = useState(false);
+
+    const handleDragOver = (e: React.DragEvent<HTMLButtonElement>) => {
+      if (!onMoveFile || !dataTransferHasFile(e.dataTransfer)) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      if (!isDropTarget) setIsDropTarget(true);
+    };
+    const handleDragLeave = (e: React.DragEvent<HTMLButtonElement>) => {
+      const next = e.relatedTarget as Node | null;
+      if (next && e.currentTarget.contains(next)) return; // still inside
+      setIsDropTarget(false);
+    };
+    const handleDrop = (e: React.DragEvent<HTMLButtonElement>) => {
+      e.preventDefault();
+      setIsDropTarget(false);
+      if (!onMoveFile) return;
+      const fileId = e.dataTransfer.getData(SB_FILE_MIME);
+      if (!fileId) return;
+      onMoveFile(fileId, node.id);
+    };
 
     return (
       <div>
         <button
           className={`group w-full text-left px-2 py-1.5 rounded text-xs font-mono flex items-center gap-1.5 transition-colors
-            ${isCurrent ? "bg-[#00FF41]/10 text-[#00FF41]" : "text-[#A0A0B0] hover:text-[#F0F0F0] hover:bg-white/5"}`}
+            ${isCurrent ? "bg-[#00FF41]/10 text-[#00FF41]" : "text-[#A0A0B0] hover:text-[#F0F0F0] hover:bg-white/5"}
+            ${isDropTarget ? "ring-2 ring-[#00FF41] bg-[#00FF41]/5" : ""}`}
           style={{ paddingLeft: `${8 + depth * 12}px` }}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
           onClick={() => {
             if (hasChildren) setExpanded(!expanded);
             onSelect(node.id);

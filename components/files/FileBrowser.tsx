@@ -106,6 +106,54 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
     }).then((res) => { if (res.ok) refreshFolders(); });
   };
 
+  const handleMoveFile = useCallback(
+    async (fileId: string, targetFolderId: string | null) => {
+      const previous = [...files];
+      const moved = previous.find((f) => f.id === fileId);
+      if (!moved) return;
+      if ((moved.folderId ?? null) === targetFolderId) return;
+
+      // Optimistic: remove from current view immediately.
+      setFiles((prev) => prev.filter((f) => f.id !== fileId));
+
+      try {
+        const res = await fetch(
+          `/api/projects/${projectId}/files/${fileId}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ folderId: targetFolderId }),
+          },
+        );
+        if (!res.ok) {
+          let message = `Move failed (HTTP ${res.status})`;
+          try {
+            const data = (await res.json()) as { error?: string };
+            if (data?.error) message = data.error;
+          } catch {
+            // body wasn't JSON; keep default message
+          }
+          setFiles((prev) => {
+            if (prev.some((f) => f.id === fileId)) return prev;
+            const movedFile = previous.find((f) => f.id === fileId);
+            return movedFile ? [...prev, movedFile] : prev;
+          });
+          alert(message);
+        }
+      } catch (err) {
+        setFiles((prev) => {
+          if (prev.some((f) => f.id === fileId)) return prev;
+          const movedFile = previous.find((f) => f.id === fileId);
+          return movedFile ? [...prev, movedFile] : prev;
+        });
+        alert(
+          err instanceof Error ? err.message : "Move failed: network error",
+        );
+      }
+    },
+    [files, projectId],
+  );
+
   const handleDeleteFolder = (folderId: string, folderName: string) => {
     // Folder DELETE no longer cascades: the user must empty the folder first.
     if (!confirm(`Delete empty folder "${folderName}"?`)) return;
@@ -129,14 +177,14 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
   return (
     <div className="flex h-[calc(100vh-4rem)]">
       <aside className="w-56 border-r border-[#00FF41]/10 bg-[#0A0A0F]/50 p-3 flex flex-col">
-        <FolderTree folders={folders} currentFolderId={currentFolderId} onSelect={setCurrentFolderId} onRename={handleRenameFolder} onDelete={handleDeleteFolder} />
+        <FolderTree folders={folders} currentFolderId={currentFolderId} onSelect={setCurrentFolderId} onRename={handleRenameFolder} onDelete={handleDeleteFolder} onMoveFile={handleMoveFile} />
         <Button variant="ghost" size="sm" className="mt-2" onClick={() => setShowCreateFolder(true)}>
           + New Folder
         </Button>
       </aside>
       <main className="flex-1 flex flex-col min-w-0">
         <div className="flex items-center justify-between pr-4">
-          <BreadcrumbNav folders={folders} currentFolderId={currentFolderId} onNavigate={setCurrentFolderId} />
+          <BreadcrumbNav folders={folders} currentFolderId={currentFolderId} onNavigate={setCurrentFolderId} onMoveFile={handleMoveFile} />
         </div>
         <div className="flex-1 overflow-auto p-4">
           <div className="flex items-center justify-between mb-4">
