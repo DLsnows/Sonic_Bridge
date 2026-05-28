@@ -17,6 +17,7 @@ import { DEFAULT_BASE_URL, loadConfig } from "../config.js";
 import { renderTable } from "../util/table.js";
 import { Progress } from "../util/progress.js";
 import { promptPassword } from "../util/prompt.js";
+import { resolveByPrefix } from "../util/resolve-id.js";
 
 interface FilesListResponse {
   files: Array<{
@@ -319,6 +320,37 @@ export async function runFilesMv(
   }
 }
 
+/**
+ * Walks the whole project (root + every folder) and returns the union of
+ * files. Used for fileId prefix resolution. O(folders+1) network calls;
+ * acceptable for typical project sizes.
+ */
+async function fetchAllFilesInProject(
+  projectId: string,
+): Promise<Array<{ id: string; name: string; folderId: string | null }>> {
+  interface FolderRow {
+    id: string;
+  }
+  interface FoldersListResp {
+    folders: FolderRow[];
+  }
+  const foldersRes = await apiFetch<FoldersListResp>(
+    `/api/projects/${encodeURIComponent(projectId)}/folders`,
+  );
+  const folderIds: (string | null)[] = [null, ...foldersRes.folders.map((f) => f.id)];
+  const all: Array<{ id: string; name: string; folderId: string | null }> = [];
+  for (const folderId of folderIds) {
+    const qs = folderId ? `?folderId=${encodeURIComponent(folderId)}` : "";
+    const res = await apiFetch<FilesListResponse>(
+      `/api/projects/${encodeURIComponent(projectId)}/files${qs}`,
+    );
+    for (const f of res.files) {
+      all.push({ id: f.id, name: f.name, folderId: f.folderId });
+    }
+  }
+  return all;
+}
+
 export async function runFilesRm(
   fileId: string,
   flags: FilesFlags,
@@ -331,9 +363,45 @@ export async function runFilesRm(
   try {
     const projectId = resolveActiveProject(cfg, flags.project);
 
-    // 1. Prompt for password (never via argv).
+    // 1. Resolve 8-char prefix → full UUID via project-wide files walk.
+    let resolvedId: string;
+    let resolvedName: string;
+    try {
+      const match = await resolveByPrefix(
+        fileId,
+        () => fetchAllFilesInProject(projectId),
+        "file",
+      );
+      resolvedId = match.id;
+      resolvedName = match.name;
+    } catch (err) {
+      if (err instanceof Error && /No file matches|prefix.*ambiguous/.test(err.message)) {
+        console.error(pc.red(err.message));
+        process.exit(1);
+        return;
+      }
+      throw err;
+    }
+
+    // 2. Pre-flight HEAD on the resolved UUID — short-circuit a typo or
+    //    just-deleted file BEFORE asking for the user's password.
+    try {
+      await apiFetch(
+        `/api/projects/${encodeURIComponent(projectId)}/files/${encodeURIComponent(resolvedId)}`,
+        { method: "HEAD" },
+      );
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) {
+        console.error(pc.red(`File ${resolvedId} not found.`));
+        process.exit(1);
+        return;
+      }
+      throw err;
+    }
+
+    // 3. Prompt for password (never via argv).
     const password = await promptPassword(
-      "Password (required to delete files)",
+      `Password (required to delete ${resolvedName})`,
     );
     if (!password) {
       console.error(pc.red("Cancelled."));
@@ -367,16 +435,16 @@ export async function runFilesRm(
       throw err;
     }
 
-    // 3. DELETE with X-Delete-Challenge header.
+    // 4. DELETE with X-Delete-Challenge header.
     const opts: ApiFetchOptions = {
       method: "DELETE",
       headers: { "X-Delete-Challenge": challenge },
     };
     await apiFetch(
-      `/api/projects/${encodeURIComponent(projectId)}/files/${encodeURIComponent(fileId)}`,
+      `/api/projects/${encodeURIComponent(projectId)}/files/${encodeURIComponent(resolvedId)}`,
       opts,
     );
-    console.log(pc.green(`Deleted file ${fileId}.`));
+    console.log(pc.green(`Deleted ${resolvedName} (${resolvedId}).`));
   } catch (err) {
     console.error(pc.red(formatApiError(err)));
     process.exit(1);
