@@ -17,7 +17,9 @@ interface FileListProps {
 
 function fileExtension(name: string): string {
   const idx = name.lastIndexOf(".");
-  return idx === -1 ? "" : name.slice(idx + 1).toLowerCase();
+  // idx <= 0: either no dot, or a leading-dot dotfile (e.g. ".gitignore").
+  // Both → empty extension, matching the server's rule.
+  return idx <= 0 ? "" : name.slice(idx + 1).toLowerCase();
 }
 
 function formatSize(bytes: number): string {

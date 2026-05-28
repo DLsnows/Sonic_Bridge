@@ -104,8 +104,7 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
     async (fileId: string, newName: string) => {
       // Serialize per-file: refuse a second rename while one is in-flight.
       if (renamingRef.current.has(fileId)) return;
-      const previous = [...files];
-      const target = previous.find((f) => f.id === fileId);
+      const target = files.find((f) => f.id === fileId);
       if (!target) return;
       if (target.name === newName) return;
       const previousName = target.name;

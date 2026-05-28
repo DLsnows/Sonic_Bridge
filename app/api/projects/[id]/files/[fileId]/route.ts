@@ -145,7 +145,10 @@ export async function PATCH(
   if (parsed.data.name !== undefined) {
     const extractExt = (name: string): string => {
       const idx = name.lastIndexOf(".");
-      return idx === -1 ? "" : name.slice(idx + 1).toLowerCase();
+      // idx === -1: no dot. idx === 0: leading dot only (e.g. ".gitignore",
+      // ".env") — these are dotfiles with no extension, not "gitignore"-ext
+      // files. Both cases → empty extension.
+      return idx <= 0 ? "" : name.slice(idx + 1).toLowerCase();
     };
     const currentExt = extractExt(existing.name);
     const newExt = extractExt(parsed.data.name);
