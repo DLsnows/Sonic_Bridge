@@ -2,7 +2,7 @@ name: CI / lighthouse
 
 on:
   pull_request:
-    branches: [dev]
+    branches: [dev, staging]
     types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
@@ -13,185 +13,272 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  PROJECT_ID: "0238590a-890e-4117-9dcc-b001c484a6df"
+
 jobs:
   lighthouse:
+    name: Lighthouse Audit
     if: ${{ ! github.event.pull_request.draft }}
     runs-on: ubuntu-latest
 
-    env:
-      AUTH_SECRET: 'ci-test-secret-do-not-use-in-production-00000000000000000000000000000000'
-      AUTH_URL: 'http://localhost:3000'
-
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'npm'
+          cache: npm
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Restore Next.js build cache
-        uses: actions/cache@v4
+      - name: Wait for Vercel preview
+        id: vercel
+        uses: patrickedqvist/wait-for-vercel-preview@v1.3.2
         with:
-          path: .next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('package-lock.json') }}-${{ hashFiles('**/*.ts', '**/*.tsx') }}
-          restore-keys: |
-            ${{ runner.os }}-nextjs-${{ hashFiles('package-lock.json') }}-
-            ${{ runner.os }}-nextjs-
+          token: ${{ secrets.GITHUB_TOKEN }}
+          max_timeout: 600
+          environment: Preview
 
-      - name: Build Next.js app
-        id: build
-        continue-on-error: true
+      - name: Install Playwright (chromium)
         run: |
-          set -o pipefail
-          npm run build 2>&1 | tee build-output.txt
+          npm i --no-save playwright@1.49.1
+          npx playwright install --with-deps chromium
 
-      - name: Start server & get auth cookie
-        if: steps.build.outcome == 'success'
+      - name: Login & capture session cookie
+        id: login
+        env:
+          BASE_URL: ${{ steps.vercel.outputs.url }}
+          LIGHTHOUSE_EMAIL: ${{ secrets.LIGHTHOUSE_EMAIL }}
+          LIGHTHOUSE_PASSWORD: ${{ secrets.LIGHTHOUSE_PASSWORD }}
         run: |
-          npx next start --port 3000 &
-
-          # Wait for server ready (retry up to 30s)
-          for i in $(seq 1 30); do
-            if curl -sf http://localhost:3000/ -o /dev/null 2>&1; then
-              echo "Server ready"
-              break
-            fi
-            sleep 1
-          done
-
-          # Get session cookie via CI endpoint
-          COOKIE=$(node scripts/lighthouse-login.mjs | grep "^cookie:" | cut -d' ' -f2)
-          echo "Got cookie: ${COOKIE:0:30}..."
-          echo "LHCI_COOKIE=$COOKIE" >> $GITHUB_ENV
-
-      - name: Run Lighthouse CI
-        id: lighthouse
-        continue-on-error: true
-        if: steps.build.outcome == 'success'
-        run: |
-          set -o pipefail
-          {
-            npx lhci collect \
-              --url=http://localhost:3000/ \
-              --numberOfRuns=1 \
-              --settings.preset=desktop \
-              --settings.skipAudits=full-page-screenshot,screenshot-thumbnails \
-              --settings.extraHeaders="{\"Cookie\":\"$LHCI_COOKIE\"}"
-            npx lhci upload \
-              --target=temporary-public-storage
-            npx lhci assert \
-              --preset=lighthouse:recommended \
-              --assertions.categories:performance='["warn",{"minScore":0.5}]' \
-              --assertions.categories:accessibility='["warn",{"minScore":0.7}]' \
-              --assertions.categories:best-practices='["warn",{"minScore":0.7}]' \
-              --assertions.categories:seo='["warn",{"minScore":0.7}]' \
-              --assertions.redirects='"warn"' \
-              --assertions.robots-txt='"warn"' \
-              --assertions.legacy-javascript-insight='"warn"' \
-              --assertions.legacy-javascript='"warn"' \
-              --assertions.unused-javascript='"warn"' \
-              --assertions.uses-rel-preconnect='"warn"' \
-              --assertions.render-blocking-resources='"warn"' \
-              --assertions.render-blocking-insight='"warn"' \
-              --assertions.uses-long-cache-ttl='"warn"' \
-              --assertions.cache-insight='"warn"' \
-              --assertions.max-potential-fid='"warn"' \
-              || true
-          } 2>&1 | tee lighthouse-output.txt
-
-      - name: Build comment body
-        id: build-comment
-        if: always()
-        run: |
-          TRUNCATE_LINES=100
-
-          SCORE_LINES=$(grep -E '(✅|❌)\s+categories:' lighthouse-output.txt 2>/dev/null || true)
-
-          LHR_FILE=$(ls .lighthouseci/lhr-*.json 2>/dev/null | head -1)
-          if [ -n "$LHR_FILE" ] && [ -f "$LHR_FILE" ]; then
-            PERF=$(jq -r '.categories.performance.score // "N/A"' "$LHR_FILE")
-            A11Y=$(jq -r '.categories.accessibility.score // "N/A"' "$LHR_FILE")
-            BP=$(jq -r '.categories."best-practices".score // "N/A"' "$LHR_FILE")
-            SEO=$(jq -r '.categories.seo.score // "N/A"' "$LHR_FILE")
-          else
-            PERF="N/A"; A11Y="N/A"; BP="N/A"; SEO="N/A"
+          set -e
+          COOKIE="$(node scripts/lighthouse-vercel-login.mjs)"
+          if [ -z "$COOKIE" ]; then
+            echo "Login produced no cookie" >&2
+            exit 1
           fi
-
-          to_pct() {
-            local val="$1"
-            if [ "$val" = "N/A" ]; then echo "N/A"
-            else awk "BEGIN { printf \"%.0f\", $val * 100 }" 2>/dev/null || echo "$val"
-            fi
-          }
-
-          PERF_PCT=$(to_pct "$PERF")
-          A11Y_PCT=$(to_pct "$A11Y")
-          BP_PCT=$(to_pct "$BP")
-          SEO_PCT=$(to_pct "$SEO")
-
-          build_status="${{ steps.build.outcome }}"
-          lh_status="${{ steps.lighthouse.outcome }}"
-
+          echo "::add-mask::$COOKIE"
           {
-            echo "## :lighthouse: Lighthouse CI Results"
-            echo ""
+            echo "cookie<<__EOF__"
+            echo "$COOKIE"
+            echo "__EOF__"
+          } >> "$GITHUB_OUTPUT"
 
-            if [ "$build_status" = "failure" ]; then
-              echo ":x: **Build failed** -- Lighthouse could not run."
-              echo ""
-              echo '```'
-              tail -n $TRUNCATE_LINES build-output.txt 2>/dev/null || echo "(no output captured)"
-              echo '```'
-            else
-              echo ":white_check_mark: Build succeeded."
-            fi
-            echo ""
+      - name: Generate Lighthouse config with auth cookie
+        env:
+          LH_COOKIE: ${{ steps.login.outputs.cookie }}
+        run: |
+          mkdir -p .github
+          node -e "
+            const fs = require('fs');
+            const cfg = {
+              ci: {
+                collect: {
+                  numberOfRuns: 3,
+                  settings: {
+                    preset: 'desktop',
+                    skipAudits: ['full-page-screenshot', 'screenshot-thumbnails', 'is-crawlable'],
+                    extraHeaders: { Cookie: process.env.LH_COOKIE }
+                  }
+                }
+              }
+            };
+            fs.writeFileSync('.github/lighthouserc.json', JSON.stringify(cfg, null, 2));
+          "
 
-            if [ "$build_status" = "success" ]; then
-              if [ -n "$SCORE_LINES" ] || [ "$PERF" != "N/A" ]; then
-                echo "| Category | Score |"
-                echo "|---|---|"
-                echo "| :zap: Performance | **${PERF_PCT}** / 100 |"
-                echo "| :wheelchair: Accessibility | **${A11Y_PCT}** / 100 |"
-                echo "| :shield: Best Practices | **${BP_PCT}** / 100 |"
-                echo "| :mag: SEO | **${SEO_PCT}** / 100 |"
-                echo ""
-
-                if [ "$lh_status" = "failure" ]; then
-                  echo ":warning: One or more Lighthouse assertions failed. Check the run logs for the full report URL."
-                else
-                  echo ":white_check_mark: All Lighthouse assertions passed."
-                fi
-                echo ""
-              else
-                echo ":warning: Could not parse Lighthouse scores from output."
-                echo ""
-                echo '```'
-                tail -n $TRUNCATE_LINES lighthouse-output.txt 2>/dev/null || echo "(no output captured)"
-                echo '```'
-              fi
-            fi
-            echo ""
-            echo "---"
-            echo "*Lighthouse CI runs against a production build. Config: \`lighthouserc.js\`*"
-          } > /tmp/comment.md
-
-      - name: Post sticky comment
-        if: always()
-        uses: marocchino/sticky-pull-request-comment@v2
+      - name: Audit - Projects (home)
+        id: lh-home
+        continue-on-error: true
+        uses: treosh/lighthouse-ci-action@v12
         with:
-          header: lighthouse
-          path: /tmp/comment.md
+          urls: ${{ steps.vercel.outputs.url }}/
+          runs: 3
+          uploadArtifacts: true
+          artifactName: lighthouse-home
+          temporaryPublicStorage: true
+          budgetPath: .github/lighthouse-budget.json
+          configPath: .github/lighthouserc.json
 
-      - name: Fail if any check failed
-        if: |
-          always() &&
-          (steps.build.outcome == 'failure' || steps.lighthouse.outcome == 'failure')
-        run: exit 1
+      - name: Audit - Settings
+        id: lh-settings
+        continue-on-error: true
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          urls: ${{ steps.vercel.outputs.url }}/settings
+          runs: 3
+          uploadArtifacts: true
+          artifactName: lighthouse-settings
+          temporaryPublicStorage: true
+          budgetPath: .github/lighthouse-budget.json
+          configPath: .github/lighthouserc.json
+
+      - name: Audit - Project Overview
+        id: lh-project
+        continue-on-error: true
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          urls: ${{ steps.vercel.outputs.url }}/projects/${{ env.PROJECT_ID }}
+          runs: 3
+          uploadArtifacts: true
+          artifactName: lighthouse-project
+          temporaryPublicStorage: true
+          budgetPath: .github/lighthouse-budget.json
+          configPath: .github/lighthouserc.json
+
+      - name: Audit - Project Space
+        id: lh-space
+        continue-on-error: true
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          urls: ${{ steps.vercel.outputs.url }}/projects/${{ env.PROJECT_ID }}/space
+          runs: 3
+          uploadArtifacts: true
+          artifactName: lighthouse-space
+          temporaryPublicStorage: true
+          budgetPath: .github/lighthouse-budget.json
+          configPath: .github/lighthouserc.json
+
+      - name: Audit - Project Files
+        id: lh-files
+        continue-on-error: true
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          urls: ${{ steps.vercel.outputs.url }}/projects/${{ env.PROJECT_ID }}/files
+          runs: 3
+          uploadArtifacts: true
+          artifactName: lighthouse-files
+          temporaryPublicStorage: true
+          budgetPath: .github/lighthouse-budget.json
+          configPath: .github/lighthouserc.json
+
+      - name: Audit - Project Schedule
+        id: lh-schedule
+        continue-on-error: true
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          urls: ${{ steps.vercel.outputs.url }}/projects/${{ env.PROJECT_ID }}/schedule
+          runs: 3
+          uploadArtifacts: true
+          artifactName: lighthouse-schedule
+          temporaryPublicStorage: true
+          budgetPath: .github/lighthouse-budget.json
+          configPath: .github/lighthouserc.json
+
+      - name: Audit - Project Discussion
+        id: lh-discussion
+        continue-on-error: true
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          urls: ${{ steps.vercel.outputs.url }}/projects/${{ env.PROJECT_ID }}/discussion
+          runs: 3
+          uploadArtifacts: true
+          artifactName: lighthouse-discussion
+          temporaryPublicStorage: true
+          budgetPath: .github/lighthouse-budget.json
+          configPath: .github/lighthouserc.json
+
+      - name: Audit - Project Settings
+        id: lh-project-settings
+        continue-on-error: true
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          urls: ${{ steps.vercel.outputs.url }}/projects/${{ env.PROJECT_ID }}/settings
+          runs: 3
+          uploadArtifacts: true
+          artifactName: lighthouse-project-settings
+          temporaryPublicStorage: true
+          budgetPath: .github/lighthouse-budget.json
+          configPath: .github/lighthouserc.json
+
+      - name: Post results as PR comment
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          PREVIEW_URL: ${{ steps.vercel.outputs.url }}
+          MANIFEST_HOME: ${{ steps.lh-home.outputs.manifest }}
+          MANIFEST_SETTINGS: ${{ steps.lh-settings.outputs.manifest }}
+          MANIFEST_PROJECT: ${{ steps.lh-project.outputs.manifest }}
+          MANIFEST_SPACE: ${{ steps.lh-space.outputs.manifest }}
+          MANIFEST_FILES: ${{ steps.lh-files.outputs.manifest }}
+          MANIFEST_SCHEDULE: ${{ steps.lh-schedule.outputs.manifest }}
+          MANIFEST_DISCUSSION: ${{ steps.lh-discussion.outputs.manifest }}
+          MANIFEST_PROJECT_SETTINGS: ${{ steps.lh-project-settings.outputs.manifest }}
+        with:
+          script: |
+            function parseResults(stepOutput) {
+              try {
+                const manifest = JSON.parse(stepOutput);
+                if (manifest && manifest.length > 0) {
+                  const entry = manifest.find((m) => m.isRepresentativeRun) || manifest[0];
+                  const summary = entry.summary || {};
+                  return {
+                    performance: Math.round((summary.performance || 0) * 100),
+                    accessibility: Math.round((summary.accessibility || 0) * 100),
+                    bestPractices: Math.round((summary['best-practices'] || 0) * 100),
+                    seo: Math.round((summary.seo || 0) * 100),
+                    url: entry.url || '',
+                  };
+                }
+              } catch (e) {
+                console.log('Failed to parse results:', e.message);
+              }
+              return null;
+            }
+
+            const pages = [
+              { name: 'Projects (home)',      result: parseResults(process.env.MANIFEST_HOME) },
+              { name: 'Settings',             result: parseResults(process.env.MANIFEST_SETTINGS) },
+              { name: 'Project Overview',     result: parseResults(process.env.MANIFEST_PROJECT) },
+              { name: 'Project / Space',      result: parseResults(process.env.MANIFEST_SPACE) },
+              { name: 'Project / Files',      result: parseResults(process.env.MANIFEST_FILES) },
+              { name: 'Project / Schedule',   result: parseResults(process.env.MANIFEST_SCHEDULE) },
+              { name: 'Project / Discussion', result: parseResults(process.env.MANIFEST_DISCUSSION) },
+              { name: 'Project / Settings',   result: parseResults(process.env.MANIFEST_PROJECT_SETTINGS) },
+            ];
+
+            function emoji(score) {
+              if (score >= 90) return '🟢';
+              if (score >= 50) return '🟠';
+              return '🔴';
+            }
+
+            let body = '## ⚡ Lighthouse CI Results\n\n';
+            body += `Audited against preview: ${process.env.PREVIEW_URL}\n\n`;
+            body += '| Page | Performance | Accessibility | Best Practices | SEO |\n';
+            body += '|------|------------|---------------|----------------|-----|\n';
+
+            for (const page of pages) {
+              if (page.result) {
+                const r = page.result;
+                body += `| ${page.name} | ${emoji(r.performance)} ${r.performance} | ${emoji(r.accessibility)} ${r.accessibility} | ${emoji(r.bestPractices)} ${r.bestPractices} | ${emoji(r.seo)} ${r.seo} |\n`;
+              } else {
+                body += `| ${page.name} | ⚠️ No data | - | - | - |\n`;
+              }
+            }
+
+            body += '\n> Median of 3 runs per page. Authenticated as the Lighthouse test account.';
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              per_page: 100,
+            });
+            const marker = '## ⚡ Lighthouse CI Results';
+            const existing = comments.find((c) => c.user.type === 'Bot' && c.body && c.body.startsWith(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
