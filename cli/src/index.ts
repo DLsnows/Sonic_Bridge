@@ -44,9 +44,11 @@ function buildProgram(): Command {
     .command("login")
     .description("Authenticate the CLI against a Sonic Bridge instance")
     .option("--base-url <url>", "Base URL (default https://sonicbridge.app)")
-    .option("--token <token>", "CLI token (sb_...) — skips the interactive prompt")
     .action(async (opts) => {
-      await runLogin({ baseUrl: opts.baseUrl, token: opts.token });
+      // The token is never accepted via argv (it would leak into shell
+      // history and /proc/<pid>/cmdline). Use the SONICBRIDGE_TOKEN env
+      // var in CI, or the interactive prompt otherwise.
+      await runLogin({ baseUrl: opts.baseUrl });
     });
 
   program

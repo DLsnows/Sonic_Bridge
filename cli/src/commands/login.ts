@@ -10,8 +10,10 @@ import { promptPassword, promptText } from "../util/prompt.js";
 
 export interface LoginFlags {
   baseUrl?: string;
-  token?: string;
 }
+
+/** Env var used by CI / agents to pass a CLI token without an argv flag. */
+export const TOKEN_ENV_VAR = "SONICBRIDGE_TOKEN";
 
 interface MeResponse {
   user: {
@@ -44,8 +46,15 @@ export async function runLogin(flags: LoginFlags): Promise<void> {
   }
   baseUrl = baseUrl.replace(/\/+$/, "");
 
-  // Resolve token
-  let token = flags.token;
+  // Resolve token.
+  //
+  // Order of precedence:
+  //   1. SONICBRIDGE_TOKEN env var (CI-friendly path, no argv leakage).
+  //   2. Interactive hidden prompt (the default for humans).
+  //
+  // We intentionally do NOT accept a `--token` flag: argv ends up in shell
+  // history and `/proc/<pid>/cmdline`, which would leak the bearer.
+  let token = process.env[TOKEN_ENV_VAR]?.trim();
   if (!token) {
     token = await promptPassword("CLI token (input hidden)");
     if (!token) {

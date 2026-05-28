@@ -228,16 +228,30 @@ export async function runFilesDownload(
       throw new Error("Empty response body");
     }
 
-    // Resolve output path
-    let outPath = flags.out;
+    // Resolve output path.
+    //
+    // SECURITY: when the filename is derived from the server's
+    // Content-Disposition header, run it through `path.basename` before
+    // resolving against cwd. A malicious or compromised server can return
+    // `filename="../../../.ssh/authorized_keys"` and overwrite arbitrary
+    // user files. An explicit `--out <path>` is honored verbatim because
+    // the user opted in to that path.
+    let absOut: string | undefined;
     let toStdout = false;
-    if (outPath === "-") {
+    if (flags.out === "-") {
       toStdout = true;
-    } else if (!outPath) {
-      // Derive from content-disposition or fall back to fileId
+    } else if (flags.out) {
+      absOut = path.resolve(flags.out);
+    } else {
+      // Derive from content-disposition or fall back to fileId.
       const cd = res.headers.get("content-disposition") ?? "";
       const match = /filename="([^"]+)"/i.exec(cd);
-      outPath = match ? match[1]! : fileId;
+      const parsedName = match ? match[1]! : "";
+      let safeName = path.basename(parsedName);
+      if (!safeName || safeName === "." || safeName === "..") {
+        safeName = `${fileId}.bin`;
+      }
+      absOut = path.resolve(process.cwd(), safeName);
     }
 
     const total = (() => {
@@ -246,7 +260,7 @@ export async function runFilesDownload(
     })();
     const progress = new Progress({
       total,
-      label: `downloading ${toStdout ? "(stdout)" : path.basename(outPath ?? fileId)}`,
+      label: `downloading ${toStdout ? "(stdout)" : path.basename(absOut ?? fileId)}`,
     });
 
     const nodeStream = Readable.fromWeb(
@@ -258,8 +272,7 @@ export async function runFilesDownload(
       await pipeline(nodeStream, process.stdout);
       progress.finish();
     } else {
-      const absOut = path.resolve(outPath!);
-      const writeStream = createWriteStream(absOut);
+      const writeStream = createWriteStream(absOut!);
       await pipeline(nodeStream, writeStream);
       progress.finish(`downloaded to ${absOut}`);
     }

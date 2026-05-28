@@ -20,7 +20,7 @@ A globally published `npm i -g sonicbridge` is planned for a later release.
 
 ```sh
 # 1. Generate a CLI token in the web app: Project Settings → CLI Access
-# 2. Authenticate the CLI:
+# 2. Authenticate the CLI (paste the token into the hidden prompt):
 sonicbridge login
 # 3. Pick a default project so you can omit --project:
 sonicbridge project ls
@@ -29,6 +29,18 @@ sonicbridge project use <idOrCustomId>
 sonicbridge files ls
 sonicbridge files upload ./my-mix.wav
 ```
+
+### Unattended / CI use
+
+For non-interactive contexts, set the token in the environment instead of
+typing it into the prompt:
+
+```sh
+SONICBRIDGE_TOKEN=sb_xxx sonicbridge login --base-url https://sonicbridge.app
+```
+
+The CLI deliberately does not accept a `--token` flag — argv ends up in shell
+history and `/proc/<pid>/cmdline`, which would leak the bearer.
 
 ## Commands shipped in this release
 

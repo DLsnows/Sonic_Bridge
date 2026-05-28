@@ -70,12 +70,23 @@ export async function saveConfig(cfg: CliConfig): Promise<void> {
   const dir = getConfigDir();
   const p = getConfigPath();
   await fs.mkdir(dir, { recursive: true });
-  const tmp = `${p}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(cfg, null, 2), { encoding: "utf8" });
-  if (process.platform !== "win32") {
-    await fs.chmod(tmp, 0o600);
+  // Use a per-invocation temp filename so concurrent `sonicbridge` processes
+  // don't race on a shared `config.json.tmp`. Clean up the tmp file in a
+  // `finally` block to avoid leaking partial writes if rename ever fails.
+  const tmp = `${p}.${process.pid}.${Date.now()}.tmp`;
+  try {
+    await fs.writeFile(tmp, JSON.stringify(cfg, null, 2), { encoding: "utf8" });
+    if (process.platform !== "win32") {
+      await fs.chmod(tmp, 0o600);
+    }
+    await fs.rename(tmp, p);
+  } finally {
+    try {
+      await fs.unlink(tmp);
+    } catch {
+      // Expected when rename succeeded — tmp no longer exists.
+    }
   }
-  await fs.rename(tmp, p);
 }
 
 /** Removes the config file. Idempotent. */
