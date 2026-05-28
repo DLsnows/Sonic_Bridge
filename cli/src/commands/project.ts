@@ -33,8 +33,7 @@ export async function runProjectLs(flags: ProjectLsFlags): Promise<void> {
     const activeId = cfg?.activeProject?.id;
     const rows = projects.map((p) => ({
       active: p.id === activeId ? "*" : "",
-      id: p.id,
-      customId: p.customId ?? "",
+      id: p.id.slice(0, 8),
       name: p.name,
       role: p.role,
     }));
@@ -43,7 +42,6 @@ export async function runProjectLs(flags: ProjectLsFlags): Promise<void> {
         [
           { header: " ", key: "active", maxWidth: 1 },
           { header: "id", key: "id" },
-          { header: "customId", key: "customId" },
           { header: "name", key: "name" },
           { header: "role", key: "role" },
         ],
