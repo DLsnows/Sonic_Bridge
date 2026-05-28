@@ -50,7 +50,7 @@ export function GenerateToken() {
         </div>
       ) : (
         <Button onClick={generate} loading={loading} variant="secondary">
-          Generate API Token
+          Generate CLI Token
         </Button>
       )}
       {error && <p className="text-xs text-[#FF4444]">{error}</p>}
