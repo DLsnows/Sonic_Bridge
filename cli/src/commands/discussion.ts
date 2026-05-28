@@ -8,6 +8,7 @@ import {
 } from "../api.js";
 import { loadConfig } from "../config.js";
 import { renderTable } from "../util/table.js";
+import { resolveByPrefix } from "../util/resolve-id.js";
 
 export interface DiscussionPost {
   id: string;
@@ -289,13 +290,24 @@ export async function runDiscussionReply(
       process.exit(1);
     }
 
+    // Resolve 8-char prefix → full UUID before sending (the server's Zod
+    // schema rejects non-UUIDs with 400 "Invalid uuid").
+    const parent = await resolveByPrefix(
+      parentPostId,
+      () =>
+        apiFetch<DiscussionPost[]>(
+          `/api/projects/${encodeURIComponent(projectId)}/discussion`,
+        ),
+      "post",
+    );
+
     const created = await apiFetch<CreatePostResponse>(
       `/api/projects/${encodeURIComponent(projectId)}/discussion`,
       {
         method: "POST",
         body: {
           hasParent: true,
-          parentId: parentPostId,
+          parentId: parent.id,
           content,
         },
       },
@@ -306,7 +318,7 @@ export async function runDiscussionReply(
     } else {
       console.log(
         pc.green(
-          `Replied to ${parentPostId} (new post id: ${created.id}).`,
+          `Replied to ${parent.id} (new post id: ${created.id}).`,
         ),
       );
       console.log(
@@ -318,6 +330,11 @@ export async function runDiscussionReply(
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) {
       console.error(pc.red(`Parent post ${parentPostId} not found.`));
+      process.exit(1);
+      return;
+    }
+    if (err instanceof Error && /No post matches|prefix.*ambiguous/.test(err.message)) {
+      console.error(pc.red(err.message));
       process.exit(1);
       return;
     }

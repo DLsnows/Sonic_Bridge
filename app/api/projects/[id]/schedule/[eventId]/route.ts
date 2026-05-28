@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { scheduleEvents } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
-import { resolveProjectId } from "@/lib/project-utils";
+import { resolveProjectId, UUID_RE } from "@/lib/project-utils";
 import { authenticate } from "@/lib/api-auth";
 
 const updateEventSchema = z.object({
@@ -25,6 +25,11 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string; eventId: string }> },
 ) {
   const { id: rawId, eventId } = await params;
+  // Reject non-UUID eventId early — Postgres uuid cast would otherwise crash
+  // the route with a 500. CLI bug filed in round 1 diagnostic (BUG 7).
+  if (!UUID_RE.test(eventId)) {
+    return NextResponse.json({ error: "Invalid event id" }, { status: 400 });
+  }
   const authResult = await authenticate(request, rawId);
   if (authResult instanceof Response) return authResult;
 
@@ -96,6 +101,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; eventId: string }> },
 ) {
   const { id: rawId, eventId } = await params;
+  if (!UUID_RE.test(eventId)) {
+    return NextResponse.json({ error: "Invalid event id" }, { status: 400 });
+  }
   const authResult = await authenticate(request, rawId);
   if (authResult instanceof Response) return authResult;
 

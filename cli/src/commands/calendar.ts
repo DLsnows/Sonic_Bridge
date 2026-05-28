@@ -8,6 +8,7 @@ import {
 } from "../api.js";
 import { loadConfig } from "../config.js";
 import { renderTable } from "../util/table.js";
+import { resolveByPrefix } from "../util/resolve-id.js";
 
 const EVENT_TYPES = ["meeting", "production", "release", "other"] as const;
 type EventType = (typeof EVENT_TYPES)[number];
@@ -226,6 +227,26 @@ export async function runCalendarLs(flags: CalendarFlags): Promise<void> {
   }
 }
 
+/**
+ * Fetch every event in a wide window (−1 year to +1 year) for prefix
+ * resolution. The GET /schedule endpoint filters by startDate/endDate
+ * (overlap), so this covers anything the user is likely to reference.
+ */
+async function fetchAllEventsForResolve(
+  projectId: string,
+): Promise<ScheduleEvent[]> {
+  const now = Date.now();
+  const oneYearMs = 365 * 24 * 60 * 60 * 1000;
+  const params = new URLSearchParams({
+    startDate: new Date(now - oneYearMs).toISOString(),
+    endDate: new Date(now + oneYearMs).toISOString(),
+  });
+  const res = await apiFetch<ScheduleListResponse>(
+    `/api/projects/${encodeURIComponent(projectId)}/schedule?${params.toString()}`,
+  );
+  return res.events;
+}
+
 export async function runCalendarEdit(
   eventId: string,
   flags: CalendarFlags,
@@ -233,6 +254,13 @@ export async function runCalendarEdit(
   const cfg = await loadConfig();
   try {
     const projectId = resolveActiveProject(cfg, flags.project);
+    // Resolve 8-char prefix → full UUID before sending to the API.
+    const event = await resolveByPrefix(
+      eventId,
+      () => fetchAllEventsForResolve(projectId),
+      "event",
+    );
+    const resolvedId = event.id;
     const body: Record<string, unknown> = {};
     if (flags.title !== undefined) body.title = flags.title;
     if (flags.desc !== undefined) body.description = flags.desc;
@@ -262,7 +290,7 @@ export async function runCalendarEdit(
     }
 
     const result = await apiFetch<ScheduleEventResponse>(
-      `/api/projects/${encodeURIComponent(projectId)}/schedule/${encodeURIComponent(eventId)}`,
+      `/api/projects/${encodeURIComponent(projectId)}/schedule/${encodeURIComponent(resolvedId)}`,
       { method: "PATCH", body },
     );
 
@@ -286,6 +314,11 @@ export async function runCalendarEdit(
       process.exit(1);
       return;
     }
+    if (err instanceof Error && /No event matches|prefix.*ambiguous/.test(err.message)) {
+      console.error(pc.red(err.message));
+      process.exit(1);
+      return;
+    }
     console.error(pc.red(formatApiError(err)));
     process.exit(1);
   }
@@ -298,11 +331,18 @@ export async function runCalendarRm(
   const cfg = await loadConfig();
   try {
     const projectId = resolveActiveProject(cfg, flags.project);
+    // Resolve 8-char prefix → full UUID before sending to the API.
+    const event = await resolveByPrefix(
+      eventId,
+      () => fetchAllEventsForResolve(projectId),
+      "event",
+    );
+    const resolvedId = event.id;
     await apiFetch(
-      `/api/projects/${encodeURIComponent(projectId)}/schedule/${encodeURIComponent(eventId)}`,
+      `/api/projects/${encodeURIComponent(projectId)}/schedule/${encodeURIComponent(resolvedId)}`,
       { method: "DELETE" },
     );
-    console.log(pc.green(`Deleted event ${eventId}`));
+    console.log(pc.green(`Deleted event ${resolvedId}`));
   } catch (err) {
     if (err instanceof ApiError && err.status === 403) {
       console.error(
@@ -315,6 +355,11 @@ export async function runCalendarRm(
     }
     if (err instanceof ApiError && err.status === 404) {
       console.error(pc.red(`Event ${eventId} not found.`));
+      process.exit(1);
+      return;
+    }
+    if (err instanceof Error && /No event matches|prefix.*ambiguous/.test(err.message)) {
+      console.error(pc.red(err.message));
       process.exit(1);
       return;
     }
