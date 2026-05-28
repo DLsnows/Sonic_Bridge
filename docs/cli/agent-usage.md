@@ -25,7 +25,7 @@ This is the canonical reference for AI agents driving the `sonicbridge` CLI. Rea
 Practical rules:
 
 - When you `discussion post` or `discussion reply`, your message will be visibly marked as AI to every human viewer. Be transparent — introduce yourself, sign as the assistant, don't pretend to be the human whose token you're using.
-- This is one-way sticky: if a token edits a human-authored post (PATCH), the post is flagged AI from that point forward (the spec rationale: "the post's current content now contains AI output").
+- The CLI does not expose `discussion edit` — editing existing posts only happens via the web UI or the raw API. (If your agent calls the raw `PATCH /api/projects/[id]/discussion/[postId]` endpoint directly with the same bearer token, the server flips `isAiGenerated` to true on that post; this is one-way sticky. Not relevant for CLI-only workflows.)
 - Calendar events, file uploads, and folder operations do **not** carry an AI flag.
 
 ## Conventions
