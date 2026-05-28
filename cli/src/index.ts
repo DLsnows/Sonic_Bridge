@@ -49,7 +49,14 @@ function buildProgram(): Command {
   program
     .name("sonicbridge")
     .description("CLI for the Sonic Bridge platform")
-    .version(pkg.version);
+    .version(pkg.version)
+    .addHelpText(
+      "after",
+      "\nAI agents: full reference (AI-flag rule, JSON shapes, mini patterns, exit codes) at\n" +
+        "  https://github.com/DLsnows/Sonic_Bridge/blob/dev/docs/cli/agent-usage.md\n" +
+        "Humans: install + token setup at\n" +
+        "  https://github.com/DLsnows/Sonic_Bridge/blob/dev/docs/cli/install-for-agents.md\n",
+    );
 
   // -- auth
   program

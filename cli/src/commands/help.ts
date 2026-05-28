@@ -94,6 +94,11 @@ const HEADER = [
   "Topics: login, project, files, folders, calendar, discussion",
   "",
   "Pass --help to any subcommand for its full flag list.",
+  "",
+  "AI agents: full reference (AI-flag rule, JSON shapes, mini patterns, exit codes) at",
+  "  https://github.com/DLsnows/Sonic_Bridge/blob/dev/docs/cli/agent-usage.md",
+  "Humans: install + token setup at",
+  "  https://github.com/DLsnows/Sonic_Bridge/blob/dev/docs/cli/install-for-agents.md",
 ].join("\n");
 
 export function runHelp(topic: string | undefined): void {
