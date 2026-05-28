@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { users, deleteChallenges } from "@/lib/db/schema";
-import { eq, lt, or, isNotNull } from "drizzle-orm";
+import { and, eq, lt, or, isNotNull } from "drizzle-orm";
 import { compare } from "bcryptjs";
 import { randomBytes, createHash } from "crypto";
 import { z } from "zod";
@@ -114,11 +114,16 @@ export async function POST(request: NextRequest) {
   const expiresAt = new Date(Date.now() + CHALLENGE_TTL_MS);
 
   // Best-effort cleanup of expired/used challenges to bound table growth.
+  // Scope to this user's rows only — cross-user cleanup would surprise reviewers
+  // and is unnecessary (used/expired rows are not reusable anyway).
   // Failures here must not impact the request, so swallow the error.
   await db
     .delete(deleteChallenges)
     .where(
-      or(lt(deleteChallenges.expiresAt, new Date()), isNotNull(deleteChallenges.usedAt)),
+      and(
+        eq(deleteChallenges.userId, userId),
+        or(lt(deleteChallenges.expiresAt, new Date()), isNotNull(deleteChallenges.usedAt)),
+      ),
     )
     .catch(() => {});
 
