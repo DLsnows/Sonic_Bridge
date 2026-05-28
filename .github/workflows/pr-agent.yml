@@ -13,7 +13,10 @@ concurrency:
 jobs:
   pr_agent_job:
     if: ${{ github.event.sender.type != 'Bot' }}
-    runs-on: ubuntu-slim
+    # NOTE: keep ubuntu-latest (NOT ubuntu-slim). pr-agent is a Docker container
+    # action; the slim runner image has no docker daemon, so the action's build
+    # phase fails with "no such file or directory" on /var/run/docker.sock.
+    runs-on: ubuntu-latest
     permissions:
       issues: write
       pull-requests: write
