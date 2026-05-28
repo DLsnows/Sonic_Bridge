@@ -6,11 +6,13 @@ vi.mock("../commands/files.js", () => ({
   runFilesUpload: vi.fn(),
   runFilesDownload: vi.fn(),
   runFilesMv: vi.fn(),
+  runFilesRename: vi.fn(),
   runFilesRm: vi.fn(),
 }));
 vi.mock("../commands/folders.js", () => ({
   runFoldersLs: vi.fn(),
   runFoldersMkdir: vi.fn(),
+  runFoldersRename: vi.fn(),
   runFoldersRm: vi.fn(),
 }));
 vi.mock("../commands/login.js", () => ({ runLogin: vi.fn() }));
