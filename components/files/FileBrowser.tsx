@@ -96,6 +96,63 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
     document.body.removeChild(a);
   };
 
+  const handleRenameFile = useCallback(
+    async (fileId: string, newName: string) => {
+      const previous = [...files];
+      const target = previous.find((f) => f.id === fileId);
+      if (!target) return;
+      if (target.name === newName) return;
+
+      // Optimistic update.
+      setFiles((prev) =>
+        prev.map((f) => (f.id === fileId ? { ...f, name: newName } : f)),
+      );
+
+      try {
+        const res = await fetch(
+          `/api/projects/${projectId}/files/${fileId}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: newName }),
+          },
+        );
+        if (!res.ok) {
+          // Roll back the optimistic state first.
+          setFiles((prev) =>
+            prev.map((f) => (f.id === fileId ? { ...f, name: target.name } : f)),
+          );
+          if (res.status === 422) {
+            try {
+              const data = (await res.json()) as {
+                error?: string;
+                currentExt?: string;
+                newExt?: string;
+              };
+              if (data?.error === "extension_change_not_allowed") {
+                const cur = data.currentExt ? `.${data.currentExt}` : "(none)";
+                const nxt = data.newExt ? `.${data.newExt}` : "(none)";
+                alert(`Extension cannot be changed (${cur} → ${nxt})`);
+                return;
+              }
+            } catch {
+              // fall through to generic
+            }
+          }
+          alert(`Rename failed (HTTP ${res.status})`);
+        }
+      } catch (err) {
+        setFiles((prev) =>
+          prev.map((f) => (f.id === fileId ? { ...f, name: target.name } : f)),
+        );
+        alert(
+          err instanceof Error ? err.message : "Rename failed: network error",
+        );
+      }
+    },
+    [files, projectId],
+  );
+
   const handleRenameFolder = (folderId: string, currentName: string) => {
     const newName = prompt("New folder name:", currentName);
     if (!newName || newName === currentName) return;
@@ -193,7 +250,7 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
             </h3>
             <Button size="sm" variant="primary" onClick={() => setShowUpload(true)}>Upload Files</Button>
           </div>
-          <FileList files={files} loading={loading} projectId={projectId} onDelete={handleDelete} onDownload={handleDownload} onOpenPlayer={(file) => setPlayerFile(file)} />
+          <FileList files={files} loading={loading} projectId={projectId} onDelete={handleDelete} onDownload={handleDownload} onRename={handleRenameFile} onOpenPlayer={(file) => setPlayerFile(file)} />
         </div>
       </main>
       {showUpload && <UploadZone projectId={projectId} folderId={currentFolderId} onComplete={handleUploadComplete} onClose={() => setShowUpload(false)} />}

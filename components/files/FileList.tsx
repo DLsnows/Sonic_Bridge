@@ -11,7 +11,13 @@ interface FileListProps {
   projectId: string;
   onDelete: (fileId: string) => void;
   onDownload: (fileId: string, fileName: string) => void;
+  onRename?: (fileId: string, newName: string) => void;
   onOpenPlayer?: (file: FileItem) => void;
+}
+
+function fileExtension(name: string): string {
+  const idx = name.lastIndexOf(".");
+  return idx === -1 ? "" : name.slice(idx + 1).toLowerCase();
 }
 
 function formatSize(bytes: number): string {
@@ -45,12 +51,50 @@ const iconColors: Record<string, string> = {
   FILE: "text-[#A0A0B0]",
 };
 
-export function FileList({ files, loading, projectId, onDelete, onDownload, onOpenPlayer }: FileListProps) {
+export function FileList({ files, loading, projectId, onDelete, onDownload, onRename, onOpenPlayer }: FileListProps) {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [draggingFileId, setDraggingFileId] = useState<string | null>(null);
+  const [renamingFileId, setRenamingFileId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState<string>("");
+  const [renameError, setRenameError] = useState<string | null>(null);
+  const renameErrorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [playingFileId, setPlayingFileId] = useState<string | null>(null);
   const [audioLoading, setAudioLoading] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
+
+  const startRename = (file: FileItem) => {
+    setRenamingFileId(file.id);
+    setRenameDraft(file.name);
+    setRenameError(null);
+  };
+  const cancelRename = () => {
+    setRenamingFileId(null);
+    setRenameDraft("");
+  };
+  const showRenameError = (msg: string) => {
+    setRenameError(msg);
+    if (renameErrorTimeoutRef.current) clearTimeout(renameErrorTimeoutRef.current);
+    renameErrorTimeoutRef.current = setTimeout(() => setRenameError(null), 4000);
+  };
+  const submitRename = (file: FileItem) => {
+    const trimmed = renameDraft.trim();
+    if (!trimmed || trimmed === file.name) {
+      cancelRename();
+      return;
+    }
+    // Client-side validation: extension must match (case-insensitive).
+    if (fileExtension(trimmed) !== fileExtension(file.name)) {
+      showRenameError("Extension cannot be changed");
+      return;
+    }
+    if (onRename) onRename(file.id, trimmed);
+    cancelRename();
+  };
+  useEffect(() => {
+    return () => {
+      if (renameErrorTimeoutRef.current) clearTimeout(renameErrorTimeoutRef.current);
+    };
+  }, []);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playingFileIdRef = useRef<string | null>(null);
   const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -224,6 +268,14 @@ export function FileList({ files, loading, projectId, onDelete, onDownload, onOp
           {audioError}
         </div>
       )}
+      {renameError && (
+        <div
+          role="alert"
+          className="mb-3 px-4 py-2 bg-[#FF4444]/10 border border-[#FF4444]/30 rounded text-xs text-[#FF4444]"
+        >
+          {renameError}
+        </div>
+      )}
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-white/10">
@@ -256,16 +308,38 @@ export function FileList({ files, loading, projectId, onDelete, onDownload, onOp
                 <td className="py-2.5 px-3">
                   <div className="flex items-center gap-2">
                     <span className={`font-['Share_Tech_Mono',monospace] text-[10px] ${colorClass}`}>{icon}</span>
-                    <span
-                      className={`text-[#F0F0F0] truncate max-w-[200px] ${file.mimeType.startsWith("audio/") ? "cursor-pointer hover:text-[#00F0FF] hover:underline transition-colors" : ""}`}
-                      onClick={() => {
-                        if (file.mimeType.startsWith("audio/") && onOpenPlayer) {
-                          onOpenPlayer(file);
-                        }
-                      }}
-                    >
-                      {file.name}
-                    </span>
+                    {renamingFileId === file.id ? (
+                      <input
+                        type="text"
+                        autoFocus
+                        value={renameDraft}
+                        onChange={(e) => setRenameDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            submitRename(file);
+                          } else if (e.key === "Escape") {
+                            e.preventDefault();
+                            cancelRename();
+                          }
+                        }}
+                        onBlur={() => cancelRename()}
+                        onClick={(e) => e.stopPropagation()}
+                        className="bg-[#0F0F13] border border-[#00F0FF]/40 rounded px-1.5 py-0.5 text-[#F0F0F0] text-sm font-mono w-[220px] outline-none focus:border-[#00F0FF]"
+                        aria-label="Rename file"
+                      />
+                    ) : (
+                      <span
+                        className={`text-[#F0F0F0] truncate max-w-[200px] ${file.mimeType.startsWith("audio/") ? "cursor-pointer hover:text-[#00F0FF] hover:underline transition-colors" : ""}`}
+                        onClick={() => {
+                          if (file.mimeType.startsWith("audio/") && onOpenPlayer) {
+                            onOpenPlayer(file);
+                          }
+                        }}
+                      >
+                        {file.name}
+                      </span>
+                    )}
                   </div>
                 </td>
                 <td className="py-2.5 px-3 text-[#A0A0B0] font-mono text-xs">{formatSize(file.size)}</td>
@@ -322,6 +396,17 @@ export function FileList({ files, loading, projectId, onDelete, onDownload, onOp
                           </div>
                         )}
                       </div>
+                    )}
+                    {onRename && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => startRename(file)}
+                        aria-label={`Rename ${file.name}`}
+                        title="Rename"
+                      >
+                        Rename
+                      </Button>
                     )}
                     <Button variant="ghost" size="sm" onClick={() => onDownload(file.id, file.name)}>DL</Button>
                     <Button variant="danger" size="sm" onClick={() => setDeleteTarget({ id: file.id, name: file.name })}>DEL</Button>
