@@ -382,4 +382,42 @@ describe("PATCH /api/projects/[id]/files/[fileId]", () => {
     const json = (await res.json()) as { error: string };
     expect(json.error).toBe("Invalid input");
   });
+
+  test("happy path: renames file and returns updated row", async () => {
+    const PATCH = await loadPatch();
+    const res = await PATCH(buildRequest({ name: "new-name.wav" }), { params });
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as { file: { name: string } };
+    expect(json.file.name).toBe("new-name.wav");
+    expect(store.files[0].name).toBe("new-name.wav");
+  });
+
+  test("400 when name contains a path separator (zod refine via FILE_NAME_FORBIDDEN_RE)", async () => {
+    const PATCH = await loadPatch();
+    const res = await PATCH(buildRequest({ name: "../evil.wav" }), { params });
+    expect(res.status).toBe(400);
+    const json = (await res.json()) as { error: string };
+    expect(json.error).toBe("Invalid input");
+    // file should not have been renamed
+    expect(store.files[0].name).toBe("track.wav");
+  });
+
+  test("400 when name is empty (zod min(1))", async () => {
+    const PATCH = await loadPatch();
+    const res = await PATCH(buildRequest({ name: "" }), { params });
+    expect(res.status).toBe(400);
+    const json = (await res.json()) as { error: string };
+    expect(json.error).toBe("Invalid input");
+    expect(store.files[0].name).toBe("track.wav");
+  });
+
+  test("400 when name exceeds 255 characters (zod max(255))", async () => {
+    const PATCH = await loadPatch();
+    const longName = "a".repeat(256);
+    const res = await PATCH(buildRequest({ name: longName }), { params });
+    expect(res.status).toBe(400);
+    const json = (await res.json()) as { error: string };
+    expect(json.error).toBe("Invalid input");
+    expect(store.files[0].name).toBe("track.wav");
+  });
 });

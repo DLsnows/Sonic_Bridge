@@ -41,8 +41,10 @@ function BreadcrumbSegment({
     e.dataTransfer.dropEffect = "move";
     if (!isDropTarget) setIsDropTarget(true);
   };
-  const handleDragLeave = () => {
-    if (isDropTarget) setIsDropTarget(false);
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    const next = e.relatedTarget as Node | null;
+    if (next && e.currentTarget.contains(next)) return; // still inside
+    setIsDropTarget(false);
   };
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
