@@ -180,7 +180,10 @@ export async function runDiscussionRead(
     // If the user passed a reply id, walk up to its root for thread context.
     let effectiveRoot = root;
     const byId = new Map(posts.map((p) => [p.id, p] as const));
-    while (effectiveRoot.parentId) {
+    const seenWalk = new Set<string>();
+    // Cycle guard: bail if the server returns malformed cyclic parentId data.
+    while (effectiveRoot.parentId && !seenWalk.has(effectiveRoot.id)) {
+      seenWalk.add(effectiveRoot.id);
       const parent = byId.get(effectiveRoot.parentId);
       if (!parent) break;
       effectiveRoot = parent;
