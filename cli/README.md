@@ -62,9 +62,14 @@ CLI surfaces this with an `[AI]` badge in `discussion ls` and `read` output.
 
 ## Documentation
 
-For agent-facing documentation, recommended `.claude/settings.json` snippets,
-and the full per-command reference, see `docs/cli/install-for-agents.md` and
-the rest of `docs/cli/` (added in a follow-up PR).
+- [`docs/cli/install-for-agents.md`](../docs/cli/install-for-agents.md) — install
+  the CLI for your AI agent, generate a token, recommended `.claude/settings.json`
+  allowlist.
+- [`docs/cli/agent-usage.md`](../docs/cli/agent-usage.md) — full per-command
+  reference for AI agents (synopses, JSON output shapes, mini patterns).
+- [`docs/cli/help.md`](../docs/cli/help.md) — long-form mirror of
+  `sonicbridge help <topic>`.
+- [`docs/cli/README.md`](../docs/cli/README.md) — docs landing page.
 
 ## Config storage
 
