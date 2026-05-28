@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { FolderTree } from "./FolderTree";
 import { FileList } from "./FileList";
 import { UploadZone } from "./UploadZone";
@@ -24,6 +24,10 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
   const [showUpload, setShowUpload] = useState(false);
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [playerFile, setPlayerFile] = useState<FileItem | null>(null);
+  // Per-file in-flight rename guard. A second rename on the same file is
+  // refused until the first PATCH resolves, so a failure-then-success race
+  // can't replace a successful rename with a stale rollback.
+  const renamingRef = useRef<Set<string>>(new Set());
 
   const fetchFiles = useCallback(async (folderId: string | null) => {
     setLoading(true);
@@ -98,10 +102,14 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
 
   const handleRenameFile = useCallback(
     async (fileId: string, newName: string) => {
+      // Serialize per-file: refuse a second rename while one is in-flight.
+      if (renamingRef.current.has(fileId)) return;
       const previous = [...files];
       const target = previous.find((f) => f.id === fileId);
       if (!target) return;
       if (target.name === newName) return;
+      const previousName = target.name;
+      renamingRef.current.add(fileId);
 
       // Optimistic update.
       setFiles((prev) =>
@@ -118,9 +126,16 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
           },
         );
         if (!res.ok) {
-          // Roll back the optimistic state first.
+          // Roll back the optimistic state — but only if the current state
+          // still reflects OUR optimistic write. If another rename succeeded
+          // in the meantime (shouldn't happen with the renamingRef guard
+          // above, but belt-and-suspenders), don't stomp it.
           setFiles((prev) =>
-            prev.map((f) => (f.id === fileId ? { ...f, name: target.name } : f)),
+            prev.map((f) =>
+              f.id === fileId && f.name === newName
+                ? { ...f, name: previousName }
+                : f,
+            ),
           );
           if (res.status === 422) {
             try {
@@ -143,11 +158,17 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
         }
       } catch (err) {
         setFiles((prev) =>
-          prev.map((f) => (f.id === fileId ? { ...f, name: target.name } : f)),
+          prev.map((f) =>
+            f.id === fileId && f.name === newName
+              ? { ...f, name: previousName }
+              : f,
+          ),
         );
         alert(
           err instanceof Error ? err.message : "Rename failed: network error",
         );
+      } finally {
+        renamingRef.current.delete(fileId);
       }
     },
     [files, projectId],
