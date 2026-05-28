@@ -77,16 +77,18 @@ export function renderThread(root: DiscussionPost, all: DiscussionPost[]): strin
   function walk(parent: DiscussionPost, depth: number): void {
     const children = byParent.get(parent.id) ?? [];
     const indent = "    ".repeat(depth);
-    for (const child of children) {
+    children.forEach((child, idx) => {
+      const isLast = idx === children.length - 1;
+      const connector = isLast ? "└──" : "├──";
       lines.push(
-        `${indent}└── ${shortId(child.id)} by ${child.username}${aiTag(child)} @ ${child.createdAt}`,
+        `${indent}${connector} ${shortId(child.id)} by ${child.username}${aiTag(child)} @ ${child.createdAt}`,
       );
       const contentIndent = `${indent}    `;
       for (const contentLine of child.content.split("\n")) {
         lines.push(`${contentIndent}${contentLine}`);
       }
       walk(child, depth + 1);
-    }
+    });
   }
   walk(root, 0);
 
@@ -114,7 +116,11 @@ export async function runDiscussionLs(flags: DiscussionFlags): Promise<void> {
     const byId = new Map(posts.map((p) => [p.id, p] as const));
     const rootOf = (post: DiscussionPost): string => {
       let cur: DiscussionPost | undefined = post;
-      while (cur && cur.parentId) {
+      const seen = new Set<string>();
+      // Cycle guard: if the server returns malformed parentId data that loops
+      // (A -> B -> A), bail out and treat the current node as the root.
+      while (cur && cur.parentId && !seen.has(cur.id)) {
+        seen.add(cur.id);
         cur = byId.get(cur.parentId);
       }
       return cur ? cur.id : post.id;
