@@ -9,9 +9,19 @@ const USER_ID = "33333333-3333-3333-3333-333333333333";
 const OTHER_USER_ID = "44444444-4444-4444-4444-444444444444";
 
 const state = vi.hoisted(() => ({
-  sessionMock: { user: { id: "33333333-3333-3333-3333-333333333333" } } as
-    | { user: { id: string } }
-    | null,
+  authMock: {
+    userId: "33333333-3333-3333-3333-333333333333",
+    username: "alice",
+    email: "alice@example.com",
+    isToken: false,
+  } as
+    | {
+        userId: string;
+        username: string;
+        email: string;
+        isToken: boolean;
+      }
+    | Response,
   // Pretend rows representing existing challenges. Expired/used rows belonging
   // to the VERIFYING user should be wiped by the cleanup step before the new
   // row is inserted; rows belonging to OTHER users must survive (cleanup is
@@ -54,8 +64,8 @@ const state = vi.hoisted(() => ({
   verifyingUserId: "33333333-3333-3333-3333-333333333333",
 }));
 
-vi.mock("@/lib/auth", () => ({
-  auth: vi.fn(async () => state.sessionMock),
+vi.mock("@/lib/api-auth", () => ({
+  authenticateUser: vi.fn(async () => state.authMock),
 }));
 
 vi.mock("bcryptjs", () => ({
@@ -110,7 +120,12 @@ function makeReq(): NextRequest {
 }
 
 beforeEach(async () => {
-  state.sessionMock = { user: { id: USER_ID } };
+  state.authMock = {
+    userId: USER_ID,
+    username: "alice",
+    email: "alice@example.com",
+    isToken: false,
+  };
   state.verifyingUserId = USER_ID;
   state.rows = [
     {

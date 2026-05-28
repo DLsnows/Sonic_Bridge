@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { authenticateUser } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { users, deleteChallenges } from "@/lib/db/schema";
 import { and, eq, lt, or, isNotNull } from "drizzle-orm";
@@ -60,13 +60,18 @@ export const __test =
     : undefined;
 
 export async function POST(request: NextRequest) {
-  // Security: this endpoint is session-only — a leaked Bearer token must NOT
-  // be able to mint a delete challenge.
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  const userId = session.user.id as string;
+  // Accepts both session and Bearer authentication.
+  //
+  // Rationale: the challenge guards against UI-mode attacks (XSS, stolen
+  // session cookie where the attacker has cookies but not the password).
+  // A leaked Bearer token already grants unrestricted DELETE/PATCH/POST
+  // across every endpoint that uses authenticate(); a separate session-
+  // only guard here would not raise the bar for that threat. The
+  // rate-limit (5 failed attempts per 15 min per user) and one-shot
+  // challenge semantics still bound damage in either auth mode.
+  const authResult = await authenticateUser(request);
+  if (authResult instanceof Response) return authResult;
+  const userId = authResult.userId;
 
   // Rate limit BEFORE password compare to prevent timing leakage from being
   // amplified into a brute-force vector.
