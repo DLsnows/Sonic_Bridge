@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git checkout *)",
+      "Bash(rm -f .claude/settings.local.json)",
+      "Bash(git rm *)",
+      "Bash(git commit *)",
+      "Bash(Read components/discussion/ThreadCard.tsx 97 106)",
+      "Bash(git add *)",
+      "Bash(git push *)",
+      "Bash(Read components/files/FileBrowser.tsx 59 76)",
+      "Bash(npx tsc *)",
+      "Bash(gh pr *)",
+      "Bash(git pull *)",
+      "Bash(gh run *)",
+      "Bash(git fetch *)",
+      "Bash(git merge *)",
+      "Bash(npx drizzle-kit *)",
+      "Bash(git reset *)",
+      "Bash(git stash *)",
+      "mcp__Neon__run_sql",
+      "Bash(npm install *)"
+    ]
+  }
+}

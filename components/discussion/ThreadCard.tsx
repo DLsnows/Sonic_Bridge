@@ -1,0 +1,460 @@
+"use client";
+
+import { useState } from "react";
+import MDEditor from "@uiw/react-md-editor";
+import "@uiw/react-md-editor/markdown-editor.css";
+import rehypeSanitize from "rehype-sanitize";
+import { formatDistanceToNow } from "date-fns";
+import { Button } from "@/components/ui/Button";
+import { PostForm } from "./PostForm";
+
+interface DiscussionPost {
+  id: string;
+  projectId: string;
+  userId: string;
+  username: string;
+  avatar?: string | null;
+  title: string;
+  content: string;
+  parentId: string | null;
+  isEdited: boolean;
+  isAiGenerated?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ThreadCardProps {
+  post: DiscussionPost;
+  replies: DiscussionPost[];
+  currentUserId: string;
+  isAdmin: boolean;
+  projectId: string;
+  replyingTo: string | null;
+  editingId: string | null;
+  onReply: (parentId: string, content: string) => Promise<void>;
+  onEdit: (postId: string, content: string) => Promise<void>;
+  onDelete: (postId: string) => Promise<void>;
+  onAiFormat: (postId: string) => Promise<void>;
+  onSetReplying: (id: string | null) => void;
+  onSetEditing: (id: string | null) => void;
+  repliesMap: Map<string, DiscussionPost[]>;
+}
+
+function timeAgo(dateStr: string): string {
+  try {
+    return formatDistanceToNow(new Date(dateStr), { addSuffix: true });
+  } catch {
+    return dateStr;
+  }
+}
+
+function PostBody({ post }: { post: DiscussionPost }) {
+  return (
+    <div data-color-mode="dark" className="space-y-3">
+      <MDEditor.Markdown
+        source={post.content}
+        rehypePlugins={[rehypeSanitize]}
+        style={{
+          background: "transparent",
+          color: "#D0D0D0",
+          fontSize: "14px",
+        }}
+      />
+      {post.isEdited && (
+        <span className="text-[10px] text-[#A0A0B0]/60 italic">(edited)</span>
+      )}
+      {post.isAiGenerated && (
+        <span className="inline-block text-[10px] bg-[#FF8C00]/15 text-[#FF8C00] px-1.5 py-0.5 rounded font-mono ml-1">
+          AI
+        </span>
+      )}
+    </div>
+  );
+}
+
+export function ThreadCard({
+  post,
+  replies,
+  currentUserId,
+  isAdmin,
+  projectId,
+  replyingTo,
+  editingId,
+  onReply,
+  onEdit,
+  onDelete,
+  onAiFormat,
+  onSetReplying,
+  onSetEditing,
+  repliesMap,
+}: ThreadCardProps) {
+  const [expanded, setExpanded] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deletingReplyId, setDeletingReplyId] = useState<string | null>(null);
+  const [formattingId, setFormattingId] = useState<string | null>(null);
+  const [aiFormatError, setAiFormatError] = useState<string | null>(null);
+  const [errorPostId, setErrorPostId] = useState<string | null>(null);
+  const isOwner = post.userId === currentUserId;
+  const canModify = isOwner || isAdmin;
+
+  const handleDelete = async () => {
+    if (!confirm("Delete this post and all replies?")) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await onDelete(post.id);
+    } catch (err) {
+      setDeleteError(
+        err instanceof Error ? err.message : "Delete failed",
+      );
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const preview = post.content
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/[#*`>|\n]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 200);
+
+  return (
+    <div className="glass-panel animate-fade-in">
+      <div
+        className="p-4 cursor-pointer hover:bg-white/[0.02] transition-colors"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-6 h-6 rounded-full bg-[#FF8C00]/20 border border-[#FF8C00]/30 flex items-center justify-center text-[10px] text-[#FF8C00] font-['Share_Tech_Mono',monospace] shrink-0">
+                {post.username.charAt(0).toUpperCase()}
+              </span>
+              <span className="text-sm text-[#F0F0F0] font-medium truncate">
+                {post.username}
+              </span>
+              <span className="text-xs text-[#A0A0B0]/60">
+                {timeAgo(post.createdAt)}
+              </span>
+            </div>
+            <h3 className="text-base text-[#FF8C00] font-['Share_Tech_Mono',monospace] mb-1">
+              {post.title || (
+                <span className="text-[#A0A0B0] italic">(reply to thread)</span>
+              )}
+            </h3>
+            {!expanded && (
+              <p className="text-sm text-[#A0A0B0] line-clamp-2">
+                {preview}
+                {preview.length >= 200 ? "..." : ""}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <span className="text-xs text-[#A0A0B0]/60 tabular-nums">
+              {replies.length > 0
+                ? `${replies.length} ${replies.length === 1 ? "reply" : "replies"}`
+                : "No replies"}
+            </span>
+            <span
+              className="text-[#FF8C00]/50 text-sm transition-transform duration-200"
+              style={{
+                transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
+              }}
+            >
+              ▶
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="px-4 pb-4 border-t border-[#FF8C00]/5 animate-fade-in">
+          <div className="pt-4">
+            <PostBody post={post} />
+          </div>
+
+          <div className="flex items-center gap-2 mt-4 pt-3 border-t border-white/5">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSetReplying(replyingTo === post.id ? null : post.id);
+              }}
+            >
+              {replyingTo === post.id ? "Cancel Reply" : "Reply"}
+            </Button>
+            {isOwner && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSetEditing(editingId === post.id ? null : post.id);
+                }}
+              >
+                {editingId === post.id ? "Cancel Edit" : "Edit"}
+              </Button>
+            )}
+            {canModify && (
+              <Button
+                variant="ghost"
+                size="sm"
+                loading={deleting}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete();
+                }}
+                className="hover:text-[#FF4444]"
+              >
+                Delete
+              </Button>
+            )}
+            {post.content.length > 20 && !post.isAiGenerated && (
+              <Button
+                variant="ghost"
+                size="sm"
+                loading={formattingId === post.id}
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  setFormattingId(post.id);
+                  setAiFormatError(null);
+                  setErrorPostId(null);
+                  try {
+                    await onAiFormat(post.id);
+                  } catch (err) {
+                    setAiFormatError(
+                      err instanceof Error ? err.message : "AI format failed",
+                    );
+                    setErrorPostId(post.id);
+                  } finally {
+                    setFormattingId(null);
+                  }
+                }}
+                className="text-[#FF8C00]/70 hover:text-[#FF8C00]"
+              >
+                AI Format
+              </Button>
+            )}
+          </div>
+
+          {deleteError && (
+            <div className="p-2 rounded bg-[#FF4444]/10 border border-[#FF4444]/30 text-xs text-[#FF4444] mt-2">
+              {deleteError}
+            </div>
+          )}
+
+          {aiFormatError && errorPostId === post.id && (
+            <div className="p-2 rounded bg-[#FF4444]/10 border border-[#FF4444]/30 text-xs text-[#FF4444] mt-2">
+              {aiFormatError.toLowerCase().includes("not configured") ? (
+                isAdmin ? (
+                  <>
+                    AI formatting not configured.{" "}
+                    <a
+                      href={`/projects/${projectId}/settings`}
+                      className="text-[#FF8C00] underline hover:text-[#FF8C00]/80"
+                    >
+                      Configure it in Project Settings.
+                    </a>
+                  </>
+                ) : (
+                  "AI formatting not configured. Contact a project admin to enable it."
+                )
+              ) : (
+                aiFormatError
+              )}
+            </div>
+          )}
+
+          {editingId === post.id && (
+            <div className="mt-3">
+              <PostForm
+                mode="edit"
+                initialContent={post.content}
+                onSubmit={async (data) => {
+                  await onEdit(post.id, data.content);
+                  onSetEditing(null);
+                }}
+                onCancel={() => onSetEditing(null)}
+              />
+            </div>
+          )}
+
+          {replyingTo === post.id && (
+            <div className="mt-3">
+              <PostForm
+                mode="reply"
+                onSubmit={async (data) => {
+                  await onReply(post.id, data.content);
+                  onSetReplying(null);
+                }}
+                onCancel={() => onSetReplying(null)}
+              />
+            </div>
+          )}
+
+          {replies.length > 0 && (
+            <div className="mt-4 ml-8 pl-4 border-l-2 border-[#FF8C00]/10 space-y-3">
+              {replies.map((reply) => (
+                <div key={reply.id} className="animate-fade-in">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="w-5 h-5 rounded-full bg-[#FF8C00]/10 border border-[#FF8C00]/20 flex items-center justify-center text-[9px] text-[#FF8C00] font-['Share_Tech_Mono',monospace] shrink-0">
+                      {reply.username.charAt(0).toUpperCase()}
+                    </span>
+                    <span className="text-xs text-[#F0F0F0] font-medium">
+                      {reply.username}
+                    </span>
+                    <span className="text-[10px] text-[#A0A0B0]/60">
+                      {timeAgo(reply.createdAt)}
+                    </span>
+                  </div>
+                  <PostBody post={reply} />
+                  <div className="flex items-center gap-2 mt-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        onSetReplying(
+                          replyingTo === reply.id ? null : reply.id,
+                        )
+                      }
+                    >
+                      {replyingTo === reply.id ? "Cancel" : "Reply"}
+                    </Button>
+                    {(reply.userId === currentUserId || isAdmin) && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            onSetEditing(
+                              editingId === reply.id ? null : reply.id,
+                            )
+                          }
+                        >
+                          {editingId === reply.id ? "Cancel Edit" : "Edit"}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          loading={deletingReplyId === reply.id}
+                          onClick={async () => {
+                            if (!confirm("Delete this reply?")) return;
+                            setDeletingReplyId(reply.id);
+                            setDeleteError(null);
+                            try {
+                              await onDelete(reply.id);
+                            } catch {
+                              setDeleteError("Failed to delete reply");
+                            } finally {
+                              setDeletingReplyId(null);
+                            }
+                          }}
+                          className="hover:text-[#FF4444]"
+                        >
+                          Delete
+                        </Button>
+                      </>
+                    )}
+                    {reply.content.length > 20 && !reply.isAiGenerated && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          loading={formattingId === reply.id}
+                          onClick={async () => {
+                            setFormattingId(reply.id);
+                            setAiFormatError(null);
+                            setErrorPostId(null);
+                            try { await onAiFormat(reply.id); } catch (err) {
+                              setAiFormatError(err instanceof Error ? err.message : "AI format failed");
+                              setErrorPostId(reply.id);
+                            } finally { setFormattingId(null); }
+                          }}
+                          className="text-[#FF8C00]/70 hover:text-[#FF8C00]"
+                        >
+                          AI
+                        </Button>
+                        {aiFormatError && errorPostId === reply.id && (
+                          <p className="text-[10px] text-[#FF4444] mt-1">{aiFormatError}</p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  {editingId === reply.id && (
+                    <div className="mt-2">
+                      <PostForm
+                        mode="edit"
+                        initialContent={reply.content}
+                        onSubmit={async (data) => {
+                          await onEdit(reply.id, data.content);
+                          onSetEditing(null);
+                        }}
+                        onCancel={() => onSetEditing(null)}
+                      />
+                    </div>
+                  )}
+                  {replyingTo === reply.id && (
+                    <div className="mt-2">
+                      <PostForm
+                        mode="reply"
+                        onSubmit={async (data) => {
+                          await onReply(reply.id, data.content);
+                          onSetReplying(null);
+                        }}
+                        onCancel={() => onSetReplying(null)}
+                      />
+                    </div>
+                  )}
+                  {repliesMap.get(reply.id) && repliesMap.get(reply.id)!.length > 0 && (
+                    <div className="mt-2 ml-6 pl-3 border-l border-[#FF8C00]/5 space-y-2">
+                      {repliesMap.get(reply.id)!.map((nested) => (
+                        <div key={nested.id} className="animate-fade-in">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="w-4 h-4 rounded-full bg-[#FF8C00]/10 border border-[#FF8C00]/20 flex items-center justify-center text-[8px] text-[#FF8C00] font-['Share_Tech_Mono',monospace] shrink-0">
+                              {nested.username.charAt(0).toUpperCase()}
+                            </span>
+                            <span className="text-[10px] text-[#F0F0F0] font-medium">
+                              {nested.username}
+                            </span>
+                            <span className="text-[9px] text-[#A0A0B0]/60">
+                              {timeAgo(nested.createdAt)}
+                            </span>
+                          </div>
+                          <PostBody post={nested} />
+                          <div className="flex items-center gap-1 mt-1">
+                            {(nested.userId === currentUserId || isAdmin) && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                loading={deletingReplyId === nested.id}
+                                onClick={async () => {
+                                  if (!confirm("Delete this reply?")) return;
+                                  setDeletingReplyId(nested.id);
+                                  setDeleteError(null);
+                                  try { await onDelete(nested.id); } catch {
+                                    setDeleteError("Failed to delete reply");
+                                  } finally { setDeletingReplyId(null); }
+                                }}
+                                className="hover:text-[#FF4444] text-[10px]"
+                              >
+                                Del
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

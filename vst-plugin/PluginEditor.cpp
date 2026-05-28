@@ -1,0 +1,212 @@
+#include "PluginEditor.h"
+
+namespace SonicBridge {
+
+static float dBToLinear(float db) {
+  if (db < -60.0f) return 0.0f;
+  return juce::jlimit(0.0f, 1.0f, (db + 60.0f) / 60.0f);
+}
+
+SonicBridgeAudioProcessorEditor::SonicBridgeAudioProcessorEditor(
+    SonicBridgeAudioProcessor& processor)
+    : juce::AudioProcessorEditor(&processor),
+      mProcessor(processor) {
+
+  setLookAndFeel(&mLookAndFeel);
+  setSize(360, 420);
+
+  // Status label
+  mStatusLabel.setText("Disconnected", juce::dontSendNotification);
+  mStatusLabel.setFont(juce::Font(juce::FontOptions(14.0f, juce::Font::bold)));
+  mStatusLabel.setColour(juce::Label::textColourId,
+                         juce::Colour(0xffa0a0b0));
+  addAndMakeVisible(mStatusLabel);
+
+  mPluginInfoLabel.setText("SonicBridge VST " JucePlugin_VersionString,
+                           juce::dontSendNotification);
+  mPluginInfoLabel.setFont(juce::Font(juce::FontOptions().withHeight(11.0f)));
+  mPluginInfoLabel.setColour(juce::Label::textColourId,
+                             juce::Colour(0xffa0a0b0));
+  addAndMakeVisible(mPluginInfoLabel);
+
+  mClientCountLabel.setText("Clients: 0", juce::dontSendNotification);
+  mClientCountLabel.setFont(juce::Font(juce::FontOptions().withHeight(10.0f)));
+  mClientCountLabel.setColour(juce::Label::textColourId,
+                              juce::Colour(0xffa0a0b0));
+  addAndMakeVisible(mClientCountLabel);
+
+  // Status dot (child component, replaces hardcoded paint)
+  addAndMakeVisible(mStatusDot);
+
+  // Meters
+  addAndMakeVisible(mLeftMeter);
+  addAndMakeVisible(mRightMeter);
+
+  mMeterLabelL.setText("L", juce::dontSendNotification);
+  mMeterLabelL.setFont(juce::Font(juce::FontOptions().withHeight(10.0f)));
+  mMeterLabelL.setColour(juce::Label::textColourId,
+                         juce::Colour(0xffa0a0b0));
+  addAndMakeVisible(mMeterLabelL);
+
+  mMeterLabelR.setText("R", juce::dontSendNotification);
+  mMeterLabelR.setFont(juce::Font(juce::FontOptions().withHeight(10.0f)));
+  mMeterLabelR.setColour(juce::Label::textColourId,
+                         juce::Colour(0xffa0a0b0));
+  addAndMakeVisible(mMeterLabelR);
+
+  // Audio info
+  mSampleRateLabel.setText("48 kHz", juce::dontSendNotification);
+  mSampleRateLabel.setFont(juce::Font(juce::FontOptions().withHeight(10.0f)));
+  mSampleRateLabel.setColour(juce::Label::textColourId,
+                             juce::Colour(0xffa0a0b0));
+  addAndMakeVisible(mSampleRateLabel);
+
+  // Start/Stop button
+  mStartStopButton.setButtonText("Start Bridge");
+  mStartStopButton.onClick = [this]() {
+    auto& server = mProcessor.getBridgeServer();
+    if (server.isRunning()) {
+      server.stop();
+      mStartStopButton.setButtonText("Start Bridge");
+      mPortLabel.setText("Offline", juce::dontSendNotification);
+      mPortLabel.setColour(juce::Label::textColourId, juce::Colour(0xffa0a0b0));
+    } else {
+      int actualPort = server.start(9420);
+      if (actualPort > 0) {
+        mActualPort = actualPort;
+        mStartStopButton.setButtonText("Stop Bridge");
+        mPortLabel.setText(
+          "ws://localhost:" + juce::String(actualPort),
+          juce::dontSendNotification
+        );
+        mPortLabel.setColour(juce::Label::textColourId, juce::Colour(0xffa0a0b0));
+      } else {
+        mPortLabel.setText("ERROR: All ports in use", juce::dontSendNotification);
+        mPortLabel.setColour(juce::Label::textColourId, juce::Colour(0xffff4444));
+      }
+    }
+  };
+  addAndMakeVisible(mStartStopButton);
+
+  mPortLabel.setText("ws://localhost:9420", juce::dontSendNotification);
+  mPortLabel.setFont(juce::Font(juce::FontOptions().withHeight(10.0f)));
+  mPortLabel.setColour(juce::Label::textColourId,
+                       juce::Colour(0xffa0a0b0));
+  addAndMakeVisible(mPortLabel);
+
+  // Start 20 Hz timer for UI updates
+  startTimerHz(20);
+}
+
+SonicBridgeAudioProcessorEditor::~SonicBridgeAudioProcessorEditor() {
+  stopTimer();
+  setLookAndFeel(nullptr);
+}
+
+void SonicBridgeAudioProcessorEditor::paint(juce::Graphics& g) {
+  g.fillAll(juce::Colour(0xff09090b));
+
+  for (int y = 0; y < getHeight(); y += 3) {
+    g.setColour(juce::Colour(0x00ff41).withAlpha(0.02f));
+    g.fillRect(0, y, getWidth(), 1);
+  }
+
+  g.setColour(juce::Colour(0xff00ff41));
+  g.setFont(18.0f);
+  g.drawText("SonicBridge VST",
+             getLocalBounds().removeFromTop(40).toFloat(),
+             juce::Justification::centred);
+}
+
+void SonicBridgeAudioProcessorEditor::resized() {
+  auto area = getLocalBounds().reduced(12);
+
+  area.removeFromTop(44); // header
+
+  // Status row: dot + status label + client count
+  auto statusRow = area.removeFromTop(36);
+  mStatusDot.setBounds(statusRow.removeFromLeft(16).withSizeKeepingCentre(8, 8));
+  mStatusLabel.setBounds(statusRow.removeFromLeft(120));
+  mClientCountLabel.setBounds(statusRow.removeFromRight(80));
+
+  // Sample rate only (no buffer size)
+  area.removeFromTop(8);
+  auto infoRow = area.removeFromTop(18);
+  mSampleRateLabel.setBounds(infoRow.removeFromLeft(80));
+
+  area.removeFromTop(8);
+
+  // Meters
+  auto meterArea = area.removeFromTop(60);
+  auto leftMeterArea = meterArea.removeFromLeft(meterArea.getWidth() / 2 - 20);
+  mMeterLabelL.setBounds(leftMeterArea.removeFromLeft(16));
+  mLeftMeter.setBounds(leftMeterArea.reduced(0, 10));
+
+  meterArea.removeFromLeft(40);
+  auto rightMeterArea = meterArea;
+  mMeterLabelR.setBounds(rightMeterArea.removeFromLeft(16));
+  mRightMeter.setBounds(rightMeterArea.reduced(0, 10));
+
+  area.removeFromTop(8);
+
+  // Port info
+  mPortLabel.setBounds(area.removeFromTop(16));
+
+  // Start/Stop button
+  mStartStopButton.setBounds(area.removeFromTop(32).reduced(40, 0));
+
+  // Version label -- bottom-right corner
+  mPluginInfoLabel.setBounds(
+    getWidth() - 180, getHeight() - 24, 168, 16
+  );
+}
+
+void SonicBridgeAudioProcessorEditor::timerCallback() {
+  // stopTimer() in the destructor guarantees this callback never fires
+  // during teardown — both run synchronously on the JUCE message thread.
+
+  updateStatus();
+  updateMeters();
+}
+
+void SonicBridgeAudioProcessorEditor::updateStatus() {
+  auto& server = mProcessor.getBridgeServer();
+  if (!server.isRunning()) {
+    mStatusLabel.setText("Offline", juce::dontSendNotification);
+    mStatusLabel.setColour(juce::Label::textColourId, juce::Colour(0xffa0a0b0));
+    mStatusDot.setVisible(false);
+  } else if (server.getClientCount() > 0) {
+    mStatusLabel.setText("Connected", juce::dontSendNotification);
+    mStatusLabel.setColour(juce::Label::textColourId, juce::Colour(0xff00ff41));
+    mStatusDot.colour = juce::Colour(0xff00ff41);
+    mStatusDot.setVisible(true);
+  } else {
+    mStatusLabel.setText("Waiting...", juce::dontSendNotification);
+    mStatusLabel.setColour(juce::Label::textColourId, juce::Colour(0xffffb800));
+    mStatusDot.colour = juce::Colour(0xffffb800);
+    mStatusDot.setVisible(true);
+  }
+
+  mClientCountLabel.setText(
+    "Clients: " + juce::String(server.getClientCount()),
+    juce::dontSendNotification
+  );
+
+  mStartStopButton.setButtonText(
+    server.isRunning() ? "Stop Bridge" : "Start Bridge"
+  );
+
+  repaint();
+}
+
+void SonicBridgeAudioProcessorEditor::updateMeters() {
+  auto levels = mProcessor.getMeter().getLevels();
+  mLeftMeter.level = dBToLinear(levels.left);
+  mLeftMeter.peakHold = dBToLinear(levels.peak);
+  mRightMeter.level = dBToLinear(levels.right);
+  mRightMeter.peakHold = dBToLinear(levels.peak);
+  mLeftMeter.repaint();
+  mRightMeter.repaint();
+}
+
+} // namespace SonicBridge

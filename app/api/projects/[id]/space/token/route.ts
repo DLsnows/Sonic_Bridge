@@ -1,0 +1,59 @@
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { projectMembers, users } from "@/lib/db/schema";
+import { eq, and } from "drizzle-orm";
+import { getLiveKitToken } from "@/lib/livekit";
+import { resolveProjectId } from "@/lib/project-utils";
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const projectId = await resolveProjectId(id);
+  if (!projectId) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
+  const userId = session.user.id as string;
+
+  const [membership] = await db
+    .select()
+    .from(projectMembers)
+    .where(
+      and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)),
+    )
+    .limit(1);
+
+  if (!membership) {
+    return NextResponse.json({ error: "Not a member" }, { status: 403 });
+  }
+
+  const [user] = await db
+    .select({ username: users.username })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  const username = user?.username ?? "Unknown";
+  const roomName = `project-${projectId}`;
+
+  try {
+    const token = await getLiveKitToken(roomName, username, userId);
+    return NextResponse.json({
+      token,
+      roomName,
+      wsUrl: process.env.LIVEKIT_URL ?? "ws://localhost:7880",
+    });
+  } catch {
+    return NextResponse.json(
+      { error: "Failed to generate token" },
+      { status: 500 },
+    );
+  }
+}

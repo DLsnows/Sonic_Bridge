@@ -1,0 +1,17 @@
+[config]
+model = "deepseek/deepseek-v4-pro"
+fallback_models = ["deepseek/deepseek-v4-pro"]
+custom_model_max_tokens = 131072
+max_model_tokens = 120000
+
+[pr_reviewer]
+extra_instructions = "Focus on: security vulnerabilities, logic bugs, performance issues, and code quality. Write review comments in English."
+require_score_review = true
+num_code_suggestions = 4
+
+[pr_code_suggestions]
+num_code_suggestions = 4
+suggestions_score_threshold = 6
+
+[pr_description]
+publish_description_as_comment = true
