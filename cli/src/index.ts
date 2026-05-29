@@ -118,8 +118,11 @@ function buildProgram(): Command {
     });
   files
     .command("upload <localPath>")
-    .description("Upload a local file")
-    .option("--folder <id>", "Destination folder id (root if omitted)")
+    .description("Upload a local file (defaults to project root)")
+    .option(
+      "--folder <id>",
+      "Destination folder — full UUID or 8-char prefix shown by `folders ls`. Without this flag the file uploads to the project root.",
+    )
     .option("--project <p>", "Project id or customId")
     .option("--json", "Output JSON")
     .action(async (localPath: string, opts) => {

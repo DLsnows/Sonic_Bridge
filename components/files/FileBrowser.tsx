@@ -313,8 +313,28 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
           <FileList files={files} loading={loading} projectId={projectId} onDelete={handleDelete} onDownload={handleDownload} onRename={handleRenameFile} onOpenPlayer={(file) => setPlayerFile(file)} draggingFileId={draggingFileId} setDraggingFileId={setDraggingFileId} />
         </div>
       </main>
-      {showUpload && <UploadZone projectId={projectId} folderId={currentFolderId} onComplete={handleUploadComplete} onClose={() => setShowUpload(false)} />}
-      {showCreateFolder && <CreateFolderModal projectId={projectId} folders={folders} currentFolderId={currentFolderId} onCreated={handleFolderCreated} onClose={() => setShowCreateFolder(false)} />}
+      {showUpload && (
+        <UploadZone
+          projectId={projectId}
+          // "All Files" is a virtual view, not a real folder. Uploads
+          // initiated while in this view default to project root, otherwise
+          // upload-url would 500 on a non-UUID folderId path.
+          folderId={currentFolderId === ALL_FILES_VIEW ? null : currentFolderId}
+          onComplete={handleUploadComplete}
+          onClose={() => setShowUpload(false)}
+        />
+      )}
+      {showCreateFolder && (
+        <CreateFolderModal
+          projectId={projectId}
+          folders={folders}
+          // "All Files" is virtual — creating a folder under it isn't
+          // meaningful, so default the "create under" picker to root.
+          currentFolderId={currentFolderId === ALL_FILES_VIEW ? null : currentFolderId}
+          onCreated={handleFolderCreated}
+          onClose={() => setShowCreateFolder(false)}
+        />
+      )}
       {playerFile && (
         <AudioPlayerModal
           file={playerFile}

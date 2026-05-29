@@ -171,8 +171,11 @@ sonicbridge files upload <localPath> [--folder <id>] [--project <p>] [--json]
 
 Three-step on the wire: `POST /upload-url` → PUT bytes to the presigned URL → `POST /files` to register. Progress bar shown on TTY.
 
+**Destination folder.** Without `--folder`, the file uploads to the **project root**. With `--folder`, the value follows the prefix resolution rule — it accepts the same 8-char prefix shown by `folders ls`, or a full UUID. Ambiguous prefix fails with a clear error.
+
 ```
-$ sonicbridge files upload ./mix-v2.wav
+$ sonicbridge files upload ./mix-v2.wav                       # → root
+$ sonicbridge files upload ./mix-v2.wav --folder 4b1c         # → folder whose id starts with 4b1c
 [===========>     ] 18.4 MB / 30.0 MB
 Uploaded mix-v2.wav (id: f0d1...).
 ```
