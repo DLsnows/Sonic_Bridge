@@ -118,25 +118,44 @@ export async function POST(request: NextRequest) {
   const hashed = createHash("sha256").update(rawChallenge).digest("hex");
   const expiresAt = new Date(Date.now() + CHALLENGE_TTL_MS);
 
-  // Best-effort cleanup of expired/used challenges to bound table growth.
-  // Scope to this user's rows only — cross-user cleanup would surprise reviewers
-  // and is unnecessary (used/expired rows are not reusable anyway).
-  // Failures here must not impact the request, so swallow the error.
-  await db
-    .delete(deleteChallenges)
-    .where(
-      and(
-        eq(deleteChallenges.userId, userId),
-        or(lt(deleteChallenges.expiresAt, new Date()), isNotNull(deleteChallenges.usedAt)),
-      ),
-    )
-    .catch(() => {});
+  try {
+    // Best-effort cleanup of expired/used challenges to bound table growth.
+    // Scope to this user's rows only. Failures here must not impact the
+    // request — swallow with .catch(() => {}).
+    await db
+      .delete(deleteChallenges)
+      .where(
+        and(
+          eq(deleteChallenges.userId, userId),
+          or(
+            lt(deleteChallenges.expiresAt, new Date()),
+            isNotNull(deleteChallenges.usedAt),
+          ),
+        ),
+      )
+      .catch(() => {});
 
-  await db.insert(deleteChallenges).values({
-    userId,
-    challengeHash: hashed,
-    expiresAt,
-  });
+    // The actual mint. If the table is missing or any DB write fails, surface
+    // a 503 with a clear envelope so callers (web + CLI) can distinguish a
+    // server failure from a credential failure. Without this, an unhandled
+    // rejection became a bare 500 and the web UI mis-labeled it as
+    // "Incorrect password." — round 2 BUGS 5 + 6.
+    await db.insert(deleteChallenges).values({
+      userId,
+      challengeHash: hashed,
+      expiresAt,
+    });
+  } catch (err) {
+    console.error("[verify-password] mint failed:", err);
+    return NextResponse.json(
+      {
+        error: "challenge_mint_failed",
+        message:
+          "Could not mint a delete challenge. Try again, or contact an admin if this persists.",
+      },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
 
   return NextResponse.json(
     { challenge: rawChallenge, expiresAt: expiresAt.toISOString() },

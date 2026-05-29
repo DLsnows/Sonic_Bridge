@@ -68,8 +68,23 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
       body: JSON.stringify({ password }),
     });
     if (!verify.ok) {
-      if (verify.status === 429) alert("Too many failed attempts. Try again later.");
-      else alert("Password verification failed");
+      // Branch on the error envelope so a server-side failure (e.g. missing
+      // delete_challenges table, DB outage) is not mis-labeled as a credential
+      // problem. Round 2 BUGS 5 + 6 were caused by this confusion.
+      let body: { error?: string; message?: string } = {};
+      try { body = await verify.json(); } catch { /* ignore */ }
+      if (verify.status === 429) {
+        alert("Too many failed attempts. Try again later.");
+      } else if (verify.status === 401 && body.error === "Invalid password") {
+        alert("Incorrect password.");
+      } else if (verify.status === 503 && body.error === "challenge_mint_failed") {
+        alert(
+          body.message ??
+            "Server error minting challenge. Please try again, or contact an admin.",
+        );
+      } else {
+        alert(`Could not start delete (HTTP ${verify.status}).`);
+      }
       return;
     }
     const { challenge } = await verify.json();
