@@ -27,6 +27,15 @@ function fileExtension(name: string): string {
   return idx <= 0 ? "" : name.slice(idx + 1).toLowerCase();
 }
 
+// Split a filename into editable basename + immutable ".ext" suffix label.
+// Mirrors the server's rule (idx <= 0 → no extension; dotfiles like
+// ".gitignore" stay whole).
+function splitName(name: string): { base: string; extWithDot: string } {
+  const idx = name.lastIndexOf(".");
+  if (idx <= 0) return { base: name, extWithDot: "" };
+  return { base: name.slice(0, idx), extWithDot: name.slice(idx) };
+}
+
 function formatSize(bytes: number): string {
   if (bytes === 0) return "0 B";
   if (bytes < 1024) return `${bytes} B`;
@@ -68,14 +77,21 @@ export function FileList({ files, loading, projectId, onDelete, onDownload, onRe
   const [audioLoading, setAudioLoading] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
 
+  const [renameExtSuffix, setRenameExtSuffix] = useState<string>("");
   const startRename = (file: FileItem) => {
     setRenamingFileId(file.id);
-    setRenameDraft(file.name);
+    // Editable input gets ONLY the basename; the `.ext` suffix renders as a
+    // gray, non-editable label next to the input. The user cannot change the
+    // extension by accident. Round 2 BUG 4.
+    const { base, extWithDot } = splitName(file.name);
+    setRenameDraft(base);
+    setRenameExtSuffix(extWithDot);
     setRenameError(null);
   };
   const cancelRename = () => {
     setRenamingFileId(null);
     setRenameDraft("");
+    setRenameExtSuffix("");
   };
   const showRenameError = (msg: string) => {
     setRenameError(msg);
@@ -83,17 +99,19 @@ export function FileList({ files, loading, projectId, onDelete, onDownload, onRe
     renameErrorTimeoutRef.current = setTimeout(() => setRenameError(null), 4000);
   };
   const submitRename = (file: FileItem) => {
-    const trimmed = renameDraft.trim();
-    if (!trimmed || trimmed === file.name) {
+    const trimmedBase = renameDraft.trim();
+    if (!trimmedBase) {
       cancelRename();
       return;
     }
-    // Client-side validation: extension must match (case-insensitive).
-    if (fileExtension(trimmed) !== fileExtension(file.name)) {
-      showRenameError("Extension cannot be changed");
+    // The suffix is uneditable, so the client never needs an extension check.
+    // Server's 422 guard stays as defense-in-depth.
+    const finalName = `${trimmedBase}${renameExtSuffix}`;
+    if (finalName === file.name) {
+      cancelRename();
       return;
     }
-    if (onRename) onRename(file.id, trimmed);
+    if (onRename) onRename(file.id, finalName);
     cancelRename();
   };
   useEffect(() => {
@@ -315,25 +333,36 @@ export function FileList({ files, loading, projectId, onDelete, onDownload, onRe
                   <div className="flex items-center gap-2">
                     <span className={`font-['Share_Tech_Mono',monospace] text-[10px] ${colorClass}`}>{icon}</span>
                     {renamingFileId === file.id ? (
-                      <input
-                        type="text"
-                        autoFocus
-                        value={renameDraft}
-                        onChange={(e) => setRenameDraft(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            submitRename(file);
-                          } else if (e.key === "Escape") {
-                            e.preventDefault();
-                            cancelRename();
-                          }
-                        }}
-                        onBlur={() => cancelRename()}
-                        onClick={(e) => e.stopPropagation()}
-                        className="bg-[#0F0F13] border border-[#00F0FF]/40 rounded px-1.5 py-0.5 text-[#F0F0F0] text-sm font-mono w-[220px] outline-none focus:border-[#00F0FF]"
-                        aria-label="Rename file"
-                      />
+                      <span className="inline-flex items-center">
+                        <input
+                          type="text"
+                          autoFocus
+                          value={renameDraft}
+                          onChange={(e) => setRenameDraft(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              submitRename(file);
+                            } else if (e.key === "Escape") {
+                              e.preventDefault();
+                              cancelRename();
+                            }
+                          }}
+                          onBlur={() => cancelRename()}
+                          onClick={(e) => e.stopPropagation()}
+                          className="bg-[#0F0F13] border border-[#00F0FF]/40 rounded-l px-1.5 py-0.5 text-[#F0F0F0] text-sm font-mono w-[180px] outline-none focus:border-[#00F0FF] border-r-0"
+                          aria-label="Rename file (basename)"
+                        />
+                        {renameExtSuffix && (
+                          <span
+                            className="bg-[#0F0F13] border border-[#00F0FF]/40 rounded-r px-1.5 py-0.5 text-[#A0A0B0] text-sm font-mono border-l-0"
+                            style={{ userSelect: "none", pointerEvents: "none" }}
+                            aria-label={`Extension (locked): ${renameExtSuffix}`}
+                          >
+                            {renameExtSuffix}
+                          </span>
+                        )}
+                      </span>
                     ) : (
                       <span
                         className={`text-[#F0F0F0] truncate max-w-[200px] ${file.mimeType.startsWith("audio/") ? "cursor-pointer hover:text-[#00F0FF] hover:underline transition-colors" : ""}`}
