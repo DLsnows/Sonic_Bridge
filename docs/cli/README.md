@@ -15,6 +15,7 @@
 ```sh
 sonicbridge login                                                    # paste token
 sonicbridge files upload ./mix.wav                                   # upload to root
+sonicbridge files rename mix-v1.wav mix-final.wav                    # extension must stay
 sonicbridge discussion post --title "Mix v2" --content "see attached"
 ```
 

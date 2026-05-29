@@ -31,10 +31,26 @@ Practical rules:
 ## Conventions
 
 - **Dates:** ISO 8601 (`2026-06-01T10:00:00Z`) **or** local `YYYY-MM-DD HH:mm` (parsed in the host machine's local timezone, then converted to UTC before sending).
-- **IDs:** UUID v4 strings everywhere (`8c4f1...`). `discussion read` is the only command that also accepts an 8-character prefix as a convenience.
+- **IDs:** UUID v4 strings everywhere (`8c4f1...`). Every id-accepting command also accepts the 8-character prefix shown in `ls` output — see "Prefix resolution rule" below.
 - **JSON output:** every list/read command has a `--json` flag. The shape is the same as the API response (so the docs at `app/api/projects/[id]/...` are authoritative for field names).
 - **Exit codes:** `0` success, `1` any error (auth, API, validation, network). Errors print to stderr; success output goes to stdout.
 - **Stdin:** `discussion post --content -` and `discussion reply --content -` read the body from stdin until EOF. Useful for piping `cat notes.md | sonicbridge discussion post --title 'Mix v2' --content -`.
+
+## Prefix resolution rule
+
+Every command that takes an id (file, folder, event, post) accepts either:
+- the full UUID, or
+- a unique 8-character prefix (the same prefix shown in `ls` output).
+
+The CLI fetches the relevant list, finds the unique match, and uses the full UUID on the wire. If the prefix is ambiguous, the CLI prints
+
+```
+<label> prefix "<input>" is ambiguous (matches N). Use more characters or the full UUID.
+```
+
+and exits 1. If nothing matches, it prints `No <label> matches "<input>".` and exits 1.
+
+This rule applies to: `calendar edit`, `calendar rm`, `discussion reply`, `discussion read`, `files mv`, `files rm`, `files rename`, `folders rename`, `folders rm`. New commands should adopt the same pattern.
 
 ## Commands
 
@@ -73,17 +89,17 @@ sonicbridge whoami [--json]
 
 Hits `/api/user/me`.
 
-Human output:
+Human output (2-3 lines — projects table moved to `project ls`):
 
 ```
 Logged in as alice (alice@example.com)
-Active project: my-band (cd5e...)
-Projects:
-  * cd5e... my-band         admin
-    a91f... side-project    member
+Active project: My Band (cd5e1b2a)
+Run `sonicbridge project ls` to see your projects.
 ```
 
-JSON output:
+The "Active project:" line is omitted if no active project is set.
+
+JSON output (machine consumers should prefer `project ls --json`; this shape is kept for back-compat):
 
 ```json
 {
@@ -103,7 +119,17 @@ sonicbridge project ls [--json]
 sonicbridge project use <idOrCustomId>
 ```
 
-`ls` shows your memberships. `use` validates the id/customId against `/api/user/me` and persists it as `activeProject` in config. After `use`, you can omit `--project` on every other command.
+`ls` shows your memberships. Human output has only `id` (8-char prefix), `name`, and `role` columns — `customId` was removed (it was sparsely populated and cluttered the table; the UUID prefix is the canonical CLI id). The `--json` output still includes `customId` for any consumer that needs it.
+
+`use` validates the id/customId against `/api/user/me` and persists it as `activeProject` in config. After `use`, you can omit `--project` on every other command.
+
+Human output:
+
+```
+  id        name           role
+  cd5e1b2a  My Band        admin
+  a91f8c7d  Side Project   member
+```
 
 ### `files ls`
 
@@ -174,12 +200,54 @@ sonicbridge files rm <fileId> [--project <p>]
 
 Two-step:
 
-1. Interactive password prompt → POST `/api/user/verify-password` → mints a short-lived (5 min, single-use) challenge token (`ch_...`).
-2. DELETE `/api/projects/<p>/files/<id>` with `X-Delete-Challenge: ch_...` header.
+1. Pre-flight HEAD `/api/projects/<p>/files/<id>` so a typo'd id short-circuits with a friendly 404 *before* the password prompt.
+2. Interactive password prompt → POST `/api/user/verify-password` → mints a short-lived (5 min, single-use) challenge token (`ch_...`).
+3. DELETE `/api/projects/<p>/files/<id>` with `X-Delete-Challenge: ch_...` header.
 
 The challenge is **only consumed if the file exists**, so typoing the fileId costs nothing. Rate limit: 5 wrong password attempts per 15 min returns `429`.
 
 **Agents should not run `files rm` autonomously** — it requires a password prompt that an unattended runner can't answer. Use it only with a human in the loop.
+
+### `files rename`
+
+```
+sonicbridge files rename <fileId> <newName> [--project <p>] [--json]
+```
+
+PATCH `/api/projects/<p>/files/<id>` with `{ name }`. Accepts the full UUID or an 8-char prefix (per the prefix resolution rule).
+
+**Extension lock — server-enforced.** The file's extension may not change. Renaming `mix.wav → mix-final.wav` works; renaming `mix.wav → mix-final.mp3` returns `422 { error: "extension_change_not_allowed", currentExt: "wav", newExt: "mp3" }` and the CLI prints:
+
+```
+Extension cannot be changed (.wav → .mp3). Use the same extension as the original.
+```
+
+The CLI also emits a yellow warning before sending if it detects an extension change, so the server round-trip is just a hard fallback.
+
+**Dotfiles** (`.gitignore`, `.env`, anything whose first character is `.` with no other dot) are treated as **no-extension** on both client and server — they use `idx <= 0` for `lastIndexOf(".")`. So renaming `.gitignore → .gitignore2` is allowed (both have empty extension).
+
+Client-side guards (before any API call):
+- `newName` must be non-empty.
+- `newName` length ≤ 200.
+- No path separators (`/`, `\`) or ASCII control characters.
+
+JSON output (success):
+
+```json
+{ "file": { "id": "f0d1...", "name": "mix-final.wav" } }
+```
+
+Errors:
+- 404 → `File <id> not found.` (exit 1)
+- 422 `extension_change_not_allowed` → as above (exit 1)
+- Ambiguous prefix → `file prefix "<input>" is ambiguous (matches N)...` (exit 1)
+
+Example:
+
+```sh
+sonicbridge files rename f0d1 mix-final.wav
+# Renamed mix-v2.wav → mix-final.wav (id: f0d1abcd).
+```
 
 ### `folders ls`
 
@@ -205,6 +273,27 @@ sonicbridge folders rm <folderId> [--project <p>]
 ```
 
 DELETE `/api/projects/<p>/folders/<id>`. **Server refuses non-empty folders with 409 `{ error: "folder_not_empty" }`** — empty the folder yourself first (move or delete files + sub-folders). No password prompt for folder delete.
+
+### `folders rename`
+
+```
+sonicbridge folders rename <folderId> <newName> [--project <p>] [--json]
+```
+
+PATCH `/api/projects/<p>/folders/<id>` with `{ name }`. Accepts the full UUID or an 8-char prefix (per the prefix resolution rule).
+
+No extension constraint (folders don't have one). Client-side guards: non-empty, ≤200 chars, no path separators or ASCII control characters.
+
+Errors:
+- 404 → `Folder <id> not found.` (exit 1)
+- Ambiguous prefix → `folder prefix "<input>" is ambiguous (matches N)...` (exit 1)
+
+Example:
+
+```sh
+sonicbridge folders rename 4b1c "Mix Sessions"
+# Renamed folder → Mix Sessions (id: 4b1cabcd).
+```
 
 ### `calendar add`
 
@@ -257,7 +346,7 @@ GET `/api/projects/<p>/discussion`. Lists top-level threads (replies are folded)
 sonicbridge discussion read <postId> [--project <p>] [--json]
 ```
 
-Renders the thread as an ASCII tree. Accepts the full UUID or an 8-character prefix. If `postId` is a reply, the CLI walks `parentId` up to the root for full thread context (cycle-guarded against malformed server data).
+Renders the thread as an ASCII tree. The `postId` follows the global prefix resolution rule. If you pass a reply id (not a thread root), the CLI walks `parentId` up to the root for full thread context (cycle-guarded against malformed server data).
 
 Sample:
 

@@ -152,10 +152,35 @@ Prerequisite: pick a project that has at least 1 sub-folder and 2-3 files at the
 - J4: Folder rename via web still works (PATCH /folders/<id> with `{name}`).
 - J5: Existing drag-and-drop affordance for the upload zone (drag files INTO the upload zone) still works — this is the OLD drag-drop, separate from the new move-via-drag.
 
+## K. Rename — CLI + Web (round 1 follow-up)
+
+| # | Action | Expected |
+|---|---|---|
+| K1 | `sonicbridge files rename <prefix> mix-final.wav` (same ext) | Renamed; web reflects |
+| K2 | `sonicbridge files rename <prefix> mix.mp3` (different ext) | 422; CLI prints `Extension cannot be changed (.wav → .mp3)` and exits 1 |
+| K3 | `sonicbridge files rename <prefix-of-dotfile> .gitignore2` | Allowed (both treated as no-extension via `idx <= 0`) |
+| K4 | `sonicbridge folders rename <prefix> "New Name"` | Renamed; web tree updates |
+| K5 | Web: click rename icon on a file row, change name with same extension, Enter | Saved |
+| K6 | Web: rename to a different extension, Enter | Blocked client-side before submit with toast `Extension cannot be changed` |
+| K7 | Web: rapid double-rename of the same file (failure-then-success race) | Second rename is refused while first is in-flight (`renamingRef` guard); UI converges to the server-confirmed name |
+| K8 | `sonicbridge files rename <ambiguous-prefix> X.wav` | `file prefix "<input>" is ambiguous (matches N). Use more characters or the full UUID.` |
+
+## L. Prefix resolution (round 1 follow-up)
+
+| # | Action | Expected |
+|---|---|---|
+| L1 | `sonicbridge calendar edit <8charPrefix> --title X` | Succeeds (resolved to full UUID before PATCH) |
+| L2 | `sonicbridge calendar rm <8charPrefix>` | Succeeds |
+| L3 | `sonicbridge discussion reply <8charPrefix> --content x` | Succeeds |
+| L4 | `sonicbridge files rm <8charPrefix>` (existing file) | HEAD pre-flight passes; password prompt shows real file name |
+| L5 | `sonicbridge files rm <nonexistent prefix>` | `No file matches "<input>".` exit 1 — NO password prompt |
+| L6 | `PATCH /api/projects/<UUID>/schedule/not-a-uuid` direct | Returns 400 `Invalid event id` (not 500 anymore) |
+| L7 | `sonicbridge files rm <correct-prefix>` then enter correct password | Verify-password 200, challenge minted, DELETE succeeds — BUG 5 regression check |
+
 ## What to do when something fails
 
-If any of A-H fails, open an issue with:
-- The exact step number (e.g. "C10")
+If any of A-L fails, open an issue with:
+- The exact step number (e.g. "C10", "K2", "L5")
 - The full CLI output OR a screenshot for web
 - The project ID + (if relevant) the file/folder/event/post id involved
 
@@ -163,7 +188,7 @@ For doc-only issues, just commit a fix directly to this branch — no need for a
 
 ## Sign-off
 
-When all of A-J pass, this branch is ready to PR into `dev`. The PR title should be:
+When all of A-L pass, this branch is ready to PR into `dev`. The PR title should be:
 
 ```
 feat: files drag-and-drop + sonicbridge CLI (files / folders / calendar / discussion / docs)
