@@ -1,6 +1,7 @@
 import pc from "picocolors";
 import { apiFetch, formatApiError, wantsJson } from "../api.js";
 import { loadConfig, saveConfig } from "../config.js";
+import { resolveByPrefix } from "../util/resolve-id.js";
 import { renderTable } from "../util/table.js";
 
 interface MeResponse {
@@ -54,7 +55,7 @@ export async function runProjectLs(flags: ProjectLsFlags): Promise<void> {
   }
 }
 
-export async function runProjectUse(idOrCustomId: string): Promise<void> {
+export async function runProjectUse(input: string): Promise<void> {
   const cfg = await loadConfig();
   if (!cfg?.token) {
     console.error(pc.red("Not logged in. Run `sonicbridge login`."));
@@ -64,30 +65,32 @@ export async function runProjectUse(idOrCustomId: string): Promise<void> {
   try {
     const me = await apiFetch<MeResponse>("/api/user/me");
     const projects = me.projects ?? [];
-    const match = projects.find(
-      (p) => p.id === idOrCustomId || p.customId === idOrCustomId,
-    );
-    if (!match) {
-      console.error(
-        pc.red(
-          `No accessible project matches "${idOrCustomId}". Run \`sonicbridge project ls\`.`,
-        ),
+
+    // Direct exact customId match (case-sensitive) wins first.
+    const byCustomId = projects.find((p) => p.customId === input);
+    let resolved: { id: string; customId?: string | null; name: string };
+    if (byCustomId) {
+      resolved = byCustomId;
+    } else {
+      // Otherwise fall back to the shared id-prefix / full-UUID resolver.
+      resolved = await resolveByPrefix(
+        input,
+        async () => projects,
+        "project",
       );
-      process.exit(1);
     }
+
     await saveConfig({
       ...cfg,
       activeProject: {
-        id: match.id,
-        customId: match.customId ?? null,
-        name: match.name,
+        id: resolved.id,
+        customId: resolved.customId ?? null,
+        name: resolved.name,
       },
     });
     console.log(
       pc.green(
-        `Active project set to ${match.name}${
-          match.customId ? ` (${match.customId})` : ""
-        }.`,
+        `Active project set to ${resolved.name} (${resolved.id.slice(0, 8)}).`,
       ),
     );
   } catch (err) {
