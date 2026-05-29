@@ -89,6 +89,15 @@ export function BreadcrumbNav({
   onNavigate,
   onMoveFile,
 }: BreadcrumbNavProps) {
+  // "All Files" virtual view: render as a single non-navigable label.
+  if (currentFolderId === "__all__") {
+    return (
+      <nav className="flex items-center gap-1 px-4 py-2 border-b border-white/10 bg-[#0A0A0F]/30">
+        <span className="text-xs font-mono italic text-[#00FF41]">* All Files</span>
+      </nav>
+    );
+  }
+
   const path: { id: string | null; name: string }[] = [{ id: null, name: "Root" }];
 
   if (currentFolderId) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { FolderTree } from "./FolderTree";
+import { FolderTree, ALL_FILES_VIEW } from "./FolderTree";
 import { FileList } from "./FileList";
 import { UploadZone } from "./UploadZone";
 import { BreadcrumbNav } from "./BreadcrumbNav";
@@ -29,11 +29,20 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
   // can't replace a successful rename with a stale rollback.
   const renamingRef = useRef<Set<string>>(new Set());
 
-  const fetchFiles = useCallback(async (folderId: string | null) => {
-    setLoading(true);
+  // Build the files query string for a given view. The "All Files" sentinel
+  // becomes `?all=1`; a real folderId becomes `?folderId=<id>`; null = root
+  // and sends nothing — the server returns `folderId IS NULL` only.
+  const filesQueryFor = (view: string | null): string => {
     const params = new URLSearchParams();
-    if (folderId) params.set("folderId", folderId);
-    const res = await fetch(`/api/projects/${projectId}/files?${params}`);
+    if (view === ALL_FILES_VIEW) params.set("all", "1");
+    else if (view) params.set("folderId", view);
+    const qs = params.toString();
+    return qs ? `?${qs}` : "";
+  };
+
+  const fetchFiles = useCallback(async (view: string | null) => {
+    setLoading(true);
+    const res = await fetch(`/api/projects/${projectId}/files${filesQueryFor(view)}`);
     if (res.ok) { const data = await res.json(); setFiles(data.files); }
     setLoading(false);
   }, [projectId]);
@@ -42,9 +51,7 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
     let ignore = false;
     (async () => {
       setLoading(true);
-      const params = new URLSearchParams();
-      if (currentFolderId) params.set("folderId", currentFolderId);
-      const res = await fetch(`/api/projects/${projectId}/files?${params}`);
+      const res = await fetch(`/api/projects/${projectId}/files${filesQueryFor(currentFolderId)}`);
       if (!ignore && res.ok) { const data = await res.json(); setFiles(data.files); }
       if (!ignore) setLoading(false);
     })();
@@ -185,6 +192,10 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
 
   const handleMoveFile = useCallback(
     async (fileId: string, targetFolderId: string | null) => {
+      // Refuse drops on the synthetic "All Files" view — there's no folder to
+      // move INTO. (FolderTree's "All Files" button doesn't accept drops, but
+      // BreadcrumbNav could in theory fire one.)
+      if (targetFolderId === ALL_FILES_VIEW) return;
       const previous = [...files];
       const moved = previous.find((f) => f.id === fileId);
       if (!moved) return;
@@ -266,7 +277,11 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
         <div className="flex-1 overflow-auto p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-['Share_Tech_Mono',monospace] text-sm text-[#00FF41]">
-              {currentFolderId ? folders.find((f) => f.id === currentFolderId)?.name ?? "Files" : "Root"}
+              {currentFolderId === ALL_FILES_VIEW
+                ? "All Files"
+                : currentFolderId
+                ? folders.find((f) => f.id === currentFolderId)?.name ?? "Files"
+                : "Root"}
             </h3>
             <Button size="sm" variant="primary" onClick={() => setShowUpload(true)}>Upload Files</Button>
           </div>
