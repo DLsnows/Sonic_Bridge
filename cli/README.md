@@ -50,8 +50,8 @@ history and `/proc/<pid>/cmdline`, which would leak the bearer.
 |---|---|
 | auth | `login`, `logout`, `whoami` |
 | project | `project ls`, `project use <id>` |
-| files | `files ls`, `files upload <path>`, `files download <id>`, `files mv <id> --to <folderId\|root>`, `files rm <id>` |
-| folders | `folders ls [folderId]`, `folders mkdir <name>`, `folders rm <folderId>` |
+| files | `files ls`, `files upload <path>`, `files download <id>`, `files mv <id> --to <folderId\|root>`, `files rename <id> <newName>`, `files rm <id>` |
+| folders | `folders ls [folderId]`, `folders mkdir <name>`, `folders rename <id> <newName>`, `folders rm <folderId>` |
 | calendar | `calendar add`, `calendar ls`, `calendar edit <eventId>`, `calendar rm <eventId>` |
 | discussion | `discussion ls`, `discussion read <postId>`, `discussion post`, `discussion reply <postId>` |
 | help | `help [topic]` |

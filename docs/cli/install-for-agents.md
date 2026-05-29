@@ -101,6 +101,7 @@ Read-only commands are safe to allowlist so your agent doesn't get blocked on pe
 Do **not** broadly allowlist:
 - `sonicbridge files rm *` — destructive, triggers a password prompt
 - `sonicbridge folders rm *` — destructive
+- `sonicbridge files rename *` / `folders rename *` — mutating; surface a prompt so the human can spot accidental renames before they hit the project
 - `sonicbridge files upload *` / `discussion post *` / `discussion reply *` / `calendar add *` / `calendar edit *` / `calendar rm *` — these write data and should be reviewed
 
 You can still allowlist them per-project or per-command if your workflow needs it.
@@ -132,6 +133,8 @@ When briefing your agent, include something like:
 | `Not a member of this project` | The token's user isn't on this project | Get added (admin invites) or `project use` a project you're on |
 | `challenge_required` on file delete | Trying to delete via raw API without verify-password flow | Use `sonicbridge files rm` (handles the flow) instead |
 | `folder_not_empty` (409) | The folder has files or sub-folders | Empty it first: `folders ls <id>` then `files rm` each, or move them out |
+| `Extension cannot be changed (.wav → .mp3)` on `files rename` | Server-enforced: rename keeps the extension | Use the same extension as the original. To relocate without renaming, use `files mv`. Dotfiles (`.gitignore`) are no-extension and renameable to any other dotfile name. |
+| `<label> prefix "<input>" is ambiguous` | Multiple ids share that prefix | Use a longer prefix or the full UUID. The `ls` output shows the canonical short prefix. |
 | CLI silently exits with no output | Almost always means a buggy `invokedAsScript` check or a stale npm link | `cd cli && npm run build && npm link --force` |
 
 ## Where to go next
