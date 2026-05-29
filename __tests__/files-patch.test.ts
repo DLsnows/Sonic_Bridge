@@ -3,8 +3,10 @@ import type { NextRequest } from "next/server";
 
 const PROJECT_ID = "11111111-1111-1111-1111-111111111111";
 const FILE_ID = "22222222-2222-2222-2222-222222222222";
-const FOLDER_SAME_PROJECT_ID = "33333333-3333-3333-3333-333333333333";
-const FOLDER_OTHER_PROJECT_ID = "44444444-4444-4444-4444-444444444444";
+// Zod 4's .uuid() validates the version digit. Use valid v4 shapes:
+// 13th hex char must be "4"; 17th must be one of 8, 9, a, b.
+const FOLDER_SAME_PROJECT_ID = "33333333-3333-4333-8333-333333333333";
+const FOLDER_OTHER_PROJECT_ID = "44444444-4444-4444-8444-444444444444";
 const USER_ID = "55555555-5555-5555-5555-555555555555";
 
 type SelectShape = Record<string, unknown> | undefined;

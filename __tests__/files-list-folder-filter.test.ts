@@ -134,7 +134,7 @@ describe("GET /api/projects/[id]/files — folder filter rules", () => {
     const GET = await loadGET();
     await GET(
       makeReq(
-        `http://localhost/api/projects/${PROJECT_ID}/files?folderId=33333333-3333-3333-3333-333333333333`,
+        `http://localhost/api/projects/${PROJECT_ID}/files?folderId=33333333-3333-4333-8333-333333333333`,
       ),
       { params: paramsPromise() },
     );
