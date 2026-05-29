@@ -315,17 +315,25 @@ export function FileList({ files, loading, projectId, onDelete, onDownload, onRe
           {files.map((file) => {
             const icon = fileIcon(file.mimeType);
             const colorClass = iconColors[icon] ?? "text-[#A0A0B0]";
+            // When the inline preview / mini-player is active on this row, the
+            // entire row is non-draggable. Sliders inside the player previously
+            // bled mousedown events up to the draggable <tr> and initiated a
+            // file move; flipping `draggable` off is the only fully reliable
+            // way to stop HTML5 drag from being initiated on a slider thumb.
+            const isPlayerOpen = playingFileId === file.id;
+            const isRenaming = renamingFileId === file.id;
+            const rowDraggable = !isPlayerOpen && !isRenaming;
             return (
               <tr
                 key={file.id}
-                draggable
-                onDragStart={(e) => {
+                draggable={rowDraggable}
+                onDragStart={rowDraggable ? (e) => {
                   e.dataTransfer.setData("application/x-sb-file", file.id);
                   e.dataTransfer.effectAllowed = "move";
                   setDraggingFileId(file.id);
-                }}
-                onDragEnd={() => setDraggingFileId(null)}
-                className={`border-b border-white/5 hover:bg-white/[0.03] transition-colors cursor-grab ${
+                } : undefined}
+                onDragEnd={rowDraggable ? () => setDraggingFileId(null) : undefined}
+                className={`border-b border-white/5 hover:bg-white/[0.03] transition-colors ${rowDraggable ? "cursor-grab" : ""} ${
                   draggingFileId === file.id ? "opacity-50" : ""
                 }`}
               >
@@ -333,7 +341,10 @@ export function FileList({ files, loading, projectId, onDelete, onDownload, onRe
                   <div className="flex items-center gap-2">
                     <span className={`font-['Share_Tech_Mono',monospace] text-[10px] ${colorClass}`}>{icon}</span>
                     {renamingFileId === file.id ? (
-                      <span className="inline-flex items-center">
+                      // Single visual box: outer span owns the border + background,
+                      // child input and suffix label are borderless and share the
+                      // padding. focus-within highlights the whole box on focus.
+                      <span className="inline-flex items-center bg-[#0F0F13] border border-[#00F0FF]/40 rounded px-1.5 py-0.5 focus-within:border-[#00F0FF] transition-colors">
                         <input
                           type="text"
                           autoFocus
@@ -350,12 +361,12 @@ export function FileList({ files, loading, projectId, onDelete, onDownload, onRe
                           }}
                           onBlur={() => cancelRename()}
                           onClick={(e) => e.stopPropagation()}
-                          className="bg-[#0F0F13] border border-[#00F0FF]/40 rounded-l px-1.5 py-0.5 text-[#F0F0F0] text-sm font-mono w-[180px] outline-none focus:border-[#00F0FF] border-r-0"
+                          className="bg-transparent border-none outline-none text-[#F0F0F0] text-sm font-mono w-[180px] p-0 m-0"
                           aria-label="Rename file (basename)"
                         />
                         {renameExtSuffix && (
                           <span
-                            className="bg-[#0F0F13] border border-[#00F0FF]/40 rounded-r px-1.5 py-0.5 text-[#A0A0B0] text-sm font-mono border-l-0"
+                            className="text-[#A0A0B0] text-sm font-mono"
                             style={{ userSelect: "none", pointerEvents: "none" }}
                             aria-label={`Extension (locked): ${renameExtSuffix}`}
                           >
