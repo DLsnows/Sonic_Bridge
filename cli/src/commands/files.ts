@@ -153,12 +153,39 @@ export async function runFilesUpload(
     const mimeType =
       mime.lookup(fileName) || "application/octet-stream";
 
+    // Resolve --folder via the prefix rule, so users can paste the same
+    // 8-char id shown by `folders ls`. Without --folder, upload goes to root.
+    let resolvedFolderId: string | null = null;
+    if (flags.folder) {
+      try {
+        interface FolderRow { id: string; name: string }
+        interface FoldersListResp { folders: FolderRow[] }
+        const folder = await resolveByPrefix(
+          flags.folder,
+          async () => {
+            const res = await apiFetch<FoldersListResp>(
+              `/api/projects/${encodeURIComponent(projectId)}/folders`,
+            );
+            return res.folders;
+          },
+          "folder",
+        );
+        resolvedFolderId = folder.id;
+      } catch (err) {
+        if (err instanceof Error && /No folder matches|prefix.*ambiguous/.test(err.message)) {
+          console.error(pc.red(err.message));
+          process.exit(1);
+        }
+        throw err;
+      }
+    }
+
     // 1. Get a presigned upload URL.
     const qs = new URLSearchParams();
     qs.set("name", fileName);
     qs.set("size", String(stat.size));
     qs.set("type", mimeType);
-    if (flags.folder) qs.set("folderId", flags.folder);
+    if (resolvedFolderId) qs.set("folderId", resolvedFolderId);
     const upload = await apiFetch<UploadUrlResponse>(
       `/api/projects/${encodeURIComponent(projectId)}/files/upload-url?${qs.toString()}`,
     );
@@ -205,7 +232,7 @@ export async function runFilesUpload(
           name: fileName,
           size: stat.size,
           mimeType,
-          folderId: flags.folder ?? null,
+          folderId: resolvedFolderId,
         },
       },
     );

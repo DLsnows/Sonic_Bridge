@@ -97,7 +97,7 @@ sonicbridge files rm <fileId> [--project <p>]
 ```
 
 - `files ls` — list files in a folder (or project root if `--folder` omitted).
-- `files upload` — two-step presigned upload + register. Progress bar on TTY.
+- `files upload` — two-step presigned upload + register. Progress bar on TTY. Without `--folder` the file uploads to the project root; `--folder` accepts an 8-char prefix or full UUID.
 - `files download` — stream a file to disk. `--out -` writes to stdout. The server-supplied filename is sanitized with `path.basename` to prevent traversal.
 - `files mv` — change a file's parent folder. `--to root` moves to the project root.
 - `files rename` — change a file's name. **Extension must stay the same.** Server returns 422 `extension_change_not_allowed` if the extension differs. Dotfiles (`.gitignore`, `.env`) are treated as no-extension on both sides.
@@ -109,7 +109,8 @@ Examples:
 
 ```sh
 sonicbridge files ls
-sonicbridge files upload ./mix-v3.wav --folder 4b1c
+sonicbridge files upload ./mix-v3.wav                # → project root
+sonicbridge files upload ./mix-v3.wav --folder 4b1c  # → folder 4b1c… (prefix)
 sonicbridge files download f0d1 --out ./mix.wav
 sonicbridge files mv f0d1 --to root
 sonicbridge files rename f0d1 mix-final.wav
