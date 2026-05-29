@@ -21,15 +21,22 @@ interface InsertedRow {
 }
 
 // Hoisted so the vi.mock factory closures can capture stable references.
-const state = vi.hoisted(() => ({
-  sessionMock: null as { user: { id: string; username: string } } | null,
-  useTokenAuth: false,
-  insertedRows: [] as InsertedRow[],
-  selectCallIndex: 0,
-  PROJECT_ID: "11111111-1111-1111-1111-111111111111",
-  USER_ID: "22222222-2222-2222-2222-222222222222",
-  TOKEN_HASH: createHash("sha256").update("sb_abc123def456").digest("hex"),
-}));
+// IMPORTANT: vi.hoisted body runs BEFORE imports, so we must require()
+// node:crypto inside the factory — using the top-level `createHash` here
+// throws "Cannot access '__vi_import_X__' before initialization".
+const state = vi.hoisted(() => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { createHash: _createHash } = require("node:crypto") as typeof import("node:crypto");
+  return {
+    sessionMock: null as { user: { id: string; username: string } } | null,
+    useTokenAuth: false,
+    insertedRows: [] as InsertedRow[],
+    selectCallIndex: 0,
+    PROJECT_ID: "11111111-1111-1111-1111-111111111111",
+    USER_ID: "22222222-2222-2222-2222-222222222222",
+    TOKEN_HASH: _createHash("sha256").update("sb_abc123def456").digest("hex"),
+  };
+});
 
 vi.mock("@/lib/auth", () => ({
   auth: vi.fn(async () => state.sessionMock),
