@@ -97,7 +97,15 @@ async function loadGET() {
 }
 
 function makeReq(url: string): NextRequest {
-  return new Request(url) as unknown as NextRequest;
+  // The route reads `request.nextUrl.searchParams`. Plain `Request` has no
+  // `nextUrl`, so stub it with a real URL whose `.searchParams` matches.
+  const req = new Request(url);
+  Object.defineProperty(req, "nextUrl", {
+    value: new URL(url),
+    writable: false,
+    configurable: true,
+  });
+  return req as unknown as NextRequest;
 }
 
 function paramsPromise() {
