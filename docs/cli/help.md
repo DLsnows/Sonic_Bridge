@@ -67,17 +67,18 @@ List or switch the active project.
 
 ```
 sonicbridge project ls [--json]
-sonicbridge project use <idOrCustomId>
+sonicbridge project use <idOrCustomIdOrPrefix>
 ```
 
-`project ls` shows every project your token can access. `project use` persists the active project in the config; subsequent commands can omit `--project`.
+`project ls` shows every project your token can access. `project use` accepts an exact customId, a full UUID, or a unique 8-char prefix (the same shape `ls` prints). It persists the resolved active project in the config; subsequent commands can omit `--project`. An ambiguous prefix fails with a clear error.
 
 Examples:
 
 ```sh
 sonicbridge project ls
-sonicbridge project use my-band
-sonicbridge project use cd5e1b2a-...  # UUID also works
+sonicbridge project use my-band          # customId
+sonicbridge project use cd5e1b2a         # 8-char prefix
+sonicbridge project use cd5e1b2a-...     # full UUID
 ```
 
 ---
