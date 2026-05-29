@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { files, folders, users } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { authenticate } from "@/lib/api-auth";
 import { resolveProjectId } from "@/lib/project-utils";
 
@@ -22,6 +22,18 @@ export async function GET(
   }
 
   const folderId = request.nextUrl.searchParams.get("folderId");
+  const wantsAll = request.nextUrl.searchParams.get("all") === "1";
+
+  // Filter rules:
+  //   all=1   → every file in the project, across all folders (new "All Files" virtual view)
+  //   folderId given → files in that specific folder
+  //   neither → root files only (folderId IS NULL).  Previously this branch
+  //             returned all files in the project, which was round 2 BUG 1.
+  const folderFilter = wantsAll
+    ? undefined
+    : folderId
+    ? eq(files.folderId, folderId)
+    : isNull(files.folderId);
 
   const fileList = await db
     .select({
@@ -37,12 +49,7 @@ export async function GET(
     })
     .from(files)
     .innerJoin(users, eq(files.uploadedBy, users.id))
-    .where(
-      and(
-        eq(files.projectId, id),
-        folderId ? eq(files.folderId, folderId) : undefined,
-      ),
-    )
+    .where(and(eq(files.projectId, id), folderFilter))
     .orderBy(files.uploadedAt);
 
   return NextResponse.json({ files: fileList, folderId: folderId ?? null });

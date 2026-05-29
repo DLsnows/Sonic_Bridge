@@ -24,6 +24,10 @@ function dataTransferHasFile(dt: DataTransfer): boolean {
   return Array.from(dt.types).includes(SB_FILE_MIME);
 }
 
+// Sentinel for the synthetic "All Files" view: shows every file in the project
+// regardless of folder. Selecting it fetches `?all=1`.
+export const ALL_FILES_VIEW = "__all__";
+
 export function FolderTree({ folders, currentFolderId, onSelect, onRename, onDelete, onMoveFile }: FolderTreeProps) {
   function buildTree(parentId: string | null): TreeNode[] {
     const children = folders.filter((f) => f.parentId === parentId);
@@ -120,11 +124,25 @@ export function FolderTree({ folders, currentFolderId, onSelect, onRename, onDel
     );
   }
 
+  const isAllFilesActive = currentFolderId === ALL_FILES_VIEW;
+
   return (
     <div className="space-y-0.5">
       <h4 className="font-['Share_Tech_Mono',monospace] text-[10px] text-[#A0A0B0] uppercase tracking-wider px-2 mb-2">
         Folders
       </h4>
+      {/* "All Files" virtual entry — selects to show every file across the project. */}
+      {/* Drops are intentionally not handled (moving a file to "All" is meaningless). */}
+      <button
+        className={`group w-full text-left px-2 py-1.5 rounded text-xs font-mono flex items-center gap-1.5 transition-colors italic
+          ${isAllFilesActive ? "bg-[#00FF41]/10 text-[#00FF41]" : "text-[#A0A0B0] hover:text-[#F0F0F0] hover:bg-white/5"}`}
+        style={{ paddingLeft: "8px" }}
+        onClick={() => onSelect(ALL_FILES_VIEW)}
+        title="Show every file across this project"
+      >
+        <span className="w-3" />
+        <span className="truncate">* All Files</span>
+      </button>
       {tree.map((node) => (
         <TreeNodeItem key={node.id ?? "__root__"} node={node} depth={0} />
       ))}
