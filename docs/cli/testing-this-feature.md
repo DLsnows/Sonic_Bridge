@@ -197,10 +197,25 @@ Operator pre-req for this section: the `delete_challenges` migration has been ap
 | M12 | `sonicbridge project use <customId>` | Active project set |
 | M13 | Disable network mid-`sonicbridge files rm` to simulate server failure → verify the CLI prints "Server failed to mint a delete challenge (server-side error, not a password problem). Try again, or contact an admin." | 503 path triggers the friendly server-error message, not "Incorrect password" |
 
+## N. Round 2 follow-up fixes (PRs #203, #204)
+
+| # | Action | Expected |
+|---|---|---|
+| N1 | Click play on an audio file → grab seek bar and scrub | Audio scrubs; row does NOT begin a drag (PR #203 — `<tr draggable={false}>` while player open) |
+| N2 | Same as N1 but drag VERTICALLY on the row body | No drag — entire row is non-draggable during preview |
+| N3 | Click rename pencil → focus the input | Single unified box with one border; gray suffix label inside the same box (PR #203) |
+| N4 | Stop playback → drag the row | Row is draggable again (toggle returns automatically) |
+| N5 | Enter "All Files" virtual view → click Upload Files → choose a file | Uploads to project root, NOT 500 (PR #204) |
+| N6 | Enter "All Files" view → click + New Folder | Default parent picker is root, not the "__all__" sentinel |
+| N7 | `sonicbridge files upload ./x.wav` (no --folder) | Uploads to root |
+| N8 | `sonicbridge files upload ./x.wav --folder <8charPrefix>` | Resolves the prefix and uploads to that folder |
+| N9 | `sonicbridge files upload ./x.wav --folder <fullUUID>` | Uploads to that folder |
+| N10 | `sonicbridge files upload ./x.wav --folder <noMatchPrefix>` | Friendly error "No folder matches …" — no upload attempted |
+
 ## What to do when something fails
 
-If any of A-M fails, open an issue with:
-- The exact step number (e.g. "C10", "K2", "L5", "M3")
+If any of A-N fails, open an issue with:
+- The exact step number (e.g. "C10", "K2", "L5", "M3", "N7")
 - The full CLI output OR a screenshot for web
 - The project ID + (if relevant) the file/folder/event/post id involved
 
@@ -208,10 +223,15 @@ For doc-only issues, just commit a fix directly to this branch — no need for a
 
 ## Sign-off
 
-When all of A-M pass, this branch is ready to PR into `dev`. The PR title should be:
+When all of A-N pass, this branch is ready to PR into `dev`. The PR title should be:
 
 ```
 feat: files drag-and-drop + sonicbridge CLI (files / folders / calendar / discussion / docs)
 ```
 
-The PR body should link this checklist and mention the 10 sub-PRs that landed: round 0 (#179, #180, #181, #184, #186), round 1 (#189, #190, #191, #192, #196), and round 2 (#197, #198, #199, #200, #201).
+The PR body should link this checklist and mention every sub-PR that landed:
+- **Round 0** (initial feature work): #179, #180, #181, #184, #186
+- **Round 0 CI infra side-quests**: #182, #185, #187, #188
+- **Round 1** (bug bash): #189, #190, #191, #192, #196
+- **Round 2** (second bug bash): #197, #198, #199, #200, #201, #202
+- **Round 2 follow-up** (preview drag, rename box, upload All Files, CLI --folder prefix): #203, #204

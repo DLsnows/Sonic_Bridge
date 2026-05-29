@@ -50,7 +50,7 @@ The CLI fetches the relevant list, finds the unique match, and uses the full UUI
 
 and exits 1. If nothing matches, it prints `No <label> matches "<input>".` and exits 1.
 
-This rule applies to: `calendar edit`, `calendar rm`, `discussion reply`, `discussion read`, `files mv`, `files rm`, `files rename`, `folders rename`, `folders rm`. New commands should adopt the same pattern.
+This rule applies to: `project use`, `calendar edit`, `calendar rm`, `discussion reply`, `discussion read`, `files mv`, `files rm`, `files rename`, `files upload --folder`, `folders rename`, `folders rm`. New commands should adopt the same pattern.
 
 ## Commands
 
