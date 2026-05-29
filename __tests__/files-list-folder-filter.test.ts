@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import type { NextRequest } from "next/server";
 
 // GET /api/projects/[id]/files filter rules:
 //   all=1   → every file in the project, across folders
@@ -95,8 +96,8 @@ async function loadGET() {
   return mod.GET;
 }
 
-function makeReq(url: string): Request {
-  return new Request(url);
+function makeReq(url: string): NextRequest {
+  return new Request(url) as unknown as NextRequest;
 }
 
 function paramsPromise() {

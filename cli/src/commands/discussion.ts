@@ -25,7 +25,7 @@ export interface DiscussionPost {
   updatedAt: string;
 }
 
-interface CreatePostResponse extends DiscussionPost {}
+type CreatePostResponse = DiscussionPost;
 
 export interface DiscussionFlags {
   title?: string;

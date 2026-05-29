@@ -20,13 +20,6 @@ interface FileListProps {
   setDraggingFileId: (id: string | null) => void;
 }
 
-function fileExtension(name: string): string {
-  const idx = name.lastIndexOf(".");
-  // idx <= 0: either no dot, or a leading-dot dotfile (e.g. ".gitignore").
-  // Both → empty extension, matching the server's rule.
-  return idx <= 0 ? "" : name.slice(idx + 1).toLowerCase();
-}
-
 // Split a filename into editable basename + immutable ".ext" suffix label.
 // Mirrors the server's rule (idx <= 0 → no extension; dotfiles like
 // ".gitignore" stay whole).
@@ -71,8 +64,6 @@ export function FileList({ files, loading, projectId, onDelete, onDownload, onRe
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [renamingFileId, setRenamingFileId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState<string>("");
-  const [renameError, setRenameError] = useState<string | null>(null);
-  const renameErrorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [playingFileId, setPlayingFileId] = useState<string | null>(null);
   const [audioLoading, setAudioLoading] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
@@ -86,17 +77,11 @@ export function FileList({ files, loading, projectId, onDelete, onDownload, onRe
     const { base, extWithDot } = splitName(file.name);
     setRenameDraft(base);
     setRenameExtSuffix(extWithDot);
-    setRenameError(null);
   };
   const cancelRename = () => {
     setRenamingFileId(null);
     setRenameDraft("");
     setRenameExtSuffix("");
-  };
-  const showRenameError = (msg: string) => {
-    setRenameError(msg);
-    if (renameErrorTimeoutRef.current) clearTimeout(renameErrorTimeoutRef.current);
-    renameErrorTimeoutRef.current = setTimeout(() => setRenameError(null), 4000);
   };
   const submitRename = (file: FileItem) => {
     const trimmedBase = renameDraft.trim();
@@ -114,11 +99,6 @@ export function FileList({ files, loading, projectId, onDelete, onDownload, onRe
     if (onRename) onRename(file.id, finalName);
     cancelRename();
   };
-  useEffect(() => {
-    return () => {
-      if (renameErrorTimeoutRef.current) clearTimeout(renameErrorTimeoutRef.current);
-    };
-  }, []);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playingFileIdRef = useRef<string | null>(null);
   const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -290,14 +270,6 @@ export function FileList({ files, loading, projectId, onDelete, onDownload, onRe
       {audioError && (
         <div className="mb-3 px-4 py-2 bg-[#FF4444]/10 border border-[#FF4444]/30 rounded text-xs text-[#FF4444]">
           {audioError}
-        </div>
-      )}
-      {renameError && (
-        <div
-          role="alert"
-          className="mb-3 px-4 py-2 bg-[#FF4444]/10 border border-[#FF4444]/30 rounded text-xs text-[#FF4444]"
-        >
-          {renameError}
         </div>
       )}
       <table className="w-full text-sm">

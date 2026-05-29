@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import type { NextRequest } from "next/server";
 
 // When db.insert(deleteChallenges) throws (e.g. table missing because the
 // migration was never applied to a target environment), the route must
@@ -98,12 +99,12 @@ async function loadPOST() {
   return mod.POST;
 }
 
-function makeRequest(body: unknown): Request {
+function makeRequest(body: unknown): NextRequest {
   return new Request("http://localhost", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-  });
+  }) as unknown as NextRequest;
 }
 
 describe("POST /api/user/verify-password — 503 envelope", () => {

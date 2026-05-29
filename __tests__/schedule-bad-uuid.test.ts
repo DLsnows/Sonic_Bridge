@@ -1,4 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
+import type { NextRequest } from "next/server";
 
 // The schedule PATCH/DELETE handlers should reject a non-UUID `eventId`
 // with 400 BEFORE touching auth, drizzle, or anything else. Without this
@@ -58,12 +59,12 @@ async function loadHandlers() {
   );
 }
 
-function makeRequest(method: "PATCH" | "DELETE", body?: unknown): Request {
+function makeRequest(method: "PATCH" | "DELETE", body?: unknown): NextRequest {
   return new Request("http://localhost", {
     method,
     headers: { "Content-Type": "application/json" },
     body: body ? JSON.stringify(body) : undefined,
-  });
+  }) as unknown as NextRequest;
 }
 
 describe("schedule [eventId] route — UUID guard", () => {

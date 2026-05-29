@@ -22,7 +22,6 @@ function BreadcrumbSegment({
   name,
   isLast,
   showSeparator,
-  currentFolderId,
   onNavigate,
   onMoveFile,
 }: {
@@ -30,7 +29,6 @@ function BreadcrumbSegment({
   name: string;
   isLast: boolean;
   showSeparator: boolean;
-  currentFolderId: string | null;
   onNavigate: (folderId: string | null) => void;
   onMoveFile?: (fileId: string, targetFolderId: string | null) => void;
 }) {
@@ -122,7 +120,6 @@ export function BreadcrumbNav({
           name={segment.name}
           isLast={i === path.length - 1}
           showSeparator={i > 0}
-          currentFolderId={currentFolderId}
           onNavigate={onNavigate}
           onMoveFile={onMoveFile}
         />
