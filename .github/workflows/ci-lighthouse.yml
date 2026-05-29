@@ -75,7 +75,7 @@ jobs:
             const cfg = {
               ci: {
                 collect: {
-                  numberOfRuns: 3,
+                  numberOfRuns: 1,
                   settings: {
                     preset: 'desktop',
                     skipAudits: ['full-page-screenshot', 'screenshot-thumbnails', 'is-crawlable'],
@@ -93,7 +93,7 @@ jobs:
         uses: treosh/lighthouse-ci-action@v12
         with:
           urls: ${{ steps.vercel.outputs.url }}/
-          runs: 3
+          runs: 1
           uploadArtifacts: true
           artifactName: lighthouse-home
           temporaryPublicStorage: true
@@ -106,7 +106,7 @@ jobs:
         uses: treosh/lighthouse-ci-action@v12
         with:
           urls: ${{ steps.vercel.outputs.url }}/settings
-          runs: 3
+          runs: 1
           uploadArtifacts: true
           artifactName: lighthouse-settings
           temporaryPublicStorage: true
@@ -119,7 +119,7 @@ jobs:
         uses: treosh/lighthouse-ci-action@v12
         with:
           urls: ${{ steps.vercel.outputs.url }}/projects/${{ env.PROJECT_ID }}
-          runs: 3
+          runs: 1
           uploadArtifacts: true
           artifactName: lighthouse-project
           temporaryPublicStorage: true
@@ -132,7 +132,7 @@ jobs:
         uses: treosh/lighthouse-ci-action@v12
         with:
           urls: ${{ steps.vercel.outputs.url }}/projects/${{ env.PROJECT_ID }}/space
-          runs: 3
+          runs: 1
           uploadArtifacts: true
           artifactName: lighthouse-space
           temporaryPublicStorage: true
@@ -145,7 +145,7 @@ jobs:
         uses: treosh/lighthouse-ci-action@v12
         with:
           urls: ${{ steps.vercel.outputs.url }}/projects/${{ env.PROJECT_ID }}/files
-          runs: 3
+          runs: 1
           uploadArtifacts: true
           artifactName: lighthouse-files
           temporaryPublicStorage: true
@@ -158,7 +158,7 @@ jobs:
         uses: treosh/lighthouse-ci-action@v12
         with:
           urls: ${{ steps.vercel.outputs.url }}/projects/${{ env.PROJECT_ID }}/schedule
-          runs: 3
+          runs: 1
           uploadArtifacts: true
           artifactName: lighthouse-schedule
           temporaryPublicStorage: true
@@ -171,7 +171,7 @@ jobs:
         uses: treosh/lighthouse-ci-action@v12
         with:
           urls: ${{ steps.vercel.outputs.url }}/projects/${{ env.PROJECT_ID }}/discussion
-          runs: 3
+          runs: 1
           uploadArtifacts: true
           artifactName: lighthouse-discussion
           temporaryPublicStorage: true
@@ -184,7 +184,7 @@ jobs:
         uses: treosh/lighthouse-ci-action@v12
         with:
           urls: ${{ steps.vercel.outputs.url }}/projects/${{ env.PROJECT_ID }}/settings
-          runs: 3
+          runs: 1
           uploadArtifacts: true
           artifactName: lighthouse-project-settings
           temporaryPublicStorage: true
@@ -257,7 +257,7 @@ jobs:
               }
             }
 
-            body += '\n> Median of 3 runs per page. Authenticated as the Lighthouse test account.';
+            body += '\n> Single run per page. Authenticated as the Lighthouse test account.';
 
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
