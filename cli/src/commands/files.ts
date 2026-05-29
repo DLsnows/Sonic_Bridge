@@ -444,6 +444,17 @@ export async function runFilesRm(
         );
         process.exit(1);
       }
+      if (err instanceof ApiError && err.status === 503) {
+        // Server failed to mint a challenge (DB / migration / dependency
+        // issue, not credentials). Distinguishing from 401 prevents users
+        // from chasing a phantom password bug.
+        console.error(
+          pc.red(
+            "Server failed to mint a delete challenge (server-side error, not a password problem). Try again, or contact an admin.",
+          ),
+        );
+        process.exit(1);
+      }
       throw err;
     }
 
