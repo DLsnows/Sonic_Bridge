@@ -109,8 +109,9 @@ export async function runFilesLs(flags: FilesFlags): Promise<void> {
       console.log(pc.dim("(no files)"));
       return;
     }
+    // Show the 8-char prefix like every other `ls`. `--json` keeps the full id.
     const rows = result.files.map((f) => ({
-      id: f.id,
+      id: f.id.length > 8 ? f.id.slice(0, 8) : f.id,
       name: f.name,
       size: formatBytes(f.size),
       mimeType: f.mimeType,
@@ -361,33 +362,24 @@ export async function runFilesMv(
 
 /**
  * Walks the whole project (root + every folder) and returns the union of
- * files. Used for fileId prefix resolution. O(folders+1) network calls;
- * acceptable for typical project sizes.
+ * files. Used for fileId prefix resolution.
+ *
+ * Uses the server's `?all=1` endpoint (added in this same release) which
+ * returns every file across folders in a single response. Previously walked
+ * folders individually — N+1 round trips — but the all-view is exactly the
+ * shape we want here.
  */
 async function fetchAllFilesInProject(
   projectId: string,
 ): Promise<Array<{ id: string; name: string; folderId: string | null }>> {
-  interface FolderRow {
-    id: string;
-  }
-  interface FoldersListResp {
-    folders: FolderRow[];
-  }
-  const foldersRes = await apiFetch<FoldersListResp>(
-    `/api/projects/${encodeURIComponent(projectId)}/folders`,
+  const res = await apiFetch<FilesListResponse>(
+    `/api/projects/${encodeURIComponent(projectId)}/files?all=1`,
   );
-  const folderIds: (string | null)[] = [null, ...foldersRes.folders.map((f) => f.id)];
-  const all: Array<{ id: string; name: string; folderId: string | null }> = [];
-  for (const folderId of folderIds) {
-    const qs = folderId ? `?folderId=${encodeURIComponent(folderId)}` : "";
-    const res = await apiFetch<FilesListResponse>(
-      `/api/projects/${encodeURIComponent(projectId)}/files${qs}`,
-    );
-    for (const f of res.files) {
-      all.push({ id: f.id, name: f.name, folderId: f.folderId });
-    }
-  }
-  return all;
+  return res.files.map((f) => ({
+    id: f.id,
+    name: f.name,
+    folderId: f.folderId,
+  }));
 }
 
 export async function runFilesRm(
@@ -519,8 +511,8 @@ export async function runFilesRename(
       process.exit(1);
       return;
     }
-    if (newName.length > 200) {
-      console.error(pc.red("New name is too long (max 200 chars)."));
+    if (newName.length > 255) {
+      console.error(pc.red("New name is too long (max 255 chars)."));
       process.exit(1);
       return;
     }
