@@ -177,10 +177,30 @@ Prerequisite: pick a project that has at least 1 sub-folder and 2-3 files at the
 | L6 | `PATCH /api/projects/<UUID>/schedule/not-a-uuid` direct | Returns 400 `Invalid event id` (not 500 anymore) |
 | L7 | `sonicbridge files rm <correct-prefix>` then enter correct password | Verify-password 200, challenge minted, DELETE succeeds — BUG 5 regression check |
 
+## M. Round 2 regressions
+
+Operator pre-req for this section: the `delete_challenges` migration has been applied to the deployed Neon DB (orchestrator ran `drizzle/0005_delete_challenges.sql` via @neondatabase/serverless).
+
+| # | Action | Expected |
+|---|---|---|
+| M1 | Open the Files page on a project with at least 1 file at root AND 1 file inside a folder | Root view shows ONLY the root file (round 2 BUG 1) |
+| M2 | Click `* All Files` in the folder tree | Lists every file in the project, across all folders |
+| M3 | Try to drag a file onto the `* All Files` entry | No-op (no API call) |
+| M4 | Drag a file from folder A to folder B → drop | After the move PATCH resolves, the source row returns to full opacity immediately, no refresh needed (round 2 BUG 2) |
+| M5 | Click play on an audio file → grab the seek bar and drag the playhead | Playhead moves; the file row does NOT begin a drag operation (round 2 BUG 3) |
+| M6 | Same as M5 but for the volume slider | Volume changes; no drag triggered |
+| M7 | Click rename pencil on a file | Input shows only basename (e.g. `mix`); gray `.wav` suffix shows to the right (round 2 BUG 4) |
+| M8 | Try to click into the gray `.wav` label | Click does nothing (`pointer-events: none`) |
+| M9 | Web file delete with correct password | DELETE succeeds (round 2 BUGS 5+6 with migration applied) |
+| M10 | `sonicbridge files rm <prefix>` with correct password | DELETE succeeds via CLI |
+| M11 | `sonicbridge project use <8charPrefix>` | Active project set; matches `project ls` (round 2 BUG 7) |
+| M12 | `sonicbridge project use <customId>` | Active project set |
+| M13 | Disable network mid-`sonicbridge files rm` to simulate server failure → verify the CLI prints "Server failed to mint a delete challenge (server-side error, not a password problem). Try again, or contact an admin." | 503 path triggers the friendly server-error message, not "Incorrect password" |
+
 ## What to do when something fails
 
-If any of A-L fails, open an issue with:
-- The exact step number (e.g. "C10", "K2", "L5")
+If any of A-M fails, open an issue with:
+- The exact step number (e.g. "C10", "K2", "L5", "M3")
 - The full CLI output OR a screenshot for web
 - The project ID + (if relevant) the file/folder/event/post id involved
 
@@ -188,10 +208,10 @@ For doc-only issues, just commit a fix directly to this branch — no need for a
 
 ## Sign-off
 
-When all of A-L pass, this branch is ready to PR into `dev`. The PR title should be:
+When all of A-M pass, this branch is ready to PR into `dev`. The PR title should be:
 
 ```
 feat: files drag-and-drop + sonicbridge CLI (files / folders / calendar / discussion / docs)
 ```
 
-The PR body should link this checklist and mention the 5 sub-PRs that landed (#179, #180, #181, #184, #186).
+The PR body should link this checklist and mention the 10 sub-PRs that landed: round 0 (#179, #180, #181, #184, #186), round 1 (#189, #190, #191, #192, #196), and round 2 (#197, #198, #199, #200, #201).

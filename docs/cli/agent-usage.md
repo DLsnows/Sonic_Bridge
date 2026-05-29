@@ -116,12 +116,17 @@ JSON output (machine consumers should prefer `project ls --json`; this shape is 
 
 ```
 sonicbridge project ls [--json]
-sonicbridge project use <idOrCustomId>
+sonicbridge project use <idOrCustomIdOrPrefix>
 ```
 
 `ls` shows your memberships. Human output has only `id` (8-char prefix), `name`, and `role` columns — `customId` was removed (it was sparsely populated and cluttered the table; the UUID prefix is the canonical CLI id). The `--json` output still includes `customId` for any consumer that needs it.
 
-`use` validates the id/customId against `/api/user/me` and persists it as `activeProject` in config. After `use`, you can omit `--project` on every other command.
+`use` accepts **any of three forms** (matching the prefix resolution rule used by every other id-accepting command):
+1. An exact `customId` (case-sensitive, wins first).
+2. A full UUID.
+3. A unique 8-character (or longer) prefix of a UUID — the same prefix `ls` shows.
+
+It validates against `/api/user/me` and persists the resolved id as `activeProject` in config. After `use`, you can omit `--project` on every other command. Ambiguous prefix yields `project prefix "<input>" is ambiguous (matches N). Use more characters or the full UUID.`
 
 Human output:
 
