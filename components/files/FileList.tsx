@@ -13,6 +13,11 @@ interface FileListProps {
   onDownload: (fileId: string, fileName: string) => void;
   onRename?: (fileId: string, newName: string) => void;
   onOpenPlayer?: (file: FileItem) => void;
+  // Lifted-up drag state so FileBrowser can guarantee the opacity reset even
+  // when the browser swallows `dragend` (e.g. the source row was removed
+  // during the drop's re-render). Round 2 BUG 2.
+  draggingFileId: string | null;
+  setDraggingFileId: (id: string | null) => void;
 }
 
 function fileExtension(name: string): string {
@@ -53,9 +58,8 @@ const iconColors: Record<string, string> = {
   FILE: "text-[#A0A0B0]",
 };
 
-export function FileList({ files, loading, projectId, onDelete, onDownload, onRename, onOpenPlayer }: FileListProps) {
+export function FileList({ files, loading, projectId, onDelete, onDownload, onRename, onOpenPlayer, draggingFileId, setDraggingFileId }: FileListProps) {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
-  const [draggingFileId, setDraggingFileId] = useState<string | null>(null);
   const [renamingFileId, setRenamingFileId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState<string>("");
   const [renameError, setRenameError] = useState<string | null>(null);
@@ -351,7 +355,17 @@ export function FileList({ files, loading, projectId, onDelete, onDownload, onRe
                 <td className="py-2.5 px-3">
                   <div className="flex items-center justify-end gap-1">
                     {file.mimeType.startsWith("audio/") && (
-                      <div className="flex items-center gap-2">
+                      // Audio player isolation: stop drag + mousedown from
+                      // bubbling to the draggable <tr>. Without this, grabbing
+                      // the seek bar or volume slider initiates a file move
+                      // (round 2 BUG 3). draggable={false} blocks the slider
+                      // thumb from being interpreted as a draggable element.
+                      <div
+                        className="flex items-center gap-2"
+                        draggable={false}
+                        onDragStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                      >
                         <Button
                           variant={playingFileId === file.id ? "primary" : "ghost"}
                           size="sm"

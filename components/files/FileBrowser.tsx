@@ -24,6 +24,11 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
   const [showUpload, setShowUpload] = useState(false);
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [playerFile, setPlayerFile] = useState<FileItem | null>(null);
+  // Lifted-up drag opacity state. Lives here (not in FileList) so we can
+  // guarantee a reset after handleMoveFile resolves — some browsers swallow
+  // `dragend` when the source row is removed during the drop's re-render.
+  // Round 2 BUG 2.
+  const [draggingFileId, setDraggingFileId] = useState<string | null>(null);
   // Per-file in-flight rename guard. A second rename on the same file is
   // refused until the first PATCH resolves, so a failure-then-success race
   // can't replace a successful rename with a stale rollback.
@@ -252,6 +257,11 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
         alert(
           err instanceof Error ? err.message : "Move failed: network error",
         );
+      } finally {
+        // Always clear drag opacity. Browsers occasionally swallow `dragend`
+        // when the source row is removed mid-drop; without this the moved
+        // file looks half-transparent until a browser refresh. Round 2 BUG 2.
+        setDraggingFileId(null);
       }
     },
     [files, projectId],
@@ -300,7 +310,7 @@ export function FileBrowser({ projectId, initialFolders }: FileBrowserProps) {
             </h3>
             <Button size="sm" variant="primary" onClick={() => setShowUpload(true)}>Upload Files</Button>
           </div>
-          <FileList files={files} loading={loading} projectId={projectId} onDelete={handleDelete} onDownload={handleDownload} onRename={handleRenameFile} onOpenPlayer={(file) => setPlayerFile(file)} />
+          <FileList files={files} loading={loading} projectId={projectId} onDelete={handleDelete} onDownload={handleDownload} onRename={handleRenameFile} onOpenPlayer={(file) => setPlayerFile(file)} draggingFileId={draggingFileId} setDraggingFileId={setDraggingFileId} />
         </div>
       </main>
       {showUpload && <UploadZone projectId={projectId} folderId={currentFolderId} onComplete={handleUploadComplete} onClose={() => setShowUpload(false)} />}
