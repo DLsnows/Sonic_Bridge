@@ -7,6 +7,7 @@ import {
   pgEnum,
   boolean,
   primaryKey,
+  index,
 } from "drizzle-orm/pg-core";
 
 export const userRole = pgEnum("user_role", ["admin", "member"]);
@@ -153,6 +154,28 @@ export const notifications = pgTable("notifications", {
   isRead: boolean("is_read").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// Short-lived password-derived challenges used to authorize destructive
+// operations (e.g. permanent file deletes). One challenge can only be used
+// once, and only by the user who generated it.
+export const deleteChallenges = pgTable(
+  "delete_challenges",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    challengeHash: text("challenge_hash").notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    usedAt: timestamp("used_at"),
+  },
+  (t) => ({
+    userExpiresIdx: index("delete_challenges_user_expires_idx").on(
+      t.userId,
+      t.expiresAt,
+    ),
+  }),
+);
 
 // Tracks the last time a user viewed a project (for unread notification counts)
 export const projectViews = pgTable("project_views", {

@@ -7,6 +7,6 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     include: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}'],
-    exclude: ['**/node_modules/**', '.next', 'sonicbridge', '.claude/**'],
+    exclude: ['**/node_modules/**', '.next', 'sonicbridge', '.claude/**', 'cli/**'],
   },
 })

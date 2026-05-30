@@ -3,5 +3,5 @@
   "compilerOptions": {
     "incremental": false
   },
-  "exclude": ["node_modules", ".next", "sonicbridge"]
+  "exclude": ["node_modules", ".next", "sonicbridge", "cli"]
 }

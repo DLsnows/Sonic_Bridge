@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { projects } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function resolveProjectId(id: string): Promise<string | null> {
   if (!UUID_RE.test(id)) return null;

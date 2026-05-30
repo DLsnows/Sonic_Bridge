@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { scheduleEvents, projectMembers } from "@/lib/db/schema";
+import { scheduleEvents } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
-import { resolveProjectId } from "@/lib/project-utils";
+import { resolveProjectId, UUID_RE } from "@/lib/project-utils";
+import { authenticate } from "@/lib/api-auth";
 
 const updateEventSchema = z.object({
   title: z.string().min(1).max(200).optional(),
@@ -24,29 +24,20 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; eventId: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { id: rawId, eventId } = await params;
+  // Reject non-UUID eventId early — Postgres uuid cast would otherwise crash
+  // the route with a 500. CLI bug filed in round 1 diagnostic (BUG 7).
+  if (!UUID_RE.test(eventId)) {
+    return NextResponse.json({ error: "Invalid event id" }, { status: 400 });
   }
+  const authResult = await authenticate(request, rawId);
+  if (authResult instanceof Response) return authResult;
 
-  const { id, eventId } = await params;
-  const projectId = await resolveProjectId(id);
+  const projectId = await resolveProjectId(rawId);
   if (!projectId) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
-  const userId = session.user.id as string;
-
-  const [membership] = await db
-    .select()
-    .from(projectMembers)
-    .where(
-      and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)),
-    )
-    .limit(1);
-
-  if (!membership) {
-    return NextResponse.json({ error: "Not a member" }, { status: 403 });
-  }
+  const userId = authResult.userId;
 
   const [existing] = await db
     .select()
@@ -60,7 +51,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
 
-  if (existing.createdBy !== userId && membership.role !== "admin") {
+  if (existing.createdBy !== userId && authResult.membership.role !== "admin") {
     return NextResponse.json({ error: "Only creator or admin can edit" }, { status: 403 });
   }
 
@@ -109,29 +100,18 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; eventId: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { id: rawId, eventId } = await params;
+  if (!UUID_RE.test(eventId)) {
+    return NextResponse.json({ error: "Invalid event id" }, { status: 400 });
   }
+  const authResult = await authenticate(request, rawId);
+  if (authResult instanceof Response) return authResult;
 
-  const { id, eventId } = await params;
-  const projectId = await resolveProjectId(id);
+  const projectId = await resolveProjectId(rawId);
   if (!projectId) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
-  const userId = session.user.id as string;
-
-  const [membership] = await db
-    .select()
-    .from(projectMembers)
-    .where(
-      and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)),
-    )
-    .limit(1);
-
-  if (!membership) {
-    return NextResponse.json({ error: "Not a member" }, { status: 403 });
-  }
+  const userId = authResult.userId;
 
   const [existing] = await db
     .select()
@@ -145,7 +125,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
 
-  if (existing.createdBy !== userId && membership.role !== "admin") {
+  if (existing.createdBy !== userId && authResult.membership.role !== "admin") {
     return NextResponse.json({ error: "Only creator or admin can delete" }, { status: 403 });
   }
 
