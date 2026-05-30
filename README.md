@@ -2,6 +2,17 @@
 
 Real-time music production collaboration platform. Stream DAW audio through a VST3 plugin into browser-based Creative Spaces powered by LiveKit — remote collaborators hear your mix, see your screen, and chat in real time.
 
+## Documentation
+
+- **CLI (`sonicbridge`):** manage project files, folders, calendar events, and discussion threads from a terminal — built for humans and AI agents.
+  - [docs/cli/README.md](./docs/cli/README.md) — landing page
+  - [docs/cli/install-for-agents.md](./docs/cli/install-for-agents.md) — install the CLI for your AI agent, generate a CLI token, recommended allowlist
+  - [docs/cli/agent-usage.md](./docs/cli/agent-usage.md) — canonical reference for AI agents (every command, JSON shapes, prefix rule, mini patterns)
+  - [docs/cli/help.md](./docs/cli/help.md) — long-form mirror of `sonicbridge help <topic>`
+  - [docs/cli/testing-this-feature.md](./docs/cli/testing-this-feature.md) — end-to-end QA checklist (A–N)
+- **Web interaction reference:** [frontend-interactions.md](./frontend-interactions.md)
+- **Design specs + implementation plans + diagnostics:** [docs/superpowers/](./docs/superpowers/)
+
 ## Core Features
 
 ### User System
