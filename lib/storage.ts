@@ -87,7 +87,7 @@ async function s3Request(
   const rawQuery = options?.queryParams
     ? new URLSearchParams(options.queryParams).toString()
     : "";
-  const url = `${endpoint}/${R2_BUCKET_NAME}/${key}${rawQuery ? "?" + rawQuery : ""}`;
+  const url = `${endpoint}/${encodeKey(R2_BUCKET_NAME!)}/${encodeKey(key)}${rawQuery ? "?" + rawQuery : ""}`;
 
   const host = `${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
   const emptyHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
@@ -96,7 +96,7 @@ async function s3Request(
   const canonicalHeaders = `host:${host}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}\n`;
   const signedHeaders = "host;x-amz-content-sha256;x-amz-date";
 
-  const canonicalRequest = `${method}\n/${R2_BUCKET_NAME}/${key}\n${rawQuery}\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
+  const canonicalRequest = `${method}\n/${encodeKey(R2_BUCKET_NAME!)}/${encodeKey(key)}\n${rawQuery}\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
   const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`;
   const stringToSign = `AWS4-HMAC-SHA256\n${amzDate}\n${credentialScope}\n${await sha256(canonicalRequest)}`;
 
@@ -165,9 +165,18 @@ export function getMaxFileSize(fileName: string): { limit: number; category: str
 // ---------------------------------------------------------------------------
 
 export function getStorageKey(projectId: string, folderPath: string, filename: string): string {
-  const safeFilename = filename.replace(/\.\.|[/\\]/g, "_").replace(/^_+/, "");
+  // Sanitize filename: remove path traversal, then strip URI-unsafe characters
+  const safeFilename = filename
+    .replace(/\.\.|[/\\]/g, "_")
+    .replace(/^_+/, "")
+    .replace(/[?#&%'"<>{}|^~\`\s]/g, "_"); // remove characters unsafe in URLs
   const uniqueName = `${randomHex(8)}_${safeFilename}`;
   return `${projectId}/${folderPath}/${uniqueName}`.replace(/\/+/g, "/");
+}
+
+// Encode a storage key for use in S3 URL paths, preserving "/" separators
+function encodeKey(key: string): string {
+  return key.split("/").map(encodeURIComponent).join("/");
 }
 
 // ---------------------------------------------------------------------------
@@ -199,14 +208,14 @@ export async function createPresignedUploadUrl(
   const host = `${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
   const canonicalHeaders = `host:${host}\nx-amz-content-sha256:${emptyHash}\nx-amz-date:${amzDate}\n`;
   const canonicalQuery = `X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=${encodeURIComponent(`${R2_ACCESS_KEY_ID}/${credentialScope}`)}&X-Amz-Date=${amzDate}&X-Amz-Expires=300&X-Amz-SignedHeaders=${encodeURIComponent(signedHeaders)}`;
-  const canonicalRequest = `PUT\n/${R2_BUCKET_NAME}/${storageKey}\n${canonicalQuery}\n${canonicalHeaders}\n${signedHeaders}\n${emptyHash}`;
+  const canonicalRequest = `PUT\n/${encodeKey(R2_BUCKET_NAME!)}/${encodeKey(storageKey)}\n${canonicalQuery}\n${canonicalHeaders}\n${signedHeaders}\n${emptyHash}`;
   const stringToSign = `AWS4-HMAC-SHA256\n${amzDate}\n${credentialScope}\n${await sha256(canonicalRequest)}`;
 
   const signingKey = await getSigningKey(R2_SECRET_ACCESS_KEY, dateStamp, region, service);
   const signature = arrayBufferToHex(await hmacSha256(signingKey, stringToSign));
 
   const endpoint = `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
-  const uploadUrl = `${endpoint}/${R2_BUCKET_NAME}/${storageKey}`
+  const uploadUrl = `${endpoint}/${encodeKey(R2_BUCKET_NAME!)}/${encodeKey(storageKey)}`
     + `?X-Amz-Algorithm=AWS4-HMAC-SHA256`
     + `&X-Amz-Credential=${encodeURIComponent(`${R2_ACCESS_KEY_ID}/${credentialScope}`)}`
     + `&X-Amz-Date=${amzDate}`
@@ -272,7 +281,7 @@ export async function createPresignedPost(
   const signature = arrayBufferToHex(await hmacSha256(signingKey, policyBase64));
 
   return {
-    url: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${R2_BUCKET_NAME}`,
+    url: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${encodeKey(R2_BUCKET_NAME!)}`,
     fields: {
       key: storageKey,
       "Content-Type": contentType,
