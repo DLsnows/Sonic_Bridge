@@ -95,7 +95,7 @@ export async function PUT(
 
     let encryptedApiKey: string;
     if (apiKey) {
-      encryptedApiKey = encrypt(apiKey);
+      encryptedApiKey = await encrypt(apiKey);
     } else if (existing) {
       encryptedApiKey = existing.encryptedApiKey;
     } else {

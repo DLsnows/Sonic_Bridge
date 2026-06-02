@@ -61,7 +61,7 @@ export async function POST(
   if (dbConfig) {
     aiUrl = dbConfig.apiUrl;
     try {
-      aiKey = decrypt(dbConfig.encryptedApiKey);
+      aiKey = await decrypt(dbConfig.encryptedApiKey);
     } catch {
       console.error("Failed to decrypt AI API key - AUTH_SECRET may have changed");
       return NextResponse.json(

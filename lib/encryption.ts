@@ -1,38 +1,70 @@
-import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "crypto";
+// MIGRATION NOTE (EdgeOne): Encryption changed from Node.js scryptSync to Web Crypto PBKDF2.
+// Existing encrypted AI API keys in the project_ai_configs table will need to be re-entered
+// by users after deployment to EdgeOne.
 
 const ALGORITHM = "aes-256-gcm";
-const IV_LENGTH = 16;
-const TAG_LENGTH = 16;
+const IV_LENGTH = 16; // 12 bytes is the GCM standard, but we use 16 for compatibility with existing data
 
-let _key: Buffer | null = null;
+async function deriveKey(secret: string): Promise<CryptoKey> {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(secret),
+    "PBKDF2",
+    false,
+    ["deriveKey"]
+  );
+  return crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt: enc.encode("ai-config-salt"),
+      iterations: 100000,
+      hash: "SHA-256",
+    },
+    keyMaterial,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
+}
 
-function getKey(): Buffer {
-  if (_key) return _key;
+let _keyPromise: Promise<CryptoKey> | null = null;
+
+function getKey(): Promise<CryptoKey> {
+  if (_keyPromise) return _keyPromise;
   const secret = process.env.AUTH_SECRET;
   if (!secret) {
-    throw new Error("AUTH_SECRET environment variable is not configured. Please set it in Vercel project settings.");
+    throw new Error("AUTH_SECRET environment variable is not configured. Please set it in EdgeOne project settings.");
   }
-  _key = scryptSync(secret, "ai-config-salt", 32);
-  return _key;
+  _keyPromise = deriveKey(secret);
+  return _keyPromise;
 }
 
-export function encrypt(plaintext: string): string {
-  const key = getKey();
-  const iv = randomBytes(IV_LENGTH);
-  const cipher = createCipheriv(ALGORITHM, key, iv);
-  const encrypted = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
-  const tag = cipher.getAuthTag();
-  const result = Buffer.concat([iv, tag, encrypted]);
-  return result.toString("base64");
+export async function encrypt(plaintext: string): Promise<string> {
+  const key = await getKey();
+  const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
+  const enc = new TextEncoder();
+  const encrypted = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv },
+    key,
+    enc.encode(plaintext)
+  );
+  // Combine iv + encrypted (tag is appended by AES-GCM in subtle)
+  const combined = new Uint8Array(iv.length + encrypted.byteLength);
+  combined.set(iv);
+  combined.set(new Uint8Array(encrypted), iv.length);
+  return btoa(String.fromCharCode(...combined));
 }
 
-export function decrypt(encoded: string): string {
-  const key = getKey();
-  const buf = Buffer.from(encoded, "base64");
-  const iv = buf.subarray(0, IV_LENGTH);
-  const tag = buf.subarray(IV_LENGTH, IV_LENGTH + TAG_LENGTH);
-  const encrypted = buf.subarray(IV_LENGTH + TAG_LENGTH);
-  const decipher = createDecipheriv(ALGORITHM, key, iv);
-  decipher.setAuthTag(tag);
-  return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
+export async function decrypt(encoded: string): Promise<string> {
+  const key = await getKey();
+  const buf = Uint8Array.from(atob(encoded), c => c.charCodeAt(0));
+  const iv = buf.slice(0, IV_LENGTH);
+  const encrypted = buf.slice(IV_LENGTH);
+  const decrypted = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv },
+    key,
+    encrypted
+  );
+  return new TextDecoder().decode(decrypted);
 }
