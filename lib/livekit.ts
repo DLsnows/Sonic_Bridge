@@ -1,4 +1,4 @@
-import { AccessToken } from "livekit-server-sdk";
+import * as jose from "jose";
 
 export async function getLiveKitToken(
   roomName: string,
@@ -12,18 +12,25 @@ export async function getLiveKitToken(
     throw new Error("LiveKit credentials not configured");
   }
 
-  const token = new AccessToken(apiKey, apiSecret, {
-    identity: userId,
+  const secret = new TextEncoder().encode(apiSecret);
+
+  const jwt = await new jose.SignJWT({
     name: participantName,
     metadata: JSON.stringify({ userId, username: participantName }),
-  });
+    video: {
+      room: roomName,
+      roomJoin: true,
+      canPublish: true,
+      canSubscribe: true,
+    },
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuer(apiKey)
+    .setSubject(userId)
+    .setJti(crypto.randomUUID())
+    .setIssuedAt()
+    .setExpirationTime("6h")
+    .sign(secret);
 
-  token.addGrant({
-    room: roomName,
-    roomJoin: true,
-    canPublish: true,
-    canSubscribe: true,
-  });
-
-  return token.toJwt();
+  return jwt;
 }
