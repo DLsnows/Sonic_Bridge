@@ -84,10 +84,10 @@ async function s3Request(
   const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
   const dateStamp = amzDate.slice(0, 8);
 
-  const queryString = options?.queryParams
-    ? "?" + new URLSearchParams(options.queryParams).toString()
+  const rawQuery = options?.queryParams
+    ? new URLSearchParams(options.queryParams).toString()
     : "";
-  const url = `${endpoint}/${R2_BUCKET_NAME}/${key}${queryString}`;
+  const url = `${endpoint}/${R2_BUCKET_NAME}/${key}${rawQuery ? "?" + rawQuery : ""}`;
 
   const host = `${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
   const emptyHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
@@ -96,7 +96,7 @@ async function s3Request(
   const canonicalHeaders = `host:${host}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}\n`;
   const signedHeaders = "host;x-amz-content-sha256;x-amz-date";
 
-  const canonicalRequest = `${method}\n/${R2_BUCKET_NAME}/${key}\n${queryString}\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
+  const canonicalRequest = `${method}\n/${R2_BUCKET_NAME}/${key}\n${rawQuery}\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
   const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`;
   const stringToSign = `AWS4-HMAC-SHA256\n${amzDate}\n${credentialScope}\n${await sha256(canonicalRequest)}`;
 
@@ -113,7 +113,12 @@ async function s3Request(
   };
   if (options?.contentType) headers["Content-Type"] = options.contentType;
 
-  return fetch(url, { method, headers, body: options?.body });
+  const response = await fetch(url, { method, headers, body: options?.body });
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(`S3 request failed: ${response.status} ${response.statusText}${text ? ` — ${text}` : ""}`);
+  }
+  return response;
 }
 
 // ---------------------------------------------------------------------------
@@ -193,7 +198,8 @@ export async function createPresignedUploadUrl(
 
   const host = `${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`;
   const canonicalHeaders = `host:${host}\nx-amz-content-sha256:${emptyHash}\nx-amz-date:${amzDate}\n`;
-  const canonicalRequest = `PUT\n/${R2_BUCKET_NAME}/${storageKey}\n\n${canonicalHeaders}\n${signedHeaders}\n${emptyHash}`;
+  const canonicalQuery = `X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=${encodeURIComponent(`${R2_ACCESS_KEY_ID}/${credentialScope}`)}&X-Amz-Date=${amzDate}&X-Amz-Expires=300&X-Amz-SignedHeaders=${encodeURIComponent(signedHeaders)}`;
+  const canonicalRequest = `PUT\n/${R2_BUCKET_NAME}/${storageKey}\n${canonicalQuery}\n${canonicalHeaders}\n${signedHeaders}\n${emptyHash}`;
   const stringToSign = `AWS4-HMAC-SHA256\n${amzDate}\n${credentialScope}\n${await sha256(canonicalRequest)}`;
 
   const signingKey = await getSigningKey(R2_SECRET_ACCESS_KEY, dateStamp, region, service);
@@ -237,7 +243,7 @@ export async function createPresignedPost(
   filename: string,
   contentType: string,
 ): Promise<{ url: string; fields: Record<string, string>; storageKey: string }> {
-  if (!R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
+  if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
     throw new Error("Missing R2 environment variables.");
   }
 
@@ -307,7 +313,9 @@ export async function deleteFile(urlOrKey: string): Promise<void> {
   try {
     await s3Request("DELETE", key);
   } catch (err: unknown) {
-    if ((err as Error).message?.includes("404")) return;
+    const msg = (err as Error).message ?? "";
+    // 404 means already deleted — not an error
+    if (msg.includes("404")) return;
     throw err;
   }
 }
