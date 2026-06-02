@@ -1,5 +1,5 @@
-import { Pool } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-serverless";
+import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-http";
 
 let _db: ReturnType<typeof drizzle> | undefined;
 let _configError: Error | null = null;
@@ -13,8 +13,8 @@ function getDb() {
     );
     throw _configError;
   }
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-  _db = drizzle(pool);
+  const sql = neon(process.env.DATABASE_URL!);
+  _db = drizzle(sql);
   return _db;
 }
 
