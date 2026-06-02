@@ -182,34 +182,83 @@ Uses `@uiw/react-md-editor` with dark theme and split live preview (`preview="li
 
 ## 7. Project Files (`/projects/[id]/files`)
 
+### File Browser Layout
+
+```
+┌──────────────┬──────────────────────────────────────┐
+│  Folder Tree  │  Breadcrumb Nav (drop targets)       │
+│  (drop zones) │  ──────────────────────────────────  │
+│               │  File List (draggable rows)          │
+│  [All Files]  │  [Upload] [Rename inline] [DL] [DEL] │
+│  [Root]       │                                      │
+│  [Folders...] │  Audio player bar (on play)          │
+└──────────────┴──────────────────────────────────────┘
+```
+
 | Element | Type | Function |
 |---------|------|----------|
 | **Back** | TopBar | Navigate to `/projects/[id]` |
 | **+ New Folder** | Button | Opens CreateFolderModal |
 | **Upload Files** | Button | Opens UploadZone modal |
-| Folder tree item | Clickable | Select folder, navigate in. Toggle expand/collapse for folders with children |
-| Folder **Rename** (✎) | Button (hover on folder) | Browser prompt → PATCH to rename |
-| Folder **Delete** (✕) | Button (hover on folder) | Browser confirm → DELETE folder + contents |
-| Breadcrumb segment | Clickable link | Navigate to that folder level |
-| Audio file name | Clickable text | Open audio player if `onOpenPlayer` callback provided |
+
+### Folder Tree
+
+| Element | Type | Function |
+|---------|------|----------|
+| **All Files** | Virtual view button | Shows ALL files across every folder (sends `?all=1`). Breadcrumb shows "* All Files" |
+| **Root** | Button | Show top-level files only (no folder). Always expanded |
+| Folder item | Button | Select folder, navigate in. Toggle expand/collapse for folders with children |
+| Folder **Rename** (✎) | Button (hover) | Browser prompt → PATCH `/api/projects/[id]/folders/[folderId]` |
+| Folder **Delete** (✕) | Button (hover) | Browser confirm → DELETE. Refuses non-empty folders with 409 |
+| **Drop zone** (folder) | Drop target | Drag a file row onto a folder to move it there. Green ring highlight on hover |
+
+### Breadcrumb Nav (drop targets)
+
+| Element | Type | Function |
+|---------|------|----------|
+| Breadcrumb segment | Clickable link (non-last) / Display (last) | Navigate to that folder level |
+| **Drop zone** (each segment) | Drop target | Drag a file onto any breadcrumb segment to move it to that folder. Green ring + glow on hover |
+
+### File Row
+
+| Element | Type | Function |
+|---------|------|----------|
+| File row | **Draggable** (`application/x-sb-file` MIME) | Drag to folder tree or breadcrumb to move file. PATCH `/api/projects/[id]/files/[fileId]` with `{ folderId }`. Disabled when player or rename is active |
+| Audio file icon | Display | SPEAKER tag. Click name to open `AudioPlayerModal` |
+| File name | Display (clickable for audio) | Opens `AudioPlayerModal` for audio files |
+
+### Inline Rename
+
+| Element | Type | Function |
+|---------|------|----------|
+| Rename input | Text field | Editable **basename only** (extension shown as non-editable gray suffix label). Submit on Enter, cancel on Escape/blur |
+| Extension label | Display (inline suffix) | Gray, non-editable (e.g. `.wav`). Server enforces extension lock — returns 422 if extension is changed |
 
 ### Audio Player (inline, shown when playing)
 
 | Element | Type | Function |
 |---------|------|----------|
 | **▶ / ⏸** | Toggle button | Play/pause audio |
-| Current time display | Display | Shows current playback position (mm:ss) |
-| **Seek slider** | Range slider | Seek to any position in the audio track |
-| Duration display | Display | Shows total duration (mm:ss) |
-| **Volume toggle** 🔊/🔉/🔇 | Toggle button | Mute/unmute audio (cycles between 0, current, and 1) |
-| **Volume slider** | Range slider | Adjust playback volume (0-100%) |
+| Current time display | Display | mm:ss format |
+| **Seek slider** | Range slider | Seek to any position |
+| Duration display | Display | Total duration (mm:ss) |
+| **Volume toggle** 🔊/🔉/🔇 | Toggle button | Mute/unmute |
+| **Volume slider** | Range slider | 0-100% |
 
 ### File Row Actions
 
 | Element | Type | Function |
 |---------|------|----------|
 | **DL** | Button | Download file (HEAD check → anchor download) |
-| **DEL** | Button (danger) | Opens delete confirmation modal |
+| **DEL** | Button (danger) | Opens password verification prompt |
+
+### Delete File — Password Challenge
+
+| Element | Type | Function |
+|---------|------|----------|
+| Password prompt | Browser `prompt()` | Enter password to confirm deletion |
+| Password verification | POST `/api/user/verify-password` | Returns one-shot challenge token |
+| DELETE with challenge | DELETE `/api/projects/[id]/files/[fileId]` | Passes challenge token for authorization |
 
 ### Upload Files Modal
 
@@ -227,13 +276,6 @@ Uses `@uiw/react-md-editor` with dark theme and split live preview (`preview="li
 | Folder Name input | Text field | Submit on Enter |
 | **Cancel** | Button | Close modal |
 | **Create** | Button | POST `/api/projects/[id]/folders` |
-
-### Delete File Confirmation
-
-| Element | Type | Function |
-|---------|------|----------|
-| **Cancel** | Button | Close modal |
-| **Delete** | Button (danger) | DELETE `/api/projects/[id]/files/[fileId]` |
 
 ---
 
@@ -273,13 +315,22 @@ Uses `@uiw/react-md-editor` with dark theme and split live preview (`preview="li
 | Project ID display | Code block | Shows project UUID |
 | **Copy** | Button | Copy UUID to clipboard, "Copied" feedback for 2s |
 
-### API Access Section
+### Edit Project Section
 
 | Element | Type | Function |
 |---------|------|----------|
-| **Generate API Token** | Button | POST `/api/user/token`, displays generated token |
+| Project Name input | Text field | Edit project name |
+| Description input | Text field | Edit project description |
+| **Save** | Button | PATCH `/api/projects/[id]` |
+
+### CLI Access Section
+
+| Element | Type | Function |
+|---------|------|----------|
+| **Generate CLI Token** | Button | POST `/api/user/token`, displays generated token for `sonicbridge` CLI use |
 | Token display + warning | Code block | "Save this token now — it won't be shown again" |
 | **Copy Token** | Button | Copy token to clipboard |
+| CLI docs link | Reference | Points to `docs/cli/install-for-agents.md` for setup instructions |
 
 ### AI Features Section
 

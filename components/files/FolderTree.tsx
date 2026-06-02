@@ -15,9 +15,20 @@ interface FolderTreeProps {
   onSelect: (folderId: string | null) => void;
   onRename: (folderId: string, currentName: string) => void;
   onDelete: (folderId: string, folderName: string) => void;
+  onMoveFile?: (fileId: string, targetFolderId: string | null) => void;
 }
 
-export function FolderTree({ folders, currentFolderId, onSelect, onRename, onDelete }: FolderTreeProps) {
+const SB_FILE_MIME = "application/x-sb-file";
+
+function dataTransferHasFile(dt: DataTransfer): boolean {
+  return Array.from(dt.types).includes(SB_FILE_MIME);
+}
+
+// Sentinel for the synthetic "All Files" view: shows every file in the project
+// regardless of folder. Selecting it fetches `?all=1`.
+export const ALL_FILES_VIEW = "__all__";
+
+export function FolderTree({ folders, currentFolderId, onSelect, onRename, onDelete, onMoveFile }: FolderTreeProps) {
   function buildTree(parentId: string | null): TreeNode[] {
     const children = folders.filter((f) => f.parentId === parentId);
     return children.map((f) => ({
@@ -46,13 +57,38 @@ export function FolderTree({ folders, currentFolderId, onSelect, onRename, onDel
     const isCurrent = currentFolderId === node.id;
     const hasChildren = node.children.length > 0;
     const [expanded, setExpanded] = useState(node.id === null || isAncestor(node.id));
+    const [isDropTarget, setIsDropTarget] = useState(false);
+
+    const handleDragOver = (e: React.DragEvent<HTMLButtonElement>) => {
+      if (!onMoveFile || !dataTransferHasFile(e.dataTransfer)) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      if (!isDropTarget) setIsDropTarget(true);
+    };
+    const handleDragLeave = (e: React.DragEvent<HTMLButtonElement>) => {
+      const next = e.relatedTarget as Node | null;
+      if (next && e.currentTarget.contains(next)) return; // still inside
+      setIsDropTarget(false);
+    };
+    const handleDrop = (e: React.DragEvent<HTMLButtonElement>) => {
+      e.preventDefault();
+      setIsDropTarget(false);
+      if (!onMoveFile) return;
+      const fileId = e.dataTransfer.getData(SB_FILE_MIME);
+      if (!fileId) return;
+      onMoveFile(fileId, node.id);
+    };
 
     return (
       <div>
         <button
           className={`group w-full text-left px-2 py-1.5 rounded text-xs font-mono flex items-center gap-1.5 transition-colors
-            ${isCurrent ? "bg-[#00FF41]/10 text-[#00FF41]" : "text-[#A0A0B0] hover:text-[#F0F0F0] hover:bg-white/5"}`}
+            ${isCurrent ? "bg-[#00FF41]/10 text-[#00FF41]" : "text-[#A0A0B0] hover:text-[#F0F0F0] hover:bg-white/5"}
+            ${isDropTarget ? "ring-2 ring-[#00FF41] bg-[#00FF41]/5" : ""}`}
           style={{ paddingLeft: `${8 + depth * 12}px` }}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
           onClick={() => {
             if (hasChildren) setExpanded(!expanded);
             onSelect(node.id);
@@ -88,11 +124,25 @@ export function FolderTree({ folders, currentFolderId, onSelect, onRename, onDel
     );
   }
 
+  const isAllFilesActive = currentFolderId === ALL_FILES_VIEW;
+
   return (
     <div className="space-y-0.5">
       <h4 className="font-['Share_Tech_Mono',monospace] text-[10px] text-[#A0A0B0] uppercase tracking-wider px-2 mb-2">
         Folders
       </h4>
+      {/* "All Files" virtual entry — selects to show every file across the project. */}
+      {/* Drops are intentionally not handled (moving a file to "All" is meaningless). */}
+      <button
+        className={`group w-full text-left px-2 py-1.5 rounded text-xs font-mono flex items-center gap-1.5 transition-colors italic
+          ${isAllFilesActive ? "bg-[#00FF41]/10 text-[#00FF41]" : "text-[#A0A0B0] hover:text-[#F0F0F0] hover:bg-white/5"}`}
+        style={{ paddingLeft: "8px" }}
+        onClick={() => onSelect(ALL_FILES_VIEW)}
+        title="Show every file across this project"
+      >
+        <span className="w-3" />
+        <span className="truncate">* All Files</span>
+      </button>
       {tree.map((node) => (
         <TreeNodeItem key={node.id ?? "__root__"} node={node} depth={0} />
       ))}

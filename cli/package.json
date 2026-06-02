@@ -1,0 +1,29 @@
+{
+  "name": "sonicbridge",
+  "version": "0.1.0",
+  "description": "CLI for the Sonic Bridge platform — manage project files, calendar, and discussion from your terminal.",
+  "type": "module",
+  "bin": { "sonicbridge": "./dist/index.js" },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "lint": "eslint src"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "prompts": "^2.4.2",
+    "picocolors": "^1.1.1",
+    "mime-types": "^2.1.35"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/prompts": "^2.4.9",
+    "@types/mime-types": "^2.1.4",
+    "typescript": "^5",
+    "vitest": "^3",
+    "eslint": "^9"
+  }
+}

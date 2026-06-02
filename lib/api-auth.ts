@@ -1,4 +1,5 @@
-﻿import { auth } from "@/lib/auth";
+import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { users, projectMembers } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -16,15 +17,23 @@ export interface AuthResult {
   userId: string;
   username: string;
   membership: { role: "admin" | "member" };
+  isToken: boolean;
+}
+
+export interface UserAuthResult {
+  userId: string;
+  username: string;
+  email: string;
+  isToken: boolean;
 }
 
 export async function authenticate(
   request: Request,
   projectIdOrCustomId: string,
-): Promise<AuthResult | Response> {
+): Promise<AuthResult | NextResponse> {
   const projectId = await resolveProjectId(projectIdOrCustomId);
   if (!projectId) {
-    return Response.json({ error: "Project not found" }, { status: 404 });
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
   const authHeader = request.headers.get("authorization");
@@ -40,7 +49,7 @@ export async function authenticate(
       .limit(1);
 
     if (!user) {
-      return Response.json({ error: "Invalid API token" }, { status: 401 });
+      return NextResponse.json({ error: "Invalid API token" }, { status: 401 });
     }
 
     const [membership] = await db
@@ -55,7 +64,7 @@ export async function authenticate(
       .limit(1);
 
     if (!membership) {
-      return Response.json(
+      return NextResponse.json(
         { error: "Not a member of this project" },
         { status: 403 },
       );
@@ -65,12 +74,13 @@ export async function authenticate(
       userId: user.id,
       username: user.username,
       membership: { role: validateRole(membership.role) },
+      isToken: true,
     };
   }
 
   const session = await auth();
   if (!session?.user) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const userId = session.user.id;
@@ -87,12 +97,70 @@ export async function authenticate(
     .limit(1);
 
   if (!membership) {
-    return Response.json({ error: "Not a member" }, { status: 403 });
+    return NextResponse.json({ error: "Not a member" }, { status: 403 });
   }
 
   return {
     userId,
     username: session.user.username ?? session.user.name ?? "User",
     membership: { role: validateRole(membership.role) },
+    isToken: false,
+  };
+}
+
+/**
+ * Authenticate a user (Bearer token OR session) without requiring project membership.
+ * Returns 401 if neither auth method works.
+ */
+export async function authenticateUser(
+  request: Request,
+): Promise<UserAuthResult | NextResponse> {
+  const authHeader = request.headers.get("authorization");
+
+  if (authHeader?.startsWith("Bearer sb_")) {
+    const rawToken = authHeader.slice(7);
+    const hashed = createHash("sha256").update(rawToken).digest("hex");
+
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.apiToken, hashed))
+      .limit(1);
+
+    if (!user) {
+      return NextResponse.json({ error: "Invalid API token" }, { status: 401 });
+    }
+
+    return {
+      userId: user.id,
+      username: user.username,
+      email: user.email,
+      isToken: true,
+    };
+  }
+
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const userId = session.user.id;
+
+  // Fetch email since the session may not include it reliably.
+  const [user] = await db
+    .select({ email: users.email, username: users.username })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  return {
+    userId,
+    username: session.user.username ?? session.user.name ?? user.username,
+    email: user.email,
+    isToken: false,
   };
 }

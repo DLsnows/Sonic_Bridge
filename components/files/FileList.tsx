@@ -11,7 +11,22 @@ interface FileListProps {
   projectId: string;
   onDelete: (fileId: string) => void;
   onDownload: (fileId: string, fileName: string) => void;
+  onRename?: (fileId: string, newName: string) => void;
   onOpenPlayer?: (file: FileItem) => void;
+  // Lifted-up drag state so FileBrowser can guarantee the opacity reset even
+  // when the browser swallows `dragend` (e.g. the source row was removed
+  // during the drop's re-render). Round 2 BUG 2.
+  draggingFileId: string | null;
+  setDraggingFileId: (id: string | null) => void;
+}
+
+// Split a filename into editable basename + immutable ".ext" suffix label.
+// Mirrors the server's rule (idx <= 0 → no extension; dotfiles like
+// ".gitignore" stay whole).
+function splitName(name: string): { base: string; extWithDot: string } {
+  const idx = name.lastIndexOf(".");
+  if (idx <= 0) return { base: name, extWithDot: "" };
+  return { base: name.slice(0, idx), extWithDot: name.slice(idx) };
 }
 
 function formatSize(bytes: number): string {
@@ -45,11 +60,45 @@ const iconColors: Record<string, string> = {
   FILE: "text-[#A0A0B0]",
 };
 
-export function FileList({ files, loading, projectId, onDelete, onDownload, onOpenPlayer }: FileListProps) {
+export function FileList({ files, loading, projectId, onDelete, onDownload, onRename, onOpenPlayer, draggingFileId, setDraggingFileId }: FileListProps) {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [renamingFileId, setRenamingFileId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState<string>("");
   const [playingFileId, setPlayingFileId] = useState<string | null>(null);
   const [audioLoading, setAudioLoading] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
+
+  const [renameExtSuffix, setRenameExtSuffix] = useState<string>("");
+  const startRename = (file: FileItem) => {
+    setRenamingFileId(file.id);
+    // Editable input gets ONLY the basename; the `.ext` suffix renders as a
+    // gray, non-editable label next to the input. The user cannot change the
+    // extension by accident. Round 2 BUG 4.
+    const { base, extWithDot } = splitName(file.name);
+    setRenameDraft(base);
+    setRenameExtSuffix(extWithDot);
+  };
+  const cancelRename = () => {
+    setRenamingFileId(null);
+    setRenameDraft("");
+    setRenameExtSuffix("");
+  };
+  const submitRename = (file: FileItem) => {
+    const trimmedBase = renameDraft.trim();
+    if (!trimmedBase) {
+      cancelRename();
+      return;
+    }
+    // The suffix is uneditable, so the client never needs an extension check.
+    // Server's 422 guard stays as defense-in-depth.
+    const finalName = `${trimmedBase}${renameExtSuffix}`;
+    if (finalName === file.name) {
+      cancelRename();
+      return;
+    }
+    if (onRename) onRename(file.id, finalName);
+    cancelRename();
+  };
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playingFileIdRef = useRef<string | null>(null);
   const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -238,21 +287,77 @@ export function FileList({ files, loading, projectId, onDelete, onDownload, onOp
           {files.map((file) => {
             const icon = fileIcon(file.mimeType);
             const colorClass = iconColors[icon] ?? "text-[#A0A0B0]";
+            // When the inline preview / mini-player is active on this row, the
+            // entire row is non-draggable. Sliders inside the player previously
+            // bled mousedown events up to the draggable <tr> and initiated a
+            // file move; flipping `draggable` off is the only fully reliable
+            // way to stop HTML5 drag from being initiated on a slider thumb.
+            const isPlayerOpen = playingFileId === file.id;
+            const isRenaming = renamingFileId === file.id;
+            const rowDraggable = !isPlayerOpen && !isRenaming;
             return (
-              <tr key={file.id} className="border-b border-white/5 hover:bg-white/[0.03] transition-colors">
+              <tr
+                key={file.id}
+                draggable={rowDraggable}
+                onDragStart={rowDraggable ? (e) => {
+                  e.dataTransfer.setData("application/x-sb-file", file.id);
+                  e.dataTransfer.effectAllowed = "move";
+                  setDraggingFileId(file.id);
+                } : undefined}
+                onDragEnd={rowDraggable ? () => setDraggingFileId(null) : undefined}
+                className={`border-b border-white/5 hover:bg-white/[0.03] transition-colors ${rowDraggable ? "cursor-grab" : ""} ${
+                  draggingFileId === file.id ? "opacity-50" : ""
+                }`}
+              >
                 <td className="py-2.5 px-3">
                   <div className="flex items-center gap-2">
                     <span className={`font-['Share_Tech_Mono',monospace] text-[10px] ${colorClass}`}>{icon}</span>
-                    <span
-                      className={`text-[#F0F0F0] truncate max-w-[200px] ${file.mimeType.startsWith("audio/") ? "cursor-pointer hover:text-[#00F0FF] hover:underline transition-colors" : ""}`}
-                      onClick={() => {
-                        if (file.mimeType.startsWith("audio/") && onOpenPlayer) {
-                          onOpenPlayer(file);
-                        }
-                      }}
-                    >
-                      {file.name}
-                    </span>
+                    {renamingFileId === file.id ? (
+                      // Single visual box: outer span owns the border + background,
+                      // child input and suffix label are borderless and share the
+                      // padding. focus-within highlights the whole box on focus.
+                      <span className="inline-flex items-center bg-[#0F0F13] border border-[#00F0FF]/40 rounded px-1.5 py-0.5 focus-within:border-[#00F0FF] transition-colors">
+                        <input
+                          type="text"
+                          autoFocus
+                          value={renameDraft}
+                          onChange={(e) => setRenameDraft(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              submitRename(file);
+                            } else if (e.key === "Escape") {
+                              e.preventDefault();
+                              cancelRename();
+                            }
+                          }}
+                          onBlur={() => cancelRename()}
+                          onClick={(e) => e.stopPropagation()}
+                          className="bg-transparent border-none outline-none text-[#F0F0F0] text-sm font-mono w-[180px] p-0 m-0"
+                          aria-label="Rename file (basename)"
+                        />
+                        {renameExtSuffix && (
+                          <span
+                            className="text-[#A0A0B0] text-sm font-mono"
+                            style={{ userSelect: "none", pointerEvents: "none" }}
+                            aria-label={`Extension (locked): ${renameExtSuffix}`}
+                          >
+                            {renameExtSuffix}
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      <span
+                        className={`text-[#F0F0F0] truncate max-w-[200px] ${file.mimeType.startsWith("audio/") ? "cursor-pointer hover:text-[#00F0FF] hover:underline transition-colors" : ""}`}
+                        onClick={() => {
+                          if (file.mimeType.startsWith("audio/") && onOpenPlayer) {
+                            onOpenPlayer(file);
+                          }
+                        }}
+                      >
+                        {file.name}
+                      </span>
+                    )}
                   </div>
                 </td>
                 <td className="py-2.5 px-3 text-[#A0A0B0] font-mono text-xs">{formatSize(file.size)}</td>
@@ -262,7 +367,17 @@ export function FileList({ files, loading, projectId, onDelete, onDownload, onOp
                 <td className="py-2.5 px-3">
                   <div className="flex items-center justify-end gap-1">
                     {file.mimeType.startsWith("audio/") && (
-                      <div className="flex items-center gap-2">
+                      // Audio player isolation: stop drag + mousedown from
+                      // bubbling to the draggable <tr>. Without this, grabbing
+                      // the seek bar or volume slider initiates a file move
+                      // (round 2 BUG 3). draggable={false} blocks the slider
+                      // thumb from being interpreted as a draggable element.
+                      <div
+                        className="flex items-center gap-2"
+                        draggable={false}
+                        onDragStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                        onMouseDown={(e) => e.stopPropagation()}
+                      >
                         <Button
                           variant={playingFileId === file.id ? "primary" : "ghost"}
                           size="sm"
@@ -309,6 +424,17 @@ export function FileList({ files, loading, projectId, onDelete, onDownload, onOp
                           </div>
                         )}
                       </div>
+                    )}
+                    {onRename && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => startRename(file)}
+                        aria-label={`Rename ${file.name}`}
+                        title="Rename"
+                      >
+                        Rename
+                      </Button>
                     )}
                     <Button variant="ghost" size="sm" onClick={() => onDownload(file.id, file.name)}>DL</Button>
                     <Button variant="danger" size="sm" onClick={() => setDeleteTarget({ id: file.id, name: file.name })}>DEL</Button>

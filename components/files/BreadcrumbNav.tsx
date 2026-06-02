@@ -1,18 +1,102 @@
 "use client";
 
+import { useState } from "react";
 import type { Folder } from "./types";
+import { ALL_FILES_VIEW } from "./FolderTree";
 
 interface BreadcrumbNavProps {
   folders: Folder[];
   currentFolderId: string | null;
   onNavigate: (folderId: string | null) => void;
+  onMoveFile?: (fileId: string, targetFolderId: string | null) => void;
+}
+
+const SB_FILE_MIME = "application/x-sb-file";
+
+function dataTransferHasFile(dt: DataTransfer): boolean {
+  return Array.from(dt.types).includes(SB_FILE_MIME);
+}
+
+function BreadcrumbSegment({
+  id,
+  name,
+  isLast,
+  showSeparator,
+  onNavigate,
+  onMoveFile,
+}: {
+  id: string | null;
+  name: string;
+  isLast: boolean;
+  showSeparator: boolean;
+  onNavigate: (folderId: string | null) => void;
+  onMoveFile?: (fileId: string, targetFolderId: string | null) => void;
+}) {
+  const [isDropTarget, setIsDropTarget] = useState(false);
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!onMoveFile || !dataTransferHasFile(e.dataTransfer)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (!isDropTarget) setIsDropTarget(true);
+  };
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    const next = e.relatedTarget as Node | null;
+    if (next && e.currentTarget.contains(next)) return; // still inside
+    setIsDropTarget(false);
+  };
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDropTarget(false);
+    if (!onMoveFile) return;
+    const fileId = e.dataTransfer.getData(SB_FILE_MIME);
+    if (!fileId) return;
+    onMoveFile(fileId, id);
+  };
+
+  return (
+    <div
+      className={`flex items-center gap-1 rounded px-1 ${
+        isDropTarget ? "ring-2 ring-[#00FF41] bg-[#00FF41]/5" : ""
+      }`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {showSeparator && (
+        <span className="text-[#A0A0B0]/50 text-xs">&gt;</span>
+      )}
+      {isLast ? (
+        <span className="font-['Share_Tech_Mono',monospace] text-xs text-[#00FF41]">
+          {name}
+        </span>
+      ) : (
+        <button
+          className="font-['Share_Tech_Mono',monospace] text-xs text-[#A0A0B0] hover:text-[#F0F0F0] transition-colors"
+          onClick={() => onNavigate(id)}
+        >
+          {name}
+        </button>
+      )}
+    </div>
+  );
 }
 
 export function BreadcrumbNav({
   folders,
   currentFolderId,
   onNavigate,
+  onMoveFile,
 }: BreadcrumbNavProps) {
+  // "All Files" virtual view: render as a single non-navigable label.
+  if (currentFolderId === ALL_FILES_VIEW) {
+    return (
+      <nav className="flex items-center gap-1 px-4 py-2 border-b border-white/10 bg-[#0A0A0F]/30">
+        <span className="text-xs font-mono italic text-[#00FF41]">* All Files</span>
+      </nav>
+    );
+  }
+
   const path: { id: string | null; name: string }[] = [{ id: null, name: "Root" }];
 
   if (currentFolderId) {
@@ -29,28 +113,17 @@ export function BreadcrumbNav({
 
   return (
     <nav className="flex items-center gap-1 px-4 py-2 border-b border-white/10 bg-[#0A0A0F]/30">
-      {path.map((segment, i) => {
-        const isLast = i === path.length - 1;
-        return (
-          <div key={segment.id ?? "__root__"} className="flex items-center gap-1">
-            {i > 0 && (
-              <span className="text-[#A0A0B0]/50 text-xs">&gt;</span>
-            )}
-            {isLast ? (
-              <span className="font-['Share_Tech_Mono',monospace] text-xs text-[#00FF41]">
-                {segment.name}
-              </span>
-            ) : (
-              <button
-                className="font-['Share_Tech_Mono',monospace] text-xs text-[#A0A0B0] hover:text-[#F0F0F0] transition-colors"
-                onClick={() => onNavigate(segment.id)}
-              >
-                {segment.name}
-              </button>
-            )}
-          </div>
-        );
-      })}
+      {path.map((segment, i) => (
+        <BreadcrumbSegment
+          key={segment.id ?? "__root__"}
+          id={segment.id}
+          name={segment.name}
+          isLast={i === path.length - 1}
+          showSeparator={i > 0}
+          onNavigate={onNavigate}
+          onMoveFile={onMoveFile}
+        />
+      ))}
     </nav>
   );
 }

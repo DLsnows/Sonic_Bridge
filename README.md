@@ -2,6 +2,17 @@
 
 Real-time music production collaboration platform. Stream DAW audio through a VST3 plugin into browser-based Creative Spaces powered by LiveKit — remote collaborators hear your mix, see your screen, and chat in real time.
 
+## Documentation
+
+- **CLI (`sonicbridge`):** manage project files, folders, calendar events, and discussion threads from a terminal — built for humans and AI agents.
+  - [docs/cli/README.md](./docs/cli/README.md) — landing page
+  - [docs/cli/install-for-agents.md](./docs/cli/install-for-agents.md) — install the CLI for your AI agent, generate a CLI token, recommended allowlist
+  - [docs/cli/agent-usage.md](./docs/cli/agent-usage.md) — canonical reference for AI agents (every command, JSON shapes, prefix rule, mini patterns)
+  - [docs/cli/help.md](./docs/cli/help.md) — long-form mirror of `sonicbridge help <topic>`
+  - [docs/cli/testing-this-feature.md](./docs/cli/testing-this-feature.md) — end-to-end QA checklist (A–N)
+- **Web interaction reference:** [frontend-interactions.md](./frontend-interactions.md)
+- **Design specs + implementation plans + diagnostics:** [docs/superpowers/](./docs/superpowers/)
+
 ## Core Features
 
 ### User System
@@ -28,10 +39,14 @@ Real-time music production collaboration platform. Stream DAW audio through a VS
 
 ### File Management
 - **Upload Files** — drag-and-drop or browse, multi-file upload with size limits per type (Audio 500MB, Archives 5GB, Video 500MB, Other 100MB)
-- **Folder Organization** — create, rename, delete folders with nested hierarchy
-- **Breadcrumb Navigation** — traverse folder structure
+- **Drag-and-drop file moves** — drag a file row onto a folder in the tree or a breadcrumb segment to move it; drop targets highlight in green
+- **Inline rename with extension lock** — edit the filename basename; the extension suffix is displayed as a non-editable label and enforced server-side
+- **All Files view** — virtual view in the folder tree showing every file across all folders at once
+- **Folder Organization** — create, rename, delete folders with nested hierarchy; non-empty folder deletion refused with 409
+- **Breadcrumb Navigation** — traverse folder structure; each segment is also a drop target for file moves
+- **Delete with password verification** — file deletion requires re-entering your password as a one-shot challenge for safety
 - **Inline Audio Player** — play/pause, seek bar with time display, volume slider with mute toggle
-- **Download & Delete** — download any file, delete with confirmation
+- **CLI access** — manage files, folders, calendar, and discussion from a terminal or AI agent via the [`sonicbridge` CLI](./docs/cli/README.md)
 
 ### Schedule / Calendar
 - **Month View Calendar** — navigate months, click days to filter events
@@ -109,13 +124,20 @@ sonicbridge/
 │   ├── encryption.ts             # API key encryption
 │   ├── image-utils.ts            # Image validation & resizing
 │   └── store/                    # Zustand stores (sidebar, space, vst, media-settings, notification)
+├── cli/                           # sonicbridge CLI (TypeScript, Commander)
+│   ├── src/
+│   │   ├── index.ts               # CLI entry point
+│   │   ├── commands/              # auth, project, files, folders, calendar, discussion
+│   │   └── util/                  # Helpers (progress bars, tables, prompts)
+│   └── package.json
 ├── vst-plugin/                   # C++ VST3 plugin (JUCE 8)
 │   ├── CMakeLists.txt
 │   └── *.cpp / *.h
 ├── scripts/
 │   └── mock-vst-server.ts        # Mock WebSocket server for local dev
 ├── docs/
-│   └── frontend-interactions.md  # Complete per-page interaction reference
+│   ├── frontend-interactions.md  # Complete per-page interaction reference
+│   └── cli/                      # CLI usage docs (install, agent-usage, help)
 └── public/
     └── audio-worklet.js          # Audio decoding worklet
 ```
@@ -150,6 +172,36 @@ npm run lint         # ESLint
 | `LIVEKIT_API_SECRET` | Yes | — | LiveKit Server API secret |
 | `LIVEKIT_URL` | Yes | `ws://localhost:7880` | LiveKit server WebSocket URL |
 | `VST_WS_PORT` | No | `9420` | VST plugin WebSocket server port |
+
+---
+
+## CLI Tool
+
+The [`sonicbridge` CLI](./cli/README.md) provides terminal and AI-agent access to projects. Install with:
+
+```bash
+cd cli && npm install && npm run build && npm link
+```
+
+### Commands
+
+| Group | Commands |
+|-------|----------|
+| auth | `login`, `logout`, `whoami` |
+| project | `project ls`, `project use <id\|prefix\|customId>` |
+| files | `ls`, `upload [--folder <id>]`, `download`, `mv`, `rename`, `rm` |
+| folders | `ls`, `mkdir`, `rename`, `rm` |
+| calendar | `add`, `ls`, `edit`, `rm` |
+| discussion | `ls`, `read`, `post`, `reply` |
+| help | `help [topic]` |
+
+**Conventions:**
+- Token via `SONICBRIDGE_TOKEN` env var or interactive prompt — never on the command line
+- All ID arguments accept full UUID or 8-character prefix (ambiguous prefixes fail explicitly)
+- Discussion posts/replies via CLI are flagged `isAiGenerated=true` in the web UI
+- File delete requires interactive password verification (one-shot challenge)
+
+See [`docs/cli/`](./docs/cli/) for agent setup guides and the full command reference.
 
 ---
 
