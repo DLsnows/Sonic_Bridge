@@ -57,7 +57,7 @@ async function getSigningKey(
     { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
   );
   return crypto.subtle.importKey(
-    "raw", new Uint8Array(await hmacSha256(kService, service)),
+    "raw", new Uint8Array(await hmacSha256(kService, "aws4_request")),
     { name: "HMAC", hash: "SHA-256" }, false, ["sign"],
   );
 }
