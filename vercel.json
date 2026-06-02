@@ -1,3 +1,4 @@
+// This file is for Vercel deployments only. EdgeOne uses edgeone.json instead.
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs"
