@@ -41,7 +41,7 @@ export async function getLiveKitToken(
     .setSubject(userId)
     .setJti(randomUUID())
     .setIssuedAt()
-    .setExpirationTime("6h")
+    .setExpirationTime(Math.floor(Date.now() / 1000) + 6 * 60 * 60)
     .sign(secret);
 
   return jwt;
