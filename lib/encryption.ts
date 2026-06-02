@@ -37,6 +37,8 @@ function getKey(): Promise<CryptoKey> {
     throw new Error("AUTH_SECRET environment variable is not configured. Please set it in EdgeOne project settings.");
   }
   _keyPromise = deriveKey(secret);
+  // Don't cache rejections — allows retry when env vars become available
+  _keyPromise.catch(() => { _keyPromise = null; });
   return _keyPromise;
 }
 
@@ -53,7 +55,9 @@ export async function encrypt(plaintext: string): Promise<string> {
   const combined = new Uint8Array(iv.length + encrypted.byteLength);
   combined.set(iv);
   combined.set(new Uint8Array(encrypted), iv.length);
-  return btoa(String.fromCharCode(...combined));
+  // Use TextDecoder('latin1') to safely map bytes→binary string without
+  // spreading large arrays into String.fromCharCode (which can overflow)
+  return btoa(new TextDecoder("latin1").decode(combined));
 }
 
 export async function decrypt(encoded: string): Promise<string> {
